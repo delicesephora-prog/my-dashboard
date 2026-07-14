@@ -5,7 +5,9 @@ import {
   BackBeat as BackBeatData,
   DashboardData,
   HabitsData,
+  LifeQuarterly,
   LifeWeekly,
+  Reference as ReferenceData,
   WorkOps,
   weekDataFor,
 } from "@/lib/types";
@@ -16,15 +18,18 @@ import OneThing from "./OneThing";
 import WorldToggle from "./WorldToggle";
 import SubNav from "./SubNav";
 import WeekView from "./WeekView";
+import BrainDump from "./BrainDump";
 import OperationsDashboard from "./work/OperationsDashboard";
 import BackBeat from "./work/BackBeat";
+import Reference from "./work/Reference";
 import HabitsView from "./life/HabitsView";
 import ManageHabits from "./life/ManageHabits";
+import QuarterView from "./life/quarter/QuarterView";
 import SaveIndicator, { SaveStatus } from "./SaveIndicator";
 
 type World = "work" | "life";
-type WorkView = "dashboard" | "backbeat";
-type LifeView = "week" | "habits" | "manageHabits";
+type WorkView = "dashboard" | "backbeat" | "reference";
+type LifeView = "week" | "habits" | "manageHabits" | "quarter";
 
 const LOCAL_KEY = "dashboard-cache-v1";
 const SAVE_DELAY_MS = 700;
@@ -70,6 +75,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     scheduleSave();
   }
 
+  function setBrainDump(text: string) {
+    setData((prev) => ({ ...prev, brainDump: text }));
+    scheduleSave();
+  }
+
   function updateLifeWeekly(updater: (lw: LifeWeekly) => LifeWeekly) {
     setData((prev) => ({ ...prev, lifeWeekly: updater(prev.lifeWeekly) }));
     scheduleSave();
@@ -87,6 +97,16 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
 
   function updateHabits(updater: (h: HabitsData) => HabitsData) {
     setData((prev) => ({ ...prev, habits: updater(prev.habits) }));
+    scheduleSave();
+  }
+
+  function updateReference(updater: (r: ReferenceData) => ReferenceData) {
+    setData((prev) => ({ ...prev, reference: updater(prev.reference) }));
+    scheduleSave();
+  }
+
+  function updateLifeQuarterly(updater: (lq: LifeQuarterly) => LifeQuarterly) {
+    setData((prev) => ({ ...prev, lifeQuarterly: updater(prev.lifeQuarterly) }));
     scheduleSave();
   }
 
@@ -121,15 +141,20 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
               items={[
                 { key: "dashboard", label: "Dashboard" },
                 { key: "backbeat", label: "BackBeat" },
+                { key: "reference", label: "Reference" },
               ]}
               active={workView}
               onChange={setWorkView}
               accentClass="bg-work"
             />
-            {workView === "dashboard" ? (
+            {workView === "dashboard" && (
               <OperationsDashboard workOps={data.workOps} onChange={updateWorkOps} />
-            ) : (
+            )}
+            {workView === "backbeat" && (
               <BackBeat backBeat={data.backBeat} onChange={updateBackBeat} />
+            )}
+            {workView === "reference" && (
+              <Reference reference={data.reference} onChange={updateReference} />
             )}
           </>
         ) : (
@@ -139,6 +164,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 items={[
                   { key: "week", label: "This Week" },
                   { key: "habits", label: "Habits" },
+                  { key: "quarter", label: "Quarter" },
                 ]}
                 active={lifeView}
                 onChange={setLifeView}
@@ -162,9 +188,18 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 onBack={() => setLifeView("habits")}
               />
             )}
+            {lifeView === "quarter" && (
+              <QuarterView
+                lifeQuarterly={data.lifeQuarterly}
+                lifeWeekly={data.lifeWeekly}
+                onChange={updateLifeQuarterly}
+              />
+            )}
           </>
         )}
       </main>
+
+      <BrainDump value={data.brainDump} onChange={setBrainDump} />
     </div>
   );
 }

@@ -153,6 +153,107 @@ const habitsDataSchema = z.object({
   weeks: z.record(habitWeekDataSchema),
 });
 
+const contactSchema = z.object({
+  id: z.string(),
+  name: z.string().max(200),
+  position: z.string().max(200),
+  department: z.string().max(200),
+  email: z.string().max(200),
+  phone: z.string().max(100),
+  company: z.string().max(200),
+  notes: z.string().max(5000),
+});
+
+const approvalChainSchema = z.object({
+  id: z.string(),
+  name: z.string().max(200),
+  purpose: z.string().max(5000),
+  steps: z.string().max(10000),
+  responsiblePerson: z.string().max(200),
+  requiredDocuments: z.string().max(2000),
+  expectedTurnaround: z.string().max(200),
+  notes: z.string().max(5000),
+});
+
+const sopEntrySchema = z.object({
+  id: z.string(),
+  title: z.string().max(300),
+  category: z.string().max(200),
+  relatedProject: z.string().max(200),
+  lastUpdated: z.string(),
+  body: z.string().max(20000),
+});
+
+const actionItemSchema = z.object({
+  id: z.string(),
+  text: z.string().max(500),
+  done: z.boolean(),
+});
+
+const meetingNoteSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  meetingName: z.string().max(300),
+  attendees: z.string().max(2000),
+  notes: z.string().max(10000),
+  actionItems: z.array(actionItemSchema).max(200),
+});
+
+const referenceSchema = z.object({
+  contacts: z.array(contactSchema).max(2000),
+  approvalChains: z.array(approvalChainSchema).max(500),
+  sops: z.array(sopEntrySchema).max(1000),
+  meetingNotes: z.array(meetingNoteSchema).max(2000),
+});
+
+const vaultSchema = z.object({
+  id: z.string(),
+  name: z.string().max(200),
+  currentAmount: z.number().min(-1000000000).max(1000000000),
+  goalAmount: z.number().min(0).max(1000000000),
+});
+
+const debtSchema = z.object({
+  id: z.string(),
+  name: z.string().max(200),
+  currentBalance: z.number().min(0).max(1000000000),
+  startingBalance: z.number().min(0).max(1000000000),
+});
+
+const moneyDataSchema = z.object({
+  vaults: z.array(vaultSchema).max(200),
+  debts: z.array(debtSchema).max(200),
+});
+
+const quarterGoalSchema = z.object({
+  id: z.string(),
+  category: z.enum(["Finance", "Health", "Faith", "Personal", "Career"]),
+  text: z.string().max(500),
+  done: z.boolean(),
+});
+
+const achievementSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  text: z.string().max(1000),
+});
+
+const parkingLotItemSchema = z.object({
+  id: z.string(),
+  text: z.string().max(1000),
+});
+
+const quarterDataSchema = z.object({
+  goals: z.array(quarterGoalSchema).max(500),
+  achievements: z.array(achievementSchema).max(1000),
+  parkingLot: z.array(parkingLotItemSchema).max(500),
+});
+
+const lifeQuarterlySchema = z.object({
+  money: moneyDataSchema,
+  quarters: z.record(quarterDataSchema),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -162,6 +263,9 @@ const dashboardSchema = z.object({
   workOps: workOpsSchema,
   backBeat: backBeatSchema,
   habits: habitsDataSchema,
+  reference: referenceSchema,
+  brainDump: z.string().max(50000),
+  lifeQuarterly: lifeQuarterlySchema,
 });
 
 export async function GET() {

@@ -333,6 +333,169 @@ export function habitCompletionsFor(
   return [false, false, false, false, false, false, false];
 }
 
+// ---------------------------------------------------------------------------
+// Work reference: contacts, approval chains, SOPs, meeting notes
+
+export type Contact = {
+  id: string;
+  name: string;
+  position: string;
+  department: string;
+  email: string;
+  phone: string;
+  company: string;
+  notes: string;
+};
+
+export type ApprovalChain = {
+  id: string;
+  name: string;
+  purpose: string;
+  // Multiline - one step per line.
+  steps: string;
+  responsiblePerson: string;
+  requiredDocuments: string;
+  expectedTurnaround: string;
+  notes: string;
+};
+
+function emptyApprovalChain(name: string): ApprovalChain {
+  return {
+    id: crypto.randomUUID(),
+    name,
+    purpose: "",
+    steps: "",
+    responsiblePerson: "",
+    requiredDocuments: "",
+    expectedTurnaround: "",
+    notes: "",
+  };
+}
+
+function seedApprovalChains(): ApprovalChain[] {
+  return [
+    "Translation Requests",
+    "NDA Workflow",
+    "Vendor Contracts",
+    "Purchase Orders",
+    "Invoice Processing",
+  ].map(emptyApprovalChain);
+}
+
+export type SopEntry = {
+  id: string;
+  title: string;
+  category: string;
+  relatedProject: string;
+  lastUpdated: string;
+  body: string;
+};
+
+export type ActionItem = {
+  id: string;
+  text: string;
+  done: boolean;
+};
+
+export type MeetingNote = {
+  id: string;
+  date: string;
+  meetingName: string;
+  attendees: string;
+  notes: string;
+  actionItems: ActionItem[];
+};
+
+export type Reference = {
+  contacts: Contact[];
+  approvalChains: ApprovalChain[];
+  sops: SopEntry[];
+  meetingNotes: MeetingNote[];
+};
+
+export function emptyReference(): Reference {
+  return { contacts: [], approvalChains: seedApprovalChains(), sops: [], meetingNotes: [] };
+}
+
+// ---------------------------------------------------------------------------
+// Life quarterly: money, goals, achievements, parking lot
+
+export type Vault = {
+  id: string;
+  name: string;
+  currentAmount: number;
+  goalAmount: number;
+};
+
+export type Debt = {
+  id: string;
+  name: string;
+  currentBalance: number;
+  startingBalance: number;
+};
+
+export type MoneyData = {
+  vaults: Vault[];
+  debts: Debt[];
+};
+
+export function emptyMoneyData(): MoneyData {
+  return { vaults: [], debts: [] };
+}
+
+export type GoalCategory = "Finance" | "Health" | "Faith" | "Personal" | "Career";
+export const GOAL_CATEGORIES: GoalCategory[] = [
+  "Finance",
+  "Health",
+  "Faith",
+  "Personal",
+  "Career",
+];
+
+export type QuarterGoal = {
+  id: string;
+  category: GoalCategory;
+  text: string;
+  done: boolean;
+};
+
+export type Achievement = {
+  id: string;
+  date: string;
+  text: string;
+};
+
+export type ParkingLotItem = {
+  id: string;
+  text: string;
+};
+
+export type QuarterData = {
+  goals: QuarterGoal[];
+  achievements: Achievement[];
+  parkingLot: ParkingLotItem[];
+};
+
+export function emptyQuarterData(): QuarterData {
+  return { goals: [], achievements: [], parkingLot: [] };
+}
+
+export type LifeQuarterly = {
+  money: MoneyData;
+  // Keyed by quarter, e.g. "2026-Q3".
+  quarters: Record<string, QuarterData>;
+};
+
+export function emptyLifeQuarterly(): LifeQuarterly {
+  return { money: emptyMoneyData(), quarters: {} };
+}
+
+export function quarterDataFor(lq: LifeQuarterly, key: string): QuarterData {
+  const stored = lq.quarters[key];
+  if (!stored) return emptyQuarterData();
+  return { ...emptyQuarterData(), ...stored };
+}
+
 /**
  * Everything lives in one JSON blob so new features (new fields, new
  * widgets) can be added later just by extending this shape - no
@@ -347,6 +510,9 @@ export type DashboardData = {
   workOps: WorkOps;
   backBeat: BackBeat;
   habits: HabitsData;
+  reference: Reference;
+  brainDump: string;
+  lifeQuarterly: LifeQuarterly;
 };
 
 export function emptyWorld(): WorldData {
@@ -367,6 +533,9 @@ export function defaultDashboardData(): DashboardData {
     workOps: emptyWorkOps(),
     backBeat: emptyBackBeat(),
     habits: emptyHabitsData(),
+    reference: emptyReference(),
+    brainDump: "",
+    lifeQuarterly: emptyLifeQuarterly(),
   };
 }
 
@@ -404,6 +573,20 @@ export function normalizeDashboardData(
     habits: {
       habits: data.habits?.habits ?? fallback.habits.habits,
       weeks: data.habits?.weeks ?? {},
+    },
+    reference: {
+      contacts: data.reference?.contacts ?? [],
+      approvalChains: data.reference?.approvalChains ?? fallback.reference.approvalChains,
+      sops: data.reference?.sops ?? [],
+      meetingNotes: data.reference?.meetingNotes ?? [],
+    },
+    brainDump: data.brainDump ?? "",
+    lifeQuarterly: {
+      money: {
+        vaults: data.lifeQuarterly?.money?.vaults ?? [],
+        debts: data.lifeQuarterly?.money?.debts ?? [],
+      },
+      quarters: data.lifeQuarterly?.quarters ?? {},
     },
   };
 }
