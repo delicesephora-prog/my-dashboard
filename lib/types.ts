@@ -637,6 +637,72 @@ export function emptyYearData(): YearData {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Daily Review: one journal entry per day, shared across Work and Life
+
+export type MoodOption = "great" | "good" | "okay" | "low" | "rough";
+export type EnergyOption = "high" | "good" | "okay" | "low" | "drained";
+
+export const MOOD_OPTIONS: { key: MoodOption; emoji: string; label: string }[] = [
+  { key: "great", emoji: "😄", label: "Great" },
+  { key: "good", emoji: "🙂", label: "Good" },
+  { key: "okay", emoji: "😐", label: "Okay" },
+  { key: "low", emoji: "😕", label: "Low" },
+  { key: "rough", emoji: "😣", label: "Rough" },
+];
+
+export const ENERGY_OPTIONS: { key: EnergyOption; emoji: string; label: string }[] = [
+  { key: "high", emoji: "⚡", label: "High" },
+  { key: "good", emoji: "🔋", label: "Good" },
+  { key: "okay", emoji: "🙂", label: "Okay" },
+  { key: "low", emoji: "🪫", label: "Low" },
+  { key: "drained", emoji: "😴", label: "Drained" },
+];
+
+export type DailyReviewEntry = {
+  accomplished: string;
+  stillWaiting: string;
+  improveTomorrow: string;
+  biggestWin: string;
+  mood: MoodOption | null;
+  energy: EnergyOption | null;
+};
+
+export function emptyDailyReviewEntry(): DailyReviewEntry {
+  return {
+    accomplished: "",
+    stillWaiting: "",
+    improveTomorrow: "",
+    biggestWin: "",
+    mood: null,
+    energy: null,
+  };
+}
+
+export type DailyReviewData = {
+  // Keyed by YYYY-MM-DD.
+  entries: Record<string, DailyReviewEntry>;
+};
+
+export function emptyDailyReviewData(): DailyReviewData {
+  return { entries: {} };
+}
+
+export function dailyReviewEntryFor(data: DailyReviewData, dateKey: string): DailyReviewEntry {
+  return data.entries[dateKey] ?? emptyDailyReviewEntry();
+}
+
+export function isDailyReviewEntryFilled(entry: DailyReviewEntry): boolean {
+  return Boolean(
+    entry.accomplished ||
+      entry.stillWaiting ||
+      entry.improveTomorrow ||
+      entry.biggestWin ||
+      entry.mood ||
+      entry.energy
+  );
+}
+
 /**
  * Everything lives in one JSON blob so new features (new fields, new
  * widgets) can be added later just by extending this shape - no
@@ -657,6 +723,7 @@ export type DashboardData = {
   books: BooksData;
   bucketList: BucketListData;
   year: YearData;
+  dailyReview: DailyReviewData;
 };
 
 export function emptyWorld(): WorldData {
@@ -683,6 +750,7 @@ export function defaultDashboardData(): DashboardData {
     books: emptyBooksData(),
     bucketList: emptyBucketListData(),
     year: emptyYearData(),
+    dailyReview: emptyDailyReviewData(),
   };
 }
 
@@ -747,6 +815,9 @@ export function normalizeDashboardData(
       buckets: data.year?.buckets ?? [],
       goals: data.year?.goals ?? [],
       transformations: { ...fallback.year.transformations, ...data.year?.transformations },
+    },
+    dailyReview: {
+      entries: data.dailyReview?.entries ?? {},
     },
   };
 }

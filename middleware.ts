@@ -3,7 +3,7 @@ import { SESSION_COOKIE, isValidSessionToken } from "@/lib/auth";
 
 export const config = {
   matcher: [
-    "/((?!login|api/auth|manifest.webmanifest|icon|apple-icon|favicon.ico|_next/static|_next/image).*)",
+    "/((?!login|api/auth|api/cron|manifest.webmanifest|icon|apple-icon|favicon.ico|_next/static|_next/image).*)",
   ],
 };
 

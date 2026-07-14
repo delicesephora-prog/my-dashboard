@@ -5,6 +5,7 @@ import {
   BackBeat as BackBeatData,
   BooksData,
   BucketListData,
+  DailyReviewData,
   DashboardData,
   HabitsData,
   LifeQuarterly,
@@ -22,6 +23,8 @@ import WorldToggle from "./WorldToggle";
 import SubNav from "./SubNav";
 import WeekView from "./WeekView";
 import BrainDump from "./BrainDump";
+import DailyReviewBar from "./DailyReviewBar";
+import DailyReviewSheet from "./DailyReviewSheet";
 import OperationsDashboard from "./work/OperationsDashboard";
 import BackBeat from "./work/BackBeat";
 import Reference from "./work/Reference";
@@ -46,6 +49,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   const [workView, setWorkView] = useState<WorkView>("dashboard");
   const [lifeView, setLifeView] = useState<LifeView>("week");
   const [status, setStatus] = useState<SaveStatus>("idle");
+  const [dailyReviewOpen, setDailyReviewOpen] = useState(false);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestData = useRef(data);
@@ -128,6 +132,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
 
   function updateYear(updater: (y: YearData) => YearData) {
     setData((prev) => ({ ...prev, year: updater(prev.year) }));
+    scheduleSave();
+  }
+
+  function updateDailyReview(updater: (d: DailyReviewData) => DailyReviewData) {
+    setData((prev) => ({ ...prev, dailyReview: updater(prev.dailyReview) }));
     scheduleSave();
   }
 
@@ -231,6 +240,16 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           </>
         )}
       </main>
+
+      <DailyReviewBar dailyReview={data.dailyReview} onOpen={() => setDailyReviewOpen(true)} />
+
+      {dailyReviewOpen && (
+        <DailyReviewSheet
+          dailyReview={data.dailyReview}
+          onChange={updateDailyReview}
+          onClose={() => setDailyReviewOpen(false)}
+        />
+      )}
 
       <BrainDump value={data.brainDump} onChange={setBrainDump} />
     </div>

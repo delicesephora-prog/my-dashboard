@@ -23,3 +23,16 @@ export function formatElegantDate(d: Date = new Date()): string {
     day: "numeric",
   });
 }
+
+export function shiftDateKey(dateStr: string, deltaDays: number): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + deltaDays);
+  return dateKey(date);
+}
+
+export function formatDayLabel(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return date.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+}

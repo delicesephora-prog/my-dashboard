@@ -332,6 +332,19 @@ const yearDataSchema = z.object({
   }),
 });
 
+const dailyReviewEntrySchema = z.object({
+  accomplished: z.string().max(5000),
+  stillWaiting: z.string().max(5000),
+  improveTomorrow: z.string().max(5000),
+  biggestWin: z.string().max(2000),
+  mood: z.enum(["great", "good", "okay", "low", "rough"]).nullable(),
+  energy: z.enum(["high", "good", "okay", "low", "drained"]).nullable(),
+});
+
+const dailyReviewDataSchema = z.object({
+  entries: z.record(dailyReviewEntrySchema),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -347,6 +360,7 @@ const dashboardSchema = z.object({
   books: booksDataSchema,
   bucketList: bucketListDataSchema,
   year: yearDataSchema,
+  dailyReview: dailyReviewDataSchema,
 });
 
 export async function GET() {
