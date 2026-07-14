@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  height: 100%;
+  overscroll-behavior-y: none;
+}
+
+body {
+  background-color: theme("colors.base.bg");
+  color: theme("colors.base.ink");
+}
+
+/* Respect the notch / home-indicator area when installed as a home-screen app */
+.safe-top {
+  padding-top: max(env(safe-area-inset-top), 1rem);
+}
+.safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 1rem);
+}
+
+/* Hide scrollbars on the internal task-list scroll region while keeping it scrollable */
+.scroll-quiet {
+  scrollbar-width: none;
+}
+.scroll-quiet::-webkit-scrollbar {
+  display: none;
+}
