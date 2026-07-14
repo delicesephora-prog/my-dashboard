@@ -6,17 +6,23 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Deep warm taupe/espresso - the more "structured" Work accent
+        // Rich olive - the one signature accent shared by Work and Life,
+        // used boldly for headers, active states, and progress indicators.
         work: {
-          DEFAULT: "#6E5C4B",
-          soft: "#EFE7DA",
-          dark: "#463A2F",
+          DEFAULT: "#4B5A24",
+          soft: "#E6E9D3",
+          dark: "#333D19",
         },
-        // Warm dusty terracotta - the softer Life accent
         life: {
-          DEFAULT: "#C1815F",
-          soft: "#F6E6DA",
-          dark: "#93583B",
+          DEFAULT: "#4B5A24",
+          soft: "#E6E9D3",
+          dark: "#333D19",
+        },
+        // A very light touch of gold, reserved for small celebratory
+        // accents (completed-item pops) rather than large surfaces.
+        gold: {
+          DEFAULT: "#C9A227",
+          soft: "#F5ECC9",
         },
         // Luxury paper-planner neutrals
         paper: {

@@ -43,7 +43,7 @@ export default function WorkoutConsistencyChart({ lifeWeekly }: { lifeWeekly: Li
                 className="flex-1 rounded-t-sm transition-all"
                 style={{
                   height: `${pct}%`,
-                  backgroundColor: isCurrent ? "#C1815F" : "rgba(193, 129, 95, 0.45)",
+                  backgroundColor: isCurrent ? "#4B5A24" : "rgba(75, 90, 36, 0.4)",
                 }}
               />
             );

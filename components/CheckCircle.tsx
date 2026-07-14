@@ -38,7 +38,9 @@ export default function CheckCircle({
       aria-label={ariaLabel}
       onClick={handleClick}
       className={`flex shrink-0 items-center justify-center rounded-full border transition active:animate-check-pulse ${dims} ${
-        done ? `${accentClass} border-transparent` : "border-paper-faint"
+        done
+          ? `${accentClass} border-transparent ring-2 ring-gold/50 ring-offset-2 ring-offset-paper-bg`
+          : "border-paper-faint"
       }`}
     >
       {done && (

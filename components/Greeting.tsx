@@ -18,7 +18,13 @@ export default function Greeting() {
   return (
     <div className="min-w-0">
       <h1 className="truncate font-serif text-[1.35rem] font-medium leading-tight text-paper-ink">
-        {now ? `${greetingForHour(now.getHours())}, ${NAME}` : NBSP}
+        {now ? (
+          <>
+            {greetingForHour(now.getHours())}, <span className="text-work">{NAME}</span>
+          </>
+        ) : (
+          NBSP
+        )}
       </h1>
       <p className="mt-0.5 font-serif text-[0.85rem] italic text-paper-muted">
         {now ? formatElegantDate(now) : NBSP}

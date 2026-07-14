@@ -19,7 +19,7 @@ export default function StageStepper({
               {i > 0 && (
                 <div
                   className="h-px flex-1"
-                  style={{ backgroundColor: done || completed[stages[i - 1].key] ? "#6E5C4B" : "#E7DFCF" }}
+                  style={{ backgroundColor: done || completed[stages[i - 1].key] ? "#4B5A24" : "#E7DFCF" }}
                 />
               )}
               <button
@@ -45,7 +45,7 @@ export default function StageStepper({
               {i < stages.length - 1 && (
                 <div
                   className="h-px flex-1"
-                  style={{ backgroundColor: done ? "#6E5C4B" : "#E7DFCF" }}
+                  style={{ backgroundColor: done ? "#4B5A24" : "#E7DFCF" }}
                 />
               )}
             </div>

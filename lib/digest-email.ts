@@ -19,8 +19,8 @@ const COLORS = {
   ink: "#2B2620",
   muted: "#948A79",
   faint: "#C9BEA9",
-  work: "#6E5C4B",
-  life: "#C1815F",
+  work: "#4B5A24",
+  life: "#4B5A24",
 };
 
 function escapeHtml(text: string): string {

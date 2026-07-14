@@ -31,7 +31,9 @@ export default function HabitCell({
       type="button"
       aria-label={ariaLabel}
       onClick={handleClick}
-      className="flex h-6 w-6 items-center justify-center rounded-md border transition active:scale-90"
+      className={`flex h-6 w-6 items-center justify-center rounded-md border transition active:scale-90 ${
+        done ? "ring-2 ring-gold/50 ring-offset-2 ring-offset-paper-bg" : ""
+      }`}
       style={{
         backgroundColor: done ? color : "transparent",
         borderColor: done ? "transparent" : "#E7DFCF",
