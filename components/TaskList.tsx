@@ -2,6 +2,7 @@
 
 import { TaskItem } from "@/lib/types";
 import { sortTasks } from "@/lib/sort";
+import CheckCircle from "./CheckCircle";
 
 type World = "work" | "life";
 
@@ -38,25 +39,13 @@ export default function TaskList({
             key={task.id}
             className="flex animate-pop-in items-center gap-3 px-4 py-3"
           >
-            <button
-              aria-label={task.done ? "Mark not done" : "Mark done"}
-              onClick={() => onToggleDone(task.id)}
-              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition active:animate-check-pulse ${
-                task.done ? `${dot} border-transparent` : "border-paper-faint"
-              }`}
-            >
-              {task.done && (
-                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-paper-surface" fill="none">
-                  <path
-                    d="M5 13l4 4L19 7"
-                    stroke="currentColor"
-                    strokeWidth={3}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              )}
-            </button>
+            <CheckCircle
+              done={task.done}
+              onToggle={() => onToggleDone(task.id)}
+              accentClass={dot}
+              size="sm"
+              ariaLabel={task.done ? "Mark not done" : "Mark done"}
+            />
 
             <span
               className={`min-w-0 flex-1 truncate text-[15px] ${

@@ -23,11 +23,35 @@ const oneThingSchema = z.object({
   date: z.string(),
 });
 
+const weekTaskSchema = z.object({
+  id: z.string(),
+  text: z.string().max(500),
+  done: z.boolean(),
+  createdAt: z.string(),
+});
+
+const weekDataSchema = z.object({
+  tasks: z.array(weekTaskSchema).max(200),
+  workouts: z.array(z.string()).max(100),
+  weeklyFocus: z.array(z.string().max(200)).length(3),
+  reflection: z.string().max(5000),
+});
+
+const lifeWeeklySchema = z.object({
+  workoutGoal: z.number().int().min(1).max(30),
+  currentlyReading: z.object({
+    title: z.string().max(200),
+    author: z.string().max(200),
+  }),
+  weeks: z.record(weekDataSchema),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
   life: worldSchema,
   oneThing: oneThingSchema,
+  lifeWeekly: lifeWeeklySchema,
 });
 
 export async function GET() {

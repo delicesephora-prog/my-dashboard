@@ -1,6 +1,7 @@
 "use client";
 
 import { TaskItem } from "@/lib/types";
+import CheckCircle from "./CheckCircle";
 
 type World = "work" | "life";
 
@@ -32,36 +33,26 @@ export default function FocusStrip({
       </p>
       <div className="flex flex-col gap-1.5">
         {focusTasks.map((task) => (
-          <button
+          <div
             key={task.id}
-            onClick={() => onToggleDone(task.id)}
-            className={`flex items-center gap-3 rounded-xl2 border-l-4 bg-paper-surface px-4 py-2.5 text-left shadow-paper transition active:scale-[0.99] ${accentBorder}`}
+            className={`flex items-center gap-3 rounded-xl2 border-l-4 bg-paper-surface px-4 py-2.5 shadow-paper transition ${accentBorder}`}
           >
-            <span
-              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-                task.done ? `${dot} border-transparent` : "border-paper-faint"
-              }`}
-            >
-              {task.done && (
-                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-paper-surface" fill="none">
-                  <path
-                    d="M5 13l4 4L19 7"
-                    stroke="currentColor"
-                    strokeWidth={3}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              )}
-            </span>
-            <span
-              className={`font-serif text-[1.02rem] ${
+            <CheckCircle
+              done={task.done}
+              onToggle={() => onToggleDone(task.id)}
+              accentClass={dot}
+              ariaLabel={task.done ? "Mark not done" : "Mark done"}
+            />
+            <button
+              type="button"
+              onClick={() => onToggleDone(task.id)}
+              className={`flex-1 text-left font-serif text-[1.02rem] active:opacity-70 ${
                 task.done ? "text-paper-faint line-through" : "text-paper-ink"
               }`}
             >
               {task.text}
-            </span>
-          </button>
+            </button>
+          </div>
         ))}
       </div>
     </div>

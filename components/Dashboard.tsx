@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { DashboardData, TaskItem, WorldData } from "@/lib/types";
+import { DashboardData, LifeWeekly, TaskItem, WorldData, weekDataFor } from "@/lib/types";
 import { todayKey } from "@/lib/date";
+import { weekKeyFor } from "@/lib/week";
 import Greeting from "./Greeting";
 import OneThing from "./OneThing";
 import WorldToggle from "./WorldToggle";
@@ -10,6 +11,7 @@ import FocusStrip from "./FocusStrip";
 import QuickAdd from "./QuickAdd";
 import TaskList from "./TaskList";
 import NotesSheet from "./NotesSheet";
+import WeekView from "./WeekView";
 import SaveIndicator, { SaveStatus } from "./SaveIndicator";
 
 type World = "work" | "life";
@@ -104,11 +106,17 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     scheduleSave();
   }
 
+  function updateLifeWeekly(updater: (lw: LifeWeekly) => LifeWeekly) {
+    setData((prev) => ({ ...prev, lifeWeekly: updater(prev.lifeWeekly) }));
+    scheduleSave();
+  }
+
   const current = data[world];
   const oneThingText = data.oneThing.date === todayKey() ? data.oneThing.text : "";
+  const thisWeekTasks = weekDataFor(data.lifeWeekly, weekKeyFor(new Date())).tasks;
   const counts = {
     work: data.work.tasks.filter((t) => !t.done).length,
-    life: data.life.tasks.filter((t) => !t.done).length,
+    life: thisWeekTasks.filter((t) => !t.done).length,
   };
 
   return (
@@ -129,24 +137,32 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
       <WorldToggle world={world} onChange={setWorld} counts={counts} />
 
       <main className="flex min-h-0 flex-1 flex-col px-5 pt-3">
-        <FocusStrip world={world} tasks={current.tasks} onToggleDone={toggleDone} />
-        <QuickAdd world={world} onAdd={addTask} />
-        <TaskList
-          world={world}
-          tasks={current.tasks}
-          onToggleDone={toggleDone}
-          onToggleFocus={toggleFocus}
-          onRemove={removeTask}
-        />
+        {world === "work" ? (
+          <>
+            <FocusStrip world={world} tasks={current.tasks} onToggleDone={toggleDone} />
+            <QuickAdd world={world} onAdd={addTask} />
+            <TaskList
+              world={world}
+              tasks={current.tasks}
+              onToggleDone={toggleDone}
+              onToggleFocus={toggleFocus}
+              onRemove={removeTask}
+            />
+          </>
+        ) : (
+          <WeekView lifeWeekly={data.lifeWeekly} onChange={updateLifeWeekly} />
+        )}
       </main>
 
-      <button
-        onClick={() => setNotesOpen(true)}
-        className="safe-bottom mx-5 mb-3 mt-2 rounded-xl2 border border-paper-border bg-paper-surface px-4 py-3 text-left text-sm text-paper-muted shadow-paper"
-      >
-        {world === "work" ? "Work" : "Life"} notes
-        {current.notes ? " · has notes" : ""}
-      </button>
+      {world === "work" && (
+        <button
+          onClick={() => setNotesOpen(true)}
+          className="safe-bottom mx-5 mb-3 mt-2 rounded-xl2 border border-paper-border bg-paper-surface px-4 py-3 text-left text-sm text-paper-muted shadow-paper"
+        >
+          Work notes
+          {current.notes ? " · has notes" : ""}
+        </button>
+      )}
 
       {notesOpen && (
         <NotesSheet
