@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getDashboardData, saveDashboardData } from "@/lib/db";
+import { normalizeDashboardData } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -382,7 +383,11 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
   const body = await req.json().catch(() => null);
-  const parsed = dashboardSchema.safeParse(body);
+  // Backfill any fields the request is missing (e.g. a browser tab that's
+  // been open since before a newer field was added) so a slightly stale
+  // client never gets its save silently rejected.
+  const normalized = normalizeDashboardData(body);
+  const parsed = dashboardSchema.safeParse(normalized);
 
   if (!parsed.success) {
     return NextResponse.json(

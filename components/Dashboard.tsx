@@ -73,10 +73,14 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(latestData.current),
         });
-        if (!res.ok) throw new Error("save failed");
+        if (!res.ok) {
+          const detail = await res.text().catch(() => "");
+          throw new Error(`save failed (${res.status}): ${detail.slice(0, 500)}`);
+        }
         window.localStorage.setItem(LOCAL_KEY, JSON.stringify(latestData.current));
         setStatus("saved");
-      } catch {
+      } catch (err) {
+        console.error("[dashboard] save failed:", err);
         setStatus("error");
       }
     }, SAVE_DELAY_MS);
@@ -155,7 +159,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
         <div className="flex items-start justify-between gap-3">
           <Greeting />
           <div className="flex items-center gap-2 pt-1">
-            <SaveIndicator status={status} />
+            <SaveIndicator status={status} onRetry={scheduleSave} />
             <button
               type="button"
               onClick={() => setSettingsOpen(true)}
