@@ -25,6 +25,7 @@ import WeekView from "./WeekView";
 import BrainDump from "./BrainDump";
 import DailyReviewBar from "./DailyReviewBar";
 import DailyReviewSheet from "./DailyReviewSheet";
+import SettingsSheet from "./SettingsSheet";
 import OperationsDashboard from "./work/OperationsDashboard";
 import BackBeat from "./work/BackBeat";
 import Reference from "./work/Reference";
@@ -50,6 +51,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   const [lifeView, setLifeView] = useState<LifeView>("week");
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [dailyReviewOpen, setDailyReviewOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestData = useRef(data);
@@ -152,8 +154,16 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
       <header className="safe-top px-5 pb-2 pt-2">
         <div className="flex items-start justify-between gap-3">
           <Greeting />
-          <div className="pt-1">
+          <div className="flex items-center gap-2 pt-1">
             <SaveIndicator status={status} />
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Settings"
+              className="text-base leading-none text-paper-muted"
+            >
+              ⚙
+            </button>
           </div>
         </div>
       </header>
@@ -252,6 +262,17 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
       )}
 
       <BrainDump value={data.brainDump} onChange={setBrainDump} />
+
+      {settingsOpen && (
+        <SettingsSheet
+          data={data}
+          onImported={(imported) => {
+            setData(imported);
+            setStatus("saved");
+          }}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
     </div>
   );
 }
