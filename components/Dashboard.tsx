@@ -1,20 +1,30 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { DashboardData, LifeWeekly, TaskItem, WorldData, weekDataFor } from "@/lib/types";
+import {
+  BackBeat as BackBeatData,
+  DashboardData,
+  HabitsData,
+  LifeWeekly,
+  WorkOps,
+  weekDataFor,
+} from "@/lib/types";
 import { todayKey } from "@/lib/date";
 import { weekKeyFor } from "@/lib/week";
 import Greeting from "./Greeting";
 import OneThing from "./OneThing";
 import WorldToggle from "./WorldToggle";
-import FocusStrip from "./FocusStrip";
-import QuickAdd from "./QuickAdd";
-import TaskList from "./TaskList";
-import NotesSheet from "./NotesSheet";
+import SubNav from "./SubNav";
 import WeekView from "./WeekView";
+import OperationsDashboard from "./work/OperationsDashboard";
+import BackBeat from "./work/BackBeat";
+import HabitsView from "./life/HabitsView";
+import ManageHabits from "./life/ManageHabits";
 import SaveIndicator, { SaveStatus } from "./SaveIndicator";
 
 type World = "work" | "life";
+type WorkView = "dashboard" | "backbeat";
+type LifeView = "week" | "habits" | "manageHabits";
 
 const LOCAL_KEY = "dashboard-cache-v1";
 const SAVE_DELAY_MS = 700;
@@ -22,7 +32,8 @@ const SAVE_DELAY_MS = 700;
 export default function Dashboard({ initialData }: { initialData: DashboardData }) {
   const [data, setData] = useState<DashboardData>(initialData);
   const [world, setWorld] = useState<World>("work");
-  const [notesOpen, setNotesOpen] = useState(false);
+  const [workView, setWorkView] = useState<WorkView>("dashboard");
+  const [lifeView, setLifeView] = useState<LifeView>("week");
   const [status, setStatus] = useState<SaveStatus>("idle");
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -54,53 +65,6 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     }, SAVE_DELAY_MS);
   }, []);
 
-  function updateWorld(w: World, updater: (world: WorldData) => WorldData) {
-    setData((prev) => ({ ...prev, [w]: updater(prev[w]) }));
-    scheduleSave();
-  }
-
-  function addTask(text: string) {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    const task: TaskItem = {
-      id: crypto.randomUUID(),
-      text: trimmed,
-      done: false,
-      focus: false,
-      createdAt: new Date().toISOString(),
-    };
-    updateWorld(world, (w) => ({ ...w, tasks: [task, ...w.tasks] }));
-  }
-
-  function toggleDone(id: string) {
-    updateWorld(world, (w) => ({
-      ...w,
-      tasks: w.tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
-    }));
-  }
-
-  function toggleFocus(id: string) {
-    updateWorld(world, (w) => {
-      const focusCount = w.tasks.filter((t) => t.focus).length;
-      return {
-        ...w,
-        tasks: w.tasks.map((t) => {
-          if (t.id !== id) return t;
-          if (!t.focus && focusCount >= 3) return t;
-          return { ...t, focus: !t.focus };
-        }),
-      };
-    });
-  }
-
-  function removeTask(id: string) {
-    updateWorld(world, (w) => ({ ...w, tasks: w.tasks.filter((t) => t.id !== id) }));
-  }
-
-  function setNotes(text: string) {
-    updateWorld(world, (w) => ({ ...w, notes: text }));
-  }
-
   function setOneThing(text: string) {
     setData((prev) => ({ ...prev, oneThing: { text, date: todayKey() } }));
     scheduleSave();
@@ -111,11 +75,25 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     scheduleSave();
   }
 
-  const current = data[world];
+  function updateWorkOps(updater: (wo: WorkOps) => WorkOps) {
+    setData((prev) => ({ ...prev, workOps: updater(prev.workOps) }));
+    scheduleSave();
+  }
+
+  function updateBackBeat(updater: (b: BackBeatData) => BackBeatData) {
+    setData((prev) => ({ ...prev, backBeat: updater(prev.backBeat) }));
+    scheduleSave();
+  }
+
+  function updateHabits(updater: (h: HabitsData) => HabitsData) {
+    setData((prev) => ({ ...prev, habits: updater(prev.habits) }));
+    scheduleSave();
+  }
+
   const oneThingText = data.oneThing.date === todayKey() ? data.oneThing.text : "";
   const thisWeekTasks = weekDataFor(data.lifeWeekly, weekKeyFor(new Date())).tasks;
   const counts = {
-    work: data.work.tasks.filter((t) => !t.done).length,
+    work: data.workOps.tasks.filter((t) => t.status !== "completed").length,
     life: thisWeekTasks.filter((t) => !t.done).length,
   };
 
@@ -139,39 +117,54 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
       <main className="flex min-h-0 flex-1 flex-col px-5 pt-3">
         {world === "work" ? (
           <>
-            <FocusStrip world={world} tasks={current.tasks} onToggleDone={toggleDone} />
-            <QuickAdd world={world} onAdd={addTask} />
-            <TaskList
-              world={world}
-              tasks={current.tasks}
-              onToggleDone={toggleDone}
-              onToggleFocus={toggleFocus}
-              onRemove={removeTask}
+            <SubNav
+              items={[
+                { key: "dashboard", label: "Dashboard" },
+                { key: "backbeat", label: "BackBeat" },
+              ]}
+              active={workView}
+              onChange={setWorkView}
+              accentClass="bg-work"
             />
+            {workView === "dashboard" ? (
+              <OperationsDashboard workOps={data.workOps} onChange={updateWorkOps} />
+            ) : (
+              <BackBeat backBeat={data.backBeat} onChange={updateBackBeat} />
+            )}
           </>
         ) : (
-          <WeekView lifeWeekly={data.lifeWeekly} onChange={updateLifeWeekly} />
+          <>
+            {lifeView !== "manageHabits" && (
+              <SubNav
+                items={[
+                  { key: "week", label: "This Week" },
+                  { key: "habits", label: "Habits" },
+                ]}
+                active={lifeView}
+                onChange={setLifeView}
+                accentClass="bg-life"
+              />
+            )}
+            {lifeView === "week" && (
+              <WeekView lifeWeekly={data.lifeWeekly} onChange={updateLifeWeekly} />
+            )}
+            {lifeView === "habits" && (
+              <HabitsView
+                habitsData={data.habits}
+                onChange={updateHabits}
+                onManage={() => setLifeView("manageHabits")}
+              />
+            )}
+            {lifeView === "manageHabits" && (
+              <ManageHabits
+                habitsData={data.habits}
+                onChange={updateHabits}
+                onBack={() => setLifeView("habits")}
+              />
+            )}
+          </>
         )}
       </main>
-
-      {world === "work" && (
-        <button
-          onClick={() => setNotesOpen(true)}
-          className="safe-bottom mx-5 mb-3 mt-2 rounded-xl2 border border-paper-border bg-paper-surface px-4 py-3 text-left text-sm text-paper-muted shadow-paper"
-        >
-          Work notes
-          {current.notes ? " · has notes" : ""}
-        </button>
-      )}
-
-      {notesOpen && (
-        <NotesSheet
-          world={world}
-          value={current.notes}
-          onChange={setNotes}
-          onClose={() => setNotesOpen(false)}
-        />
-      )}
     </div>
   );
 }

@@ -21,6 +21,19 @@ export function shiftWeekKey(weekKey: string, deltaWeeks: number): string {
   return dateKey(date);
 }
 
+// Whether a YYYY-MM-DD date string falls within the Monday-Sunday range
+// keyed by weekKey.
+export function isDateInWeek(dateStr: string, weekKey: string): boolean {
+  if (!dateStr) return false;
+  const [y, m, d] = weekKey.split("-").map(Number);
+  const start = new Date(y, m - 1, d);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 7);
+  const [dy, dm, dd] = dateStr.split("-").map(Number);
+  const target = new Date(dy, dm - 1, dd);
+  return target >= start && target < end;
+}
+
 export function formatWeekRange(weekKey: string): string {
   const [y, m, d] = weekKey.split("-").map(Number);
   const start = new Date(y, m - 1, d);
