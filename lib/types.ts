@@ -703,6 +703,18 @@ export function isDailyReviewEntryFilled(entry: DailyReviewEntry): boolean {
   );
 }
 
+// ---------------------------------------------------------------------------
+// SMS alerts: tracks which overdue tasks have already been texted about,
+// so the daily check only alerts once per task per overdue occurrence.
+
+export type SmsAlertsData = {
+  alertedOverdueTaskIds: string[];
+};
+
+export function emptySmsAlertsData(): SmsAlertsData {
+  return { alertedOverdueTaskIds: [] };
+}
+
 /**
  * Everything lives in one JSON blob so new features (new fields, new
  * widgets) can be added later just by extending this shape - no
@@ -724,6 +736,7 @@ export type DashboardData = {
   bucketList: BucketListData;
   year: YearData;
   dailyReview: DailyReviewData;
+  smsAlerts: SmsAlertsData;
 };
 
 export function emptyWorld(): WorldData {
@@ -751,6 +764,7 @@ export function defaultDashboardData(): DashboardData {
     bucketList: emptyBucketListData(),
     year: emptyYearData(),
     dailyReview: emptyDailyReviewData(),
+    smsAlerts: emptySmsAlertsData(),
   };
 }
 
@@ -818,6 +832,9 @@ export function normalizeDashboardData(
     },
     dailyReview: {
       entries: data.dailyReview?.entries ?? {},
+    },
+    smsAlerts: {
+      alertedOverdueTaskIds: data.smsAlerts?.alertedOverdueTaskIds ?? [],
     },
   };
 }

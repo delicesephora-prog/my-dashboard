@@ -345,6 +345,10 @@ const dailyReviewDataSchema = z.object({
   entries: z.record(dailyReviewEntrySchema),
 });
 
+const smsAlertsDataSchema = z.object({
+  alertedOverdueTaskIds: z.array(z.string()).max(2000),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -361,6 +365,7 @@ const dashboardSchema = z.object({
   bucketList: bucketListDataSchema,
   year: yearDataSchema,
   dailyReview: dailyReviewDataSchema,
+  smsAlerts: smsAlertsDataSchema,
 });
 
 export async function GET() {
