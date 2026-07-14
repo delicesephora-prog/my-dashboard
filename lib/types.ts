@@ -1,3 +1,5 @@
+import { RoutinesData, emptyRoutinesData, normalizeRoutinesData } from "./routines";
+
 export type TaskItem = {
   id: string;
   text: string;
@@ -737,6 +739,7 @@ export type DashboardData = {
   year: YearData;
   dailyReview: DailyReviewData;
   smsAlerts: SmsAlertsData;
+  routines: RoutinesData;
 };
 
 export function emptyWorld(): WorldData {
@@ -765,6 +768,7 @@ export function defaultDashboardData(): DashboardData {
     year: emptyYearData(),
     dailyReview: emptyDailyReviewData(),
     smsAlerts: emptySmsAlertsData(),
+    routines: emptyRoutinesData(),
   };
 }
 
@@ -836,6 +840,7 @@ export function normalizeDashboardData(
     smsAlerts: {
       alertedOverdueTaskIds: data.smsAlerts?.alertedOverdueTaskIds ?? [],
     },
+    routines: normalizeRoutinesData(data.routines),
   };
 }
 

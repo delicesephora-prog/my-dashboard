@@ -15,6 +15,7 @@ import {
   YearData,
   weekDataFor,
 } from "@/lib/types";
+import { RoutinesData } from "@/lib/routines";
 import { todayKey } from "@/lib/date";
 import { weekKeyFor } from "@/lib/week";
 import WorldToggle from "./WorldToggle";
@@ -31,6 +32,8 @@ import BackBeat from "./work/BackBeat";
 import Reference from "./work/Reference";
 import HabitsView from "./life/HabitsView";
 import ManageHabits from "./life/ManageHabits";
+import RoutinesView from "./life/routines/RoutinesView";
+import ManageRoutines from "./life/routines/ManageRoutines";
 import QuarterView from "./life/quarter/QuarterView";
 import BooksView from "./life/BooksView";
 import BucketListView from "./life/BucketListView";
@@ -39,7 +42,16 @@ import SaveIndicator, { SaveStatus } from "./SaveIndicator";
 
 type World = "front" | "work" | "life";
 type WorkView = "dashboard" | "backbeat" | "reference";
-type LifeView = "week" | "habits" | "manageHabits" | "quarter" | "books" | "bucketList" | "year";
+type LifeView =
+  | "week"
+  | "routines"
+  | "manageRoutines"
+  | "habits"
+  | "manageHabits"
+  | "quarter"
+  | "books"
+  | "bucketList"
+  | "year";
 
 const LOCAL_KEY = "dashboard-cache-v1";
 const SAVE_DELAY_MS = 700;
@@ -108,6 +120,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
 
   function updateBackBeat(updater: (b: BackBeatData) => BackBeatData) {
     setData((prev) => ({ ...prev, backBeat: updater(prev.backBeat) }));
+    scheduleSave();
+  }
+
+  function updateRoutines(updater: (r: RoutinesData) => RoutinesData) {
+    setData((prev) => ({ ...prev, routines: updater(prev.routines) }));
     scheduleSave();
   }
 
@@ -210,10 +227,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           </>
         ) : (
           <>
-            {lifeView !== "manageHabits" && (
+            {lifeView !== "manageHabits" && lifeView !== "manageRoutines" && (
               <SubNav
                 items={[
                   { key: "week", label: "This Week" },
+                  { key: "routines", label: "Routines" },
                   { key: "habits", label: "Habits" },
                   { key: "quarter", label: "Quarter" },
                   { key: "books", label: "Books" },
@@ -230,6 +248,20 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 lifeWeekly={data.lifeWeekly}
                 currentlyReading={data.books.currentlyReading}
                 onChange={updateLifeWeekly}
+              />
+            )}
+            {lifeView === "routines" && (
+              <RoutinesView
+                routinesData={data.routines}
+                onChange={updateRoutines}
+                onManage={() => setLifeView("manageRoutines")}
+              />
+            )}
+            {lifeView === "manageRoutines" && (
+              <ManageRoutines
+                routinesData={data.routines}
+                onChange={updateRoutines}
+                onBack={() => setLifeView("routines")}
               />
             )}
             {lifeView === "habits" && (

@@ -350,6 +350,43 @@ const smsAlertsDataSchema = z.object({
   alertedOverdueTaskIds: z.array(z.string()).max(2000),
 });
 
+const routineStepSchema = z.object({
+  id: z.string(),
+  text: z.string().max(300),
+  targetTime: z.string().max(10),
+  durationMinutes: z.number().int().min(0).max(600).nullable(),
+  order: z.number().int(),
+});
+
+const routineVariantSchema = z.object({
+  steps: z.array(routineStepSchema).max(50),
+});
+
+const routineSchema = z.object({
+  variants: z.object({
+    office: routineVariantSchema,
+    remote: routineVariantSchema,
+    weekend: routineVariantSchema,
+  }),
+});
+
+const routineDayLogSchema = z.object({
+  completedStepIds: z.object({
+    morning: z.array(z.string()).max(50),
+    day: z.array(z.string()).max(50),
+    night: z.array(z.string()).max(50),
+  }),
+});
+
+const routinesDataSchema = z.object({
+  config: z.object({
+    morning: routineSchema,
+    day: routineSchema,
+    night: routineSchema,
+  }),
+  days: z.record(routineDayLogSchema),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -367,6 +404,7 @@ const dashboardSchema = z.object({
   year: yearDataSchema,
   dailyReview: dailyReviewDataSchema,
   smsAlerts: smsAlertsDataSchema,
+  routines: routinesDataSchema,
 });
 
 export async function GET() {
