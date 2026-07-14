@@ -1,6 +1,6 @@
 "use client";
 
-type World = "work" | "life";
+type World = "front" | "work" | "life";
 
 export default function WorldToggle({
   world,
@@ -14,6 +14,12 @@ export default function WorldToggle({
   return (
     <div className="px-5">
       <div className="flex gap-6 border-b border-paper-border">
+        <Tab
+          label="Front Page"
+          active={world === "front"}
+          underline="border-work"
+          onClick={() => onChange("front")}
+        />
         <Tab
           label="Work"
           active={world === "work"}
@@ -42,7 +48,7 @@ function Tab({
 }: {
   label: string;
   active: boolean;
-  count: number;
+  count?: number;
   underline: string;
   onClick: () => void;
 }) {
@@ -60,7 +66,7 @@ function Tab({
       >
         {label}
       </span>
-      <span className="text-xs text-paper-faint">{count}</span>
+      {count !== undefined && <span className="text-xs text-paper-faint">{count}</span>}
     </button>
   );
 }

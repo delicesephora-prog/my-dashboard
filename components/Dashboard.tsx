@@ -17,8 +17,6 @@ import {
 } from "@/lib/types";
 import { todayKey } from "@/lib/date";
 import { weekKeyFor } from "@/lib/week";
-import Greeting from "./Greeting";
-import OneThing from "./OneThing";
 import WorldToggle from "./WorldToggle";
 import SubNav from "./SubNav";
 import WeekView from "./WeekView";
@@ -26,6 +24,8 @@ import BrainDump from "./BrainDump";
 import DailyReviewBar from "./DailyReviewBar";
 import DailyReviewSheet from "./DailyReviewSheet";
 import SettingsSheet from "./SettingsSheet";
+import FrontPage from "./FrontPage";
+import { FrontPageNavTarget } from "@/lib/frontpage";
 import OperationsDashboard from "./work/OperationsDashboard";
 import BackBeat from "./work/BackBeat";
 import Reference from "./work/Reference";
@@ -37,7 +37,7 @@ import BucketListView from "./life/BucketListView";
 import YearView from "./life/year/YearView";
 import SaveIndicator, { SaveStatus } from "./SaveIndicator";
 
-type World = "work" | "life";
+type World = "front" | "work" | "life";
 type WorkView = "dashboard" | "backbeat" | "reference";
 type LifeView = "week" | "habits" | "manageHabits" | "quarter" | "books" | "bucketList" | "year";
 
@@ -46,7 +46,7 @@ const SAVE_DELAY_MS = 700;
 
 export default function Dashboard({ initialData }: { initialData: DashboardData }) {
   const [data, setData] = useState<DashboardData>(initialData);
-  const [world, setWorld] = useState<World>("work");
+  const [world, setWorld] = useState<World>("front");
   const [workView, setWorkView] = useState<WorkView>("dashboard");
   const [lifeView, setLifeView] = useState<LifeView>("week");
   const [status, setStatus] = useState<SaveStatus>("idle");
@@ -153,33 +153,40 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     life: thisWeekTasks.filter((t) => !t.done).length,
   };
 
+  function handleFrontPageNavigate(target: FrontPageNavTarget) {
+    setWorld(target.world);
+    if (target.world === "work" && target.workView) setWorkView(target.workView);
+    if (target.world === "life" && target.lifeView) setLifeView(target.lifeView);
+  }
+
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-paper-bg">
       <header className="safe-top px-5 pb-2 pt-2">
-        <div className="flex items-start justify-between gap-3">
-          <Greeting />
-          <div className="flex items-center gap-2 pt-1">
-            <SaveIndicator status={status} onRetry={scheduleSave} />
-            <button
-              type="button"
-              onClick={() => setSettingsOpen(true)}
-              aria-label="Settings"
-              className="text-base leading-none text-paper-muted"
-            >
-              ⚙
-            </button>
-          </div>
+        <div className="flex items-center justify-end gap-2">
+          <SaveIndicator status={status} onRetry={scheduleSave} />
+          <button
+            type="button"
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Settings"
+            className="text-base leading-none text-paper-muted"
+          >
+            ⚙
+          </button>
         </div>
       </header>
-
-      <div className="px-5 pb-3">
-        <OneThing value={oneThingText} onChange={setOneThing} />
-      </div>
 
       <WorldToggle world={world} onChange={setWorld} counts={counts} />
 
       <main className="flex min-h-0 flex-1 flex-col px-5 pt-3">
-        {world === "work" ? (
+        {world === "front" ? (
+          <FrontPage
+            data={data}
+            oneThingText={oneThingText}
+            onOneThingChange={setOneThing}
+            counts={counts}
+            onNavigate={handleFrontPageNavigate}
+          />
+        ) : world === "work" ? (
           <>
             <SubNav
               items={[
