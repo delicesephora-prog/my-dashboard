@@ -13,7 +13,7 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #5B7FFF 0%, #FF8A5B 100%)",
+          background: "linear-gradient(135deg, #EFE7DA 0%, #F6E6DA 100%)",
           borderRadius: 96,
         }}
       >
@@ -22,14 +22,14 @@ export default function Icon() {
             display: "flex",
             width: 260,
             height: 260,
-            borderRadius: 64,
-            background: "rgba(255,255,255,0.95)",
+            borderRadius: 56,
+            background: "#6E5C4B",
             alignItems: "center",
             justifyContent: "center",
             fontSize: 150,
-            fontWeight: 700,
-            color: "#1C1C1E",
-            fontFamily: "sans-serif",
+            fontWeight: 500,
+            color: "#FBF5EA",
+            fontFamily: "Georgia, serif",
           }}
         >
           D

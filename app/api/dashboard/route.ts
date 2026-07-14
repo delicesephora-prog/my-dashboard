@@ -18,10 +18,16 @@ const worldSchema = z.object({
   notes: z.string().max(20000),
 });
 
+const oneThingSchema = z.object({
+  text: z.string().max(2000),
+  date: z.string(),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
   life: worldSchema,
+  oneThing: oneThingSchema,
 });
 
 export async function GET() {

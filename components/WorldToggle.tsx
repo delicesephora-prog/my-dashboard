@@ -13,21 +13,19 @@ export default function WorldToggle({
 }) {
   return (
     <div className="px-5">
-      <div className="flex gap-2 rounded-xl2 bg-base-border/60 p-1.5">
-        <Segment
+      <div className="flex gap-6 border-b border-paper-border">
+        <Tab
           label="Work"
-          emoji="💼"
           active={world === "work"}
           count={counts.work}
-          activeClass="bg-work text-white shadow-sm"
+          underline="border-work"
           onClick={() => onChange("work")}
         />
-        <Segment
+        <Tab
           label="Life"
-          emoji="🌿"
           active={world === "life"}
           count={counts.life}
-          activeClass="bg-life text-white shadow-sm"
+          underline="border-life"
           onClick={() => onChange("life")}
         />
       </div>
@@ -35,37 +33,34 @@ export default function WorldToggle({
   );
 }
 
-function Segment({
+function Tab({
   label,
-  emoji,
   active,
   count,
-  activeClass,
+  underline,
   onClick,
 }: {
   label: string;
-  emoji: string;
   active: boolean;
   count: number;
-  activeClass: string;
+  underline: string;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-all ${
-        active ? activeClass : "text-base-muted"
+      className={`-mb-px flex items-baseline gap-1.5 border-b-2 py-2.5 transition-colors ${
+        active ? underline : "border-transparent"
       }`}
     >
-      <span aria-hidden>{emoji}</span>
-      <span>{label}</span>
       <span
-        className={`min-w-[1.4rem] rounded-full px-1.5 py-0.5 text-xs font-bold ${
-          active ? "bg-white/25" : "bg-base-surface text-base-muted"
+        className={`font-serif text-[1.05rem] ${
+          active ? "text-paper-ink" : "text-paper-muted"
         }`}
       >
-        {count}
+        {label}
       </span>
+      <span className="text-xs text-paper-faint">{count}</span>
     </button>
   );
 }

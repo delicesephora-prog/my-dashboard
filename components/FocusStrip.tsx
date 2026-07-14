@@ -14,36 +14,36 @@ export default function FocusStrip({
   onToggleDone: (id: string) => void;
 }) {
   const focusTasks = tasks.filter((t) => t.focus);
-  const accent = world === "work" ? "border-work" : "border-life";
+  const accentBorder = world === "work" ? "border-work" : "border-life";
   const dot = world === "work" ? "bg-work" : "bg-life";
 
   if (focusTasks.length === 0) {
     return (
-      <div className="mb-4 rounded-xl2 border border-dashed border-base-border px-4 py-3 text-center text-sm text-base-muted">
-        Tap the ☆ on a task below to pin up to 3 as today&apos;s focus
+      <div className="mb-3 rounded-xl2 border border-dashed border-paper-border px-4 py-2.5 text-center text-sm text-paper-muted">
+        Tap the pin on a task below to set up to 3 as today&apos;s focus
       </div>
     );
   }
 
   return (
-    <div className="mb-4">
-      <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-base-muted">
-        Today&apos;s focus
+    <div className="mb-3">
+      <p className="mb-1.5 px-0.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+        Today&apos;s Focus
       </p>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-1.5">
         {focusTasks.map((task) => (
           <button
             key={task.id}
             onClick={() => onToggleDone(task.id)}
-            className={`flex items-center gap-3 rounded-xl2 border-2 bg-base-surface px-4 py-3.5 text-left shadow-sm transition active:scale-[0.98] ${accent}`}
+            className={`flex items-center gap-3 rounded-xl2 border-l-4 bg-paper-surface px-4 py-2.5 text-left shadow-paper transition active:scale-[0.99] ${accentBorder}`}
           >
             <span
-              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
-                task.done ? `${dot} border-transparent` : "border-base-border"
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                task.done ? `${dot} border-transparent` : "border-paper-faint"
               }`}
             >
               {task.done && (
-                <svg viewBox="0 0 24 24" className="h-4 w-4 text-white" fill="none">
+                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-paper-surface" fill="none">
                   <path
                     d="M5 13l4 4L19 7"
                     stroke="currentColor"
@@ -55,8 +55,8 @@ export default function FocusStrip({
               )}
             </span>
             <span
-              className={`text-[15px] font-medium ${
-                task.done ? "text-base-muted line-through" : "text-base-ink"
+              className={`font-serif text-[1.02rem] ${
+                task.done ? "text-paper-faint line-through" : "text-paper-ink"
               }`}
             >
               {task.text}

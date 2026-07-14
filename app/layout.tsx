@@ -1,5 +1,14 @@
 import type { Metadata, Viewport } from "next";
+import { Fraunces } from "next/font/google";
 import "./globals.css";
+
+const editorial = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-editorial",
+  style: ["normal", "italic"],
+  weight: ["300", "400", "500", "600"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "My Dashboard",
@@ -17,7 +26,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#FAFAF9",
+  themeColor: "#F6F1E9",
 };
 
 export default function RootLayout({
@@ -26,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={editorial.variable}>
       <body className="font-sans antialiased">{children}</body>
     </html>
   );

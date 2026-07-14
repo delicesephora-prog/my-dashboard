@@ -24,64 +24,68 @@ export default function TaskList({
 
   if (sorted.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center text-center text-sm text-base-muted">
+      <div className="flex flex-1 items-center justify-center text-center font-serif text-[0.95rem] italic text-paper-muted">
         Nothing here yet. Add your first task above.
       </div>
     );
   }
 
   return (
-    <ul className="scroll-quiet -mx-1 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-1 pb-2">
-      {sorted.map((task) => (
-        <li
-          key={task.id}
-          className="flex animate-pop-in items-center gap-3 rounded-xl border border-base-border bg-base-surface px-3 py-2.5"
-        >
-          <button
-            aria-label={task.done ? "Mark not done" : "Mark done"}
-            onClick={() => onToggleDone(task.id)}
-            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition active:animate-check-pulse ${
-              task.done ? `${dot} border-transparent` : "border-base-border"
-            }`}
+    <div className="min-h-0 flex-1 overflow-hidden rounded-xl2 border border-paper-border bg-paper-surface shadow-paper">
+      <ul className="scroll-quiet h-full divide-y divide-paper-border overflow-y-auto">
+        {sorted.map((task) => (
+          <li
+            key={task.id}
+            className="flex animate-pop-in items-center gap-3 px-4 py-3"
           >
-            {task.done && (
-              <svg viewBox="0 0 24 24" className="h-4 w-4 text-white" fill="none">
-                <path
-                  d="M5 13l4 4L19 7"
-                  stroke="currentColor"
-                  strokeWidth={3}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            )}
-          </button>
+            <button
+              aria-label={task.done ? "Mark not done" : "Mark done"}
+              onClick={() => onToggleDone(task.id)}
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition active:animate-check-pulse ${
+                task.done ? `${dot} border-transparent` : "border-paper-faint"
+              }`}
+            >
+              {task.done && (
+                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-paper-surface" fill="none">
+                  <path
+                    d="M5 13l4 4L19 7"
+                    stroke="currentColor"
+                    strokeWidth={3}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
+            </button>
 
-          <span
-            className={`min-w-0 flex-1 truncate text-[15px] ${
-              task.done ? "text-base-muted line-through" : "text-base-ink"
-            }`}
-          >
-            {task.text}
-          </span>
+            <span
+              className={`min-w-0 flex-1 truncate text-[15px] ${
+                task.done ? "text-paper-faint line-through" : "text-paper-ink"
+              }`}
+            >
+              {task.text}
+            </span>
 
-          <button
-            aria-label={task.focus ? "Remove from today's focus" : "Pin to today's focus"}
-            onClick={() => onToggleFocus(task.id)}
-            className={`shrink-0 px-1 text-lg ${task.focus ? star : "text-base-border"}`}
-          >
-            {task.focus ? "★" : "☆"}
-          </button>
+            <button
+              aria-label={task.focus ? "Remove from today's focus" : "Pin to today's focus"}
+              onClick={() => onToggleFocus(task.id)}
+              className={`shrink-0 px-1 text-lg leading-none ${
+                task.focus ? star : "text-paper-faint"
+              }`}
+            >
+              {task.focus ? "★" : "☆"}
+            </button>
 
-          <button
-            aria-label="Delete task"
-            onClick={() => onRemove(task.id)}
-            className="shrink-0 px-1 text-base text-base-border"
-          >
-            ×
-          </button>
-        </li>
-      ))}
-    </ul>
+            <button
+              aria-label="Delete task"
+              onClick={() => onRemove(task.id)}
+              className="shrink-0 px-1 text-base leading-none text-paper-faint"
+            >
+              ×
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

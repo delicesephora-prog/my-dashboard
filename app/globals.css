@@ -9,8 +9,14 @@ body {
 }
 
 body {
-  background-color: theme("colors.base.bg");
-  color: theme("colors.base.ink");
+  background-color: theme("colors.paper.bg");
+  color: theme("colors.paper.ink");
+}
+
+/* A soft divider line for editorial-style separators between sections */
+.rule {
+  height: 1px;
+  background: theme("colors.paper.border");
 }
 
 /* Respect the notch / home-indicator area when installed as a home-screen app */

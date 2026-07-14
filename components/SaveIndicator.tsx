@@ -16,13 +16,13 @@ export default function SaveIndicator({ status }: { status: SaveStatus }) {
 
   const dotClass =
     status === "saving"
-      ? "bg-amber-400 animate-pulse"
+      ? "bg-[#C7A46B] animate-pulse"
       : status === "saved"
-        ? "bg-emerald-500"
-        : "bg-red-500";
+        ? "bg-[#8FA37E]"
+        : "bg-[#B5574A]";
 
   return (
-    <div className="flex items-center gap-1.5 text-xs text-base-muted">
+    <div className="flex items-center gap-1.5 text-xs text-paper-muted">
       <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
       {label}
     </div>

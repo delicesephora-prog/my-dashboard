@@ -1,5 +1,5 @@
 import { neon } from "@neondatabase/serverless";
-import { DashboardData, defaultDashboardData } from "./types";
+import { DashboardData, defaultDashboardData, normalizeDashboardData } from "./types";
 
 const ROW_ID = "main";
 
@@ -40,7 +40,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     return initial;
   }
 
-  return rows[0].data as DashboardData;
+  return normalizeDashboardData(rows[0].data as Partial<DashboardData>);
 }
 
 export async function saveDashboardData(data: DashboardData): Promise<void> {

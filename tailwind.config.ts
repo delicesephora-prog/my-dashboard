@@ -6,26 +6,36 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Deep warm taupe/espresso - the more "structured" Work accent
         work: {
-          DEFAULT: "#5B7FFF",
-          soft: "#E8ECFF",
-          dark: "#3A54C4",
+          DEFAULT: "#6E5C4B",
+          soft: "#EFE7DA",
+          dark: "#463A2F",
         },
+        // Warm dusty terracotta - the softer Life accent
         life: {
-          DEFAULT: "#FF8A5B",
-          soft: "#FFECE3",
-          dark: "#D9633A",
+          DEFAULT: "#C1815F",
+          soft: "#F6E6DA",
+          dark: "#93583B",
         },
-        base: {
-          bg: "#FAFAF9",
-          surface: "#FFFFFF",
-          ink: "#1C1C1E",
-          muted: "#8A8A8E",
-          border: "#ECECEA",
+        // Luxury paper-planner neutrals
+        paper: {
+          bg: "#F6F1E9",
+          surface: "#FFFCF6",
+          surface2: "#FBF5EA",
+          border: "#E7DFCF",
+          ink: "#2B2620",
+          muted: "#948A79",
+          faint: "#C9BEA9",
         },
       },
       borderRadius: {
-        xl2: "1.25rem",
+        xl2: "1.5rem",
+        xl3: "2rem",
+      },
+      boxShadow: {
+        paper: "0 1px 2px rgba(43, 38, 32, 0.04), 0 8px 24px -12px rgba(43, 38, 32, 0.12)",
+        "paper-lg": "0 2px 4px rgba(43, 38, 32, 0.05), 0 16px 40px -16px rgba(43, 38, 32, 0.16)",
       },
       fontFamily: {
         sans: [
@@ -36,6 +46,7 @@ const config: Config = {
           "Roboto",
           "sans-serif",
         ],
+        serif: ["var(--font-editorial)", "Georgia", "serif"],
       },
       keyframes: {
         "pop-in": {

@@ -30,12 +30,12 @@ export default function QuickAdd({
           if (e.key === "Enter") submit();
         }}
         placeholder={world === "work" ? "Add a work task…" : "Add a life task…"}
-        className={`flex-1 rounded-xl2 border border-base-border bg-base-surface px-4 py-3 text-[15px] text-base-ink outline-none ${accent}`}
+        className={`flex-1 rounded-xl2 border border-paper-border bg-paper-surface2 px-4 py-3 text-[15px] text-paper-ink outline-none transition-colors ${accent}`}
       />
       <button
         onClick={submit}
         aria-label="Add task"
-        className={`flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-xl2 text-xl font-semibold text-white transition active:scale-90 ${button}`}
+        className={`flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-xl2 text-xl font-light text-paper-surface transition active:scale-90 ${button}`}
       >
         +
       </button>
