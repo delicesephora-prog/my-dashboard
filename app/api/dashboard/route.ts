@@ -226,6 +226,19 @@ const moneyDataSchema = z.object({
   debts: z.array(debtSchema).max(200),
 });
 
+const paydayStepSchema = z.object({
+  id: z.string(),
+  text: z.string().max(300),
+  amount: z.number().min(0).max(10000000).nullable(),
+  order: z.number().int(),
+});
+
+const paydayChecklistDataSchema = z.object({
+  anchorDate: z.string(),
+  steps: z.array(paydayStepSchema).max(100),
+  periods: z.record(z.array(z.string()).max(200)),
+});
+
 const quarterGoalSchema = z.object({
   id: z.string(),
   category: z.enum(["Finance", "Health", "Faith", "Personal", "Career"]),
@@ -252,6 +265,7 @@ const quarterDataSchema = z.object({
 
 const lifeQuarterlySchema = z.object({
   money: moneyDataSchema,
+  paydayChecklist: paydayChecklistDataSchema,
   quarters: z.record(quarterDataSchema),
 });
 

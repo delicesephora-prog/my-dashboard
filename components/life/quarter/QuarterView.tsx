@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { LifeQuarterly, LifeWeekly, MoneyData, QuarterData, quarterDataFor } from "@/lib/types";
+import { PaydayChecklistData } from "@/lib/payday";
 import { quarterKeyFor, shiftQuarterKey, formatQuarterLabel } from "@/lib/quarter";
 import WeekNav from "../../WeekNav";
 import MoneySection from "./MoneySection";
+import PaydayChecklistSection from "./PaydayChecklistSection";
 import QuarterlyGoalsSection from "./QuarterlyGoalsSection";
 import AchievementsSection from "./AchievementsSection";
 import ParkingLotSection from "./ParkingLotSection";
@@ -34,6 +36,10 @@ export default function QuarterView({
     onChange((lq) => ({ ...lq, money: updater(lq.money) }));
   }
 
+  function updatePaydayChecklist(updater: (p: PaydayChecklistData) => PaydayChecklistData) {
+    onChange((lq) => ({ ...lq, paydayChecklist: updater(lq.paydayChecklist) }));
+  }
+
   return (
     <div className="scroll-quiet safe-bottom flex-1 overflow-y-auto">
       <WeekNav
@@ -47,6 +53,11 @@ export default function QuarterView({
 
       <div className="flex flex-col gap-3">
         <MoneySection money={lifeQuarterly.money} onChange={updateMoney} />
+
+        <PaydayChecklistSection
+          data={lifeQuarterly.paydayChecklist}
+          onChange={updatePaydayChecklist}
+        />
 
         <QuarterlyGoalsSection
           goals={quarterData.goals}

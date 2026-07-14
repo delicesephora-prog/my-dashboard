@@ -1,4 +1,5 @@
 import { RoutinesData, emptyRoutinesData, normalizeRoutinesData } from "./routines";
+import { PaydayChecklistData, emptyPaydayChecklistData } from "./payday";
 
 export type TaskItem = {
   id: string;
@@ -484,12 +485,13 @@ export function emptyQuarterData(): QuarterData {
 
 export type LifeQuarterly = {
   money: MoneyData;
+  paydayChecklist: PaydayChecklistData;
   // Keyed by quarter, e.g. "2026-Q3".
   quarters: Record<string, QuarterData>;
 };
 
 export function emptyLifeQuarterly(): LifeQuarterly {
-  return { money: emptyMoneyData(), quarters: {} };
+  return { money: emptyMoneyData(), paydayChecklist: emptyPaydayChecklistData(), quarters: {} };
 }
 
 export function quarterDataFor(lq: LifeQuarterly, key: string): QuarterData {
@@ -818,6 +820,11 @@ export function normalizeDashboardData(
       money: {
         vaults: data.lifeQuarterly?.money?.vaults ?? [],
         debts: data.lifeQuarterly?.money?.debts ?? [],
+      },
+      paydayChecklist: {
+        anchorDate: data.lifeQuarterly?.paydayChecklist?.anchorDate ?? "",
+        steps: data.lifeQuarterly?.paydayChecklist?.steps ?? [],
+        periods: data.lifeQuarterly?.paydayChecklist?.periods ?? {},
       },
       quarters: data.lifeQuarterly?.quarters ?? {},
     },
