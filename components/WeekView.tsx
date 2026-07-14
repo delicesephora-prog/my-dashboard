@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LifeWeekly, WeekData, WeekTask, weekDataFor } from "@/lib/types";
+import { Book, LifeWeekly, WeekData, WeekTask, weekDataFor } from "@/lib/types";
 import { weekKeyFor, shiftWeekKey, formatWeekRange } from "@/lib/week";
 import WeekNav from "./WeekNav";
 import WeekChecklist from "./WeekChecklist";
@@ -12,9 +12,11 @@ import CurrentlyReadingCard from "./CurrentlyReadingCard";
 
 export default function WeekView({
   lifeWeekly,
+  currentlyReading,
   onChange,
 }: {
   lifeWeekly: LifeWeekly;
+  currentlyReading: Book | null;
   onChange: (updater: (lw: LifeWeekly) => LifeWeekly) => void;
 }) {
   const [weekKey, setWeekKey] = useState(() => weekKeyFor(new Date()));
@@ -75,10 +77,6 @@ export default function WeekView({
     onChange((lw) => ({ ...lw, workoutGoal: goal }));
   }
 
-  function setCurrentlyReading(next: { title: string; author: string }) {
-    onChange((lw) => ({ ...lw, currentlyReading: next }));
-  }
-
   return (
     <div className="scroll-quiet safe-bottom flex-1 overflow-y-auto">
       <WeekNav
@@ -108,10 +106,7 @@ export default function WeekView({
 
         <ReflectionCard value={weekData.reflection} onChange={setReflection} />
 
-        <CurrentlyReadingCard
-          value={lifeWeekly.currentlyReading}
-          onChange={setCurrentlyReading}
-        />
+        <CurrentlyReadingCard book={currentlyReading} />
       </div>
     </div>
   );

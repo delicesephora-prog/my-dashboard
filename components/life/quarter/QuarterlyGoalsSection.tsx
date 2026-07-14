@@ -7,16 +7,18 @@ import CheckCircle from "../../CheckCircle";
 export default function QuarterlyGoalsSection({
   goals,
   onChange,
+  title = "Quarterly Goals",
 }: {
   goals: QuarterGoal[];
   onChange: (updater: (goals: QuarterGoal[]) => QuarterGoal[]) => void;
+  title?: string;
 }) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   return (
     <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
       <p className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
-        Quarterly Goals
+        {title}
       </p>
       <div className="flex flex-col gap-3">
         {GOAL_CATEGORIES.map((category) => (

@@ -12,13 +12,13 @@ export default function SubNav<T extends string>({
   accentClass: string;
 }) {
   return (
-    <div className="mb-3 flex gap-1.5">
+    <div className="scroll-quiet -mx-5 mb-3 flex gap-1.5 overflow-x-auto px-5">
       {items.map((item) => (
         <button
           key={item.key}
           type="button"
           onClick={() => onChange(item.key)}
-          className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
+          className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
             active === item.key
               ? `${accentClass} text-paper-surface`
               : "border border-paper-border bg-paper-surface text-paper-muted"

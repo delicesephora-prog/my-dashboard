@@ -254,6 +254,84 @@ const lifeQuarterlySchema = z.object({
   quarters: z.record(quarterDataSchema),
 });
 
+const bookSchema = z.object({
+  id: z.string(),
+  openLibraryKey: z.string().max(200),
+  title: z.string().max(500),
+  author: z.string().max(300),
+  coverUrl: z.string().max(500),
+});
+
+const finishedBookSchema = bookSchema.extend({
+  finishedDate: z.string(),
+  quarterKey: z.string(),
+});
+
+const booksDataSchema = z.object({
+  currentlyReading: bookSchema.nullable(),
+  read: z.array(finishedBookSchema).max(5000),
+});
+
+const bucketItemSchema = z.object({
+  id: z.string(),
+  text: z.string().max(500),
+  category: z.enum([
+    "Travel",
+    "Experience",
+    "Career",
+    "Personal",
+    "Health",
+    "Creative",
+    "Financial",
+    "Faith",
+  ]),
+  done: z.boolean(),
+  completedDate: z.string(),
+});
+
+const bucketListDataSchema = z.object({
+  items: z.array(bucketItemSchema).max(1000),
+});
+
+const yearReflectionsSchema = z.object({
+  vision: z.string().max(10000),
+  nonNegotiables: z.string().max(10000),
+  focusingOn: z.string().max(10000),
+  wantToChange: z.string().max(10000),
+});
+
+const yearBucketSchema = z.object({
+  id: z.string(),
+  theme: z.string().max(200),
+  description: z.string().max(2000),
+});
+
+const yearGoalSchema = z.object({
+  id: z.string(),
+  category: z.enum(["Finance", "Health", "Faith", "Personal", "Career"]),
+  text: z.string().max(500),
+  done: z.boolean(),
+});
+
+const transformationGoalSchema = z.object({
+  id: z.string(),
+  text: z.string().max(500),
+  done: z.boolean(),
+});
+
+const yearDataSchema = z.object({
+  reflections: yearReflectionsSchema,
+  buckets: z.array(yearBucketSchema).max(200),
+  goals: z.array(yearGoalSchema).max(500),
+  transformations: z.object({
+    Fitness: z.array(transformationGoalSchema).max(200),
+    Finances: z.array(transformationGoalSchema).max(200),
+    Faith: z.array(transformationGoalSchema).max(200),
+    Style: z.array(transformationGoalSchema).max(200),
+    Career: z.array(transformationGoalSchema).max(200),
+  }),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -266,6 +344,9 @@ const dashboardSchema = z.object({
   reference: referenceSchema,
   brainDump: z.string().max(50000),
   lifeQuarterly: lifeQuarterlySchema,
+  books: booksDataSchema,
+  bucketList: bucketListDataSchema,
+  year: yearDataSchema,
 });
 
 export async function GET() {

@@ -3,12 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   BackBeat as BackBeatData,
+  BooksData,
+  BucketListData,
   DashboardData,
   HabitsData,
   LifeQuarterly,
   LifeWeekly,
   Reference as ReferenceData,
   WorkOps,
+  YearData,
   weekDataFor,
 } from "@/lib/types";
 import { todayKey } from "@/lib/date";
@@ -25,11 +28,14 @@ import Reference from "./work/Reference";
 import HabitsView from "./life/HabitsView";
 import ManageHabits from "./life/ManageHabits";
 import QuarterView from "./life/quarter/QuarterView";
+import BooksView from "./life/BooksView";
+import BucketListView from "./life/BucketListView";
+import YearView from "./life/year/YearView";
 import SaveIndicator, { SaveStatus } from "./SaveIndicator";
 
 type World = "work" | "life";
 type WorkView = "dashboard" | "backbeat" | "reference";
-type LifeView = "week" | "habits" | "manageHabits" | "quarter";
+type LifeView = "week" | "habits" | "manageHabits" | "quarter" | "books" | "bucketList" | "year";
 
 const LOCAL_KEY = "dashboard-cache-v1";
 const SAVE_DELAY_MS = 700;
@@ -110,6 +116,21 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     scheduleSave();
   }
 
+  function updateBooks(updater: (b: BooksData) => BooksData) {
+    setData((prev) => ({ ...prev, books: updater(prev.books) }));
+    scheduleSave();
+  }
+
+  function updateBucketList(updater: (b: BucketListData) => BucketListData) {
+    setData((prev) => ({ ...prev, bucketList: updater(prev.bucketList) }));
+    scheduleSave();
+  }
+
+  function updateYear(updater: (y: YearData) => YearData) {
+    setData((prev) => ({ ...prev, year: updater(prev.year) }));
+    scheduleSave();
+  }
+
   const oneThingText = data.oneThing.date === todayKey() ? data.oneThing.text : "";
   const thisWeekTasks = weekDataFor(data.lifeWeekly, weekKeyFor(new Date())).tasks;
   const counts = {
@@ -165,6 +186,9 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                   { key: "week", label: "This Week" },
                   { key: "habits", label: "Habits" },
                   { key: "quarter", label: "Quarter" },
+                  { key: "books", label: "Books" },
+                  { key: "bucketList", label: "Bucket List" },
+                  { key: "year", label: "Year" },
                 ]}
                 active={lifeView}
                 onChange={setLifeView}
@@ -172,7 +196,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
               />
             )}
             {lifeView === "week" && (
-              <WeekView lifeWeekly={data.lifeWeekly} onChange={updateLifeWeekly} />
+              <WeekView
+                lifeWeekly={data.lifeWeekly}
+                currentlyReading={data.books.currentlyReading}
+                onChange={updateLifeWeekly}
+              />
             )}
             {lifeView === "habits" && (
               <HabitsView
@@ -195,6 +223,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 onChange={updateLifeQuarterly}
               />
             )}
+            {lifeView === "books" && <BooksView books={data.books} onChange={updateBooks} />}
+            {lifeView === "bucketList" && (
+              <BucketListView bucketList={data.bucketList} onChange={updateBucketList} />
+            )}
+            {lifeView === "year" && <YearView year={data.year} onChange={updateYear} />}
           </>
         )}
       </main>

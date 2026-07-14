@@ -496,6 +496,147 @@ export function quarterDataFor(lq: LifeQuarterly, key: string): QuarterData {
   return { ...emptyQuarterData(), ...stored };
 }
 
+// ---------------------------------------------------------------------------
+// Books
+
+export type Book = {
+  id: string;
+  openLibraryKey: string;
+  title: string;
+  author: string;
+  coverUrl: string;
+};
+
+export type FinishedBook = Book & {
+  finishedDate: string;
+  // Quarter the book was marked finished, e.g. "2026-Q3" - fixed at
+  // completion time so the grouping doesn't shift later.
+  quarterKey: string;
+};
+
+export type BooksData = {
+  currentlyReading: Book | null;
+  read: FinishedBook[];
+};
+
+export function emptyBooksData(): BooksData {
+  return { currentlyReading: null, read: [] };
+}
+
+// ---------------------------------------------------------------------------
+// Bucket list
+
+export type BucketCategory =
+  | "Travel"
+  | "Experience"
+  | "Career"
+  | "Personal"
+  | "Health"
+  | "Creative"
+  | "Financial"
+  | "Faith";
+
+export const BUCKET_CATEGORIES: BucketCategory[] = [
+  "Travel",
+  "Experience",
+  "Career",
+  "Personal",
+  "Health",
+  "Creative",
+  "Financial",
+  "Faith",
+];
+
+export const BUCKET_CATEGORY_COLORS: Record<BucketCategory, string> = {
+  Travel: "#C1815F",
+  Experience: "#C7A46B",
+  Career: "#6E5C4B",
+  Personal: "#9B7B94",
+  Health: "#8FA37E",
+  Creative: "#8C97B0",
+  Financial: "#A8763E",
+  Faith: "#7C9070",
+};
+
+export type BucketItem = {
+  id: string;
+  text: string;
+  category: BucketCategory;
+  done: boolean;
+  completedDate: string;
+};
+
+export type BucketListData = {
+  items: BucketItem[];
+};
+
+export function emptyBucketListData(): BucketListData {
+  return { items: [] };
+}
+
+// ---------------------------------------------------------------------------
+// Year: the annual manifesto page
+
+export type YearReflections = {
+  vision: string;
+  nonNegotiables: string;
+  focusingOn: string;
+  wantToChange: string;
+};
+
+export function emptyYearReflections(): YearReflections {
+  return { vision: "", nonNegotiables: "", focusingOn: "", wantToChange: "" };
+}
+
+export type YearBucket = {
+  id: string;
+  theme: string;
+  description: string;
+};
+
+export type YearGoal = {
+  id: string;
+  category: GoalCategory;
+  text: string;
+  done: boolean;
+};
+
+export type TransformationCategoryKey = "Fitness" | "Finances" | "Faith" | "Style" | "Career";
+
+export const TRANSFORMATION_CATEGORIES: TransformationCategoryKey[] = [
+  "Fitness",
+  "Finances",
+  "Faith",
+  "Style",
+  "Career",
+];
+
+export type TransformationGoal = {
+  id: string;
+  text: string;
+  done: boolean;
+};
+
+export type YearData = {
+  reflections: YearReflections;
+  buckets: YearBucket[];
+  goals: YearGoal[];
+  transformations: Record<TransformationCategoryKey, TransformationGoal[]>;
+};
+
+export function emptyTransformations(): Record<TransformationCategoryKey, TransformationGoal[]> {
+  return { Fitness: [], Finances: [], Faith: [], Style: [], Career: [] };
+}
+
+export function emptyYearData(): YearData {
+  return {
+    reflections: emptyYearReflections(),
+    buckets: [],
+    goals: [],
+    transformations: emptyTransformations(),
+  };
+}
+
 /**
  * Everything lives in one JSON blob so new features (new fields, new
  * widgets) can be added later just by extending this shape - no
@@ -513,6 +654,9 @@ export type DashboardData = {
   reference: Reference;
   brainDump: string;
   lifeQuarterly: LifeQuarterly;
+  books: BooksData;
+  bucketList: BucketListData;
+  year: YearData;
 };
 
 export function emptyWorld(): WorldData {
@@ -536,6 +680,9 @@ export function defaultDashboardData(): DashboardData {
     reference: emptyReference(),
     brainDump: "",
     lifeQuarterly: emptyLifeQuarterly(),
+    books: emptyBooksData(),
+    bucketList: emptyBucketListData(),
+    year: emptyYearData(),
   };
 }
 
@@ -587,6 +734,19 @@ export function normalizeDashboardData(
         debts: data.lifeQuarterly?.money?.debts ?? [],
       },
       quarters: data.lifeQuarterly?.quarters ?? {},
+    },
+    books: {
+      currentlyReading: data.books?.currentlyReading ?? null,
+      read: data.books?.read ?? [],
+    },
+    bucketList: {
+      items: data.bucketList?.items ?? [],
+    },
+    year: {
+      reflections: { ...fallback.year.reflections, ...data.year?.reflections },
+      buckets: data.year?.buckets ?? [],
+      goals: data.year?.goals ?? [],
+      transformations: { ...fallback.year.transformations, ...data.year?.transformations },
     },
   };
 }
