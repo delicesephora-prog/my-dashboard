@@ -24,6 +24,16 @@ export function formatElegantDate(d: Date = new Date()): string {
   });
 }
 
+// Whole days between two YYYY-MM-DD strings, parsed as local dates so
+// it's never off by one due to UTC/local timezone differences.
+export function daysBetween(a: string, b: string): number {
+  const [ay, am, ad] = a.split("-").map(Number);
+  const [by, bm, bd] = b.split("-").map(Number);
+  const dateA = new Date(ay, am - 1, ad);
+  const dateB = new Date(by, bm - 1, bd);
+  return Math.round((dateB.getTime() - dateA.getTime()) / 86400000);
+}
+
 export function shiftDateKey(dateStr: string, deltaDays: number): string {
   const [y, m, d] = dateStr.split("-").map(Number);
   const date = new Date(y, m - 1, d);

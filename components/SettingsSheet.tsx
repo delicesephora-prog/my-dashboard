@@ -3,6 +3,11 @@
 import { useRef, useState } from "react";
 import { DashboardData, normalizeDashboardData } from "@/lib/types";
 import { todayKey } from "@/lib/date";
+import {
+  LIFE_SCORE_CATEGORIES,
+  LIFE_SCORE_CATEGORY_LABELS,
+  LifeScoreWeights,
+} from "@/lib/lifescore";
 
 type ImportState =
   | { step: "idle" }
@@ -14,10 +19,12 @@ type ImportState =
 export default function SettingsSheet({
   data,
   onImported,
+  onChangeLifeScoreWeights,
   onClose,
 }: {
   data: DashboardData;
   onImported: (data: DashboardData) => void;
+  onChangeLifeScoreWeights: (updater: (w: LifeScoreWeights) => LifeScoreWeights) => void;
   onClose: () => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -203,6 +210,38 @@ export default function SettingsSheet({
               onChange={handleFileSelected}
               className="hidden"
             />
+          </div>
+
+          <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
+            <p className="mb-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+              Life Score Weights
+            </p>
+            <p className="mb-3 text-[13px] leading-relaxed text-paper-muted">
+              How much each area counts toward your daily Life Score. These don&apos;t need to add
+              up to any particular number - they&apos;re just relative to each other.
+            </p>
+            <div className="flex flex-col gap-2.5">
+              {LIFE_SCORE_CATEGORIES.map((key) => (
+                <div key={key} className="flex items-center gap-3">
+                  <span className="w-28 shrink-0 text-[13px] text-paper-ink">
+                    {LIFE_SCORE_CATEGORY_LABELS[key]}
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={data.lifeScore.weights[key]}
+                    onChange={(e) =>
+                      onChangeLifeScoreWeights((w) => ({ ...w, [key]: Number(e.target.value) }))
+                    }
+                    className="flex-1 accent-work"
+                  />
+                  <span className="w-7 shrink-0 text-right text-[12px] text-paper-muted">
+                    {data.lifeScore.weights[key]}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

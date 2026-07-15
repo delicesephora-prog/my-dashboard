@@ -422,6 +422,20 @@ const routineDayLogSchema = z.object({
   }),
 });
 
+const lifeScoreWeightsSchema = z.object({
+  routines: z.number().min(0).max(100),
+  habits: z.number().min(0).max(100),
+  tasks: z.number().min(0).max(100),
+  dailyReview: z.number().min(0).max(100),
+  workouts: z.number().min(0).max(100),
+  payday: z.number().min(0).max(100),
+});
+
+const lifeScoreDataSchema = z.object({
+  weights: lifeScoreWeightsSchema,
+  history: z.record(z.number().min(0).max(100)),
+});
+
 const routinesDataSchema = z.object({
   config: z.object({
     morning: routineSchema,
@@ -449,6 +463,7 @@ const dashboardSchema = z.object({
   dailyReview: dailyReviewDataSchema,
   smsAlerts: smsAlertsDataSchema,
   routines: routinesDataSchema,
+  lifeScore: lifeScoreDataSchema,
 });
 
 export async function GET() {

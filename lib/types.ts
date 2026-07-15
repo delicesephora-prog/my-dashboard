@@ -1,6 +1,7 @@
 import { RoutinesData, emptyRoutinesData, normalizeRoutinesData } from "./routines";
 import { PaydayChecklistData, emptyPaydayChecklistData } from "./payday";
 import { WarRoomData, emptyWarRoomData, normalizeWarRoomData } from "./warroom";
+import { LifeScoreData, emptyLifeScoreData, normalizeLifeScoreData } from "./lifescore";
 
 export type TaskItem = {
   id: string;
@@ -745,6 +746,7 @@ export type DashboardData = {
   dailyReview: DailyReviewData;
   smsAlerts: SmsAlertsData;
   routines: RoutinesData;
+  lifeScore: LifeScoreData;
 };
 
 export function emptyWorld(): WorldData {
@@ -774,6 +776,7 @@ export function defaultDashboardData(): DashboardData {
     dailyReview: emptyDailyReviewData(),
     smsAlerts: emptySmsAlertsData(),
     routines: emptyRoutinesData(),
+    lifeScore: emptyLifeScoreData(),
   };
 }
 
@@ -852,6 +855,7 @@ export function normalizeDashboardData(
       alertedOverdueTaskIds: data.smsAlerts?.alertedOverdueTaskIds ?? [],
     },
     routines: normalizeRoutinesData(data.routines),
+    lifeScore: normalizeLifeScoreData(data.lifeScore),
   };
 }
 

@@ -16,6 +16,7 @@ import {
   weekDataFor,
 } from "@/lib/types";
 import { RoutinesData } from "@/lib/routines";
+import { LifeScoreData } from "@/lib/lifescore";
 import { todayKey } from "@/lib/date";
 import { weekKeyFor } from "@/lib/week";
 import WorldToggle from "./WorldToggle";
@@ -128,6 +129,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     scheduleSave();
   }
 
+  function updateLifeScore(updater: (l: LifeScoreData) => LifeScoreData) {
+    setData((prev) => ({ ...prev, lifeScore: updater(prev.lifeScore) }));
+    scheduleSave();
+  }
+
   function updateHabits(updater: (h: HabitsData) => HabitsData) {
     setData((prev) => ({ ...prev, habits: updater(prev.habits) }));
     scheduleSave();
@@ -202,6 +208,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             onOneThingChange={setOneThing}
             counts={counts}
             onNavigate={handleFrontPageNavigate}
+            onChangeLifeScore={updateLifeScore}
           />
         ) : world === "work" ? (
           <>
@@ -319,6 +326,9 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             setData(imported);
             setStatus("saved");
           }}
+          onChangeLifeScoreWeights={(updater) =>
+            updateLifeScore((l) => ({ ...l, weights: updater(l.weights) }))
+          }
           onClose={() => setSettingsOpen(false)}
         />
       )}

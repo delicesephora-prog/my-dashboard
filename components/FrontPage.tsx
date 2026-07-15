@@ -11,8 +11,16 @@ import {
   pinnedFocusTasks,
   todayHabitProgress,
 } from "@/lib/frontpage";
+import {
+  LifeScoreData,
+  computeLifeScoreBreakdown,
+  last30DaysScoreHistory,
+  recordTodayScore,
+} from "@/lib/lifescore";
 import Greeting from "./Greeting";
 import OneThing from "./OneThing";
+import LifeScoreRing from "./LifeScoreRing";
+import LifeScoreSheet from "./LifeScoreSheet";
 
 export default function FrontPage({
   data,
@@ -20,12 +28,14 @@ export default function FrontPage({
   onOneThingChange,
   counts,
   onNavigate,
+  onChangeLifeScore,
 }: {
   data: DashboardData;
   oneThingText: string;
   onOneThingChange: (text: string) => void;
   counts: { work: number; life: number };
   onNavigate: (target: FrontPageNavTarget) => void;
+  onChangeLifeScore: (updater: (l: LifeScoreData) => LifeScoreData) => void;
 }) {
   // Deferred to the client, same as Greeting - the recommendation, "today"
   // habit progress, and week recap are all timezone-sensitive, so they
@@ -57,6 +67,7 @@ export default function FrontPage({
           counts={counts}
           focusTasks={focusTasks}
           onNavigate={onNavigate}
+          onChangeLifeScore={onChangeLifeScore}
         />
       )}
     </div>
@@ -69,20 +80,38 @@ function FrontPageBody({
   counts,
   focusTasks,
   onNavigate,
+  onChangeLifeScore,
 }: {
   data: DashboardData;
   now: Date;
   counts: { work: number; life: number };
   focusTasks: ReturnType<typeof pinnedFocusTasks>;
   onNavigate: (target: FrontPageNavTarget) => void;
+  onChangeLifeScore: (updater: (l: LifeScoreData) => LifeScoreData) => void;
 }) {
   const habitProgress = todayHabitProgress(data.habits, now);
   const atRisk = habitsAtRisk(data.habits, now);
   const recommendation = computeRecommendation(data, now);
   const recap = computeWeekRecap(data, now);
+  const breakdown = computeLifeScoreBreakdown(data, now);
+  const [scoreOpen, setScoreOpen] = useState(false);
+
+  useEffect(() => {
+    onChangeLifeScore((l) => recordTodayScore(l, breakdown.score, now));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [breakdown.score]);
 
   return (
     <>
+      <LifeScoreRing score={breakdown.score} label={breakdown.label} onTap={() => setScoreOpen(true)} />
+      {scoreOpen && (
+        <LifeScoreSheet
+          breakdown={breakdown}
+          history={last30DaysScoreHistory(data.lifeScore, now)}
+          onClose={() => setScoreOpen(false)}
+        />
+      )}
+
       <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
         <p className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
           Today at a Glance
