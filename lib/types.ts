@@ -3,6 +3,7 @@ import { PaydayChecklistData, emptyPaydayChecklistData } from "./payday";
 import { WarRoomData, emptyWarRoomData, normalizeWarRoomData } from "./warroom";
 import { LifeScoreData, emptyLifeScoreData, normalizeLifeScoreData } from "./lifescore";
 import { BoardMeetingData, emptyBoardMeetingData, normalizeBoardMeetingData } from "./boardmeeting";
+import { ListsData, emptyListsData, normalizeListsData } from "./lists";
 
 export type TaskItem = {
   id: string;
@@ -749,6 +750,7 @@ export type DashboardData = {
   routines: RoutinesData;
   lifeScore: LifeScoreData;
   boardMeetings: BoardMeetingData;
+  lists: ListsData;
 };
 
 export function emptyWorld(): WorldData {
@@ -780,6 +782,7 @@ export function defaultDashboardData(): DashboardData {
     routines: emptyRoutinesData(),
     lifeScore: emptyLifeScoreData(),
     boardMeetings: emptyBoardMeetingData(),
+    lists: emptyListsData(),
   };
 }
 
@@ -860,6 +863,7 @@ export function normalizeDashboardData(
     routines: normalizeRoutinesData(data.routines),
     lifeScore: normalizeLifeScoreData(data.lifeScore),
     boardMeetings: normalizeBoardMeetingData(data.boardMeetings),
+    lists: normalizeListsData(data.lists),
   };
 }
 

@@ -422,6 +422,49 @@ const routineDayLogSchema = z.object({
   }),
 });
 
+const groceryCategorySchema = z.enum([
+  "Produce",
+  "Protein",
+  "Pantry",
+  "Frozen",
+  "Household",
+  "Personal Care",
+]);
+
+const groceryItemSchema = z.object({
+  id: z.string(),
+  text: z.string().max(200),
+  category: groceryCategorySchema,
+  done: z.boolean(),
+  createdAt: z.string(),
+});
+
+const stapleItemSchema = z.object({
+  id: z.string(),
+  text: z.string().max(200),
+  category: groceryCategorySchema,
+});
+
+const groceryDataSchema = z.object({
+  items: z.array(groceryItemSchema).max(500),
+  staples: z.array(stapleItemSchema).max(300),
+});
+
+const dumpItemSchema = z.object({
+  id: z.string(),
+  text: z.string().max(500),
+  createdAt: z.string(),
+});
+
+const dumpDataSchema = z.object({
+  items: z.array(dumpItemSchema).max(1000),
+});
+
+const listsDataSchema = z.object({
+  grocery: groceryDataSchema,
+  dump: dumpDataSchema,
+});
+
 const boardMeetingRecordSchema = z.object({
   date: z.string(),
   weekKeyReviewed: z.string(),
@@ -491,6 +534,7 @@ const dashboardSchema = z.object({
   routines: routinesDataSchema,
   lifeScore: lifeScoreDataSchema,
   boardMeetings: boardMeetingDataSchema,
+  lists: listsDataSchema,
 });
 
 export async function GET() {

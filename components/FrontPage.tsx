@@ -29,6 +29,7 @@ export default function FrontPage({
   counts,
   onNavigate,
   onChangeLifeScore,
+  onOpenQuickDump,
 }: {
   data: DashboardData;
   oneThingText: string;
@@ -36,6 +37,7 @@ export default function FrontPage({
   counts: { work: number; life: number };
   onNavigate: (target: FrontPageNavTarget) => void;
   onChangeLifeScore: (updater: (l: LifeScoreData) => LifeScoreData) => void;
+  onOpenQuickDump: () => void;
 }) {
   // Deferred to the client, same as Greeting - the recommendation, "today"
   // habit progress, and week recap are all timezone-sensitive, so they
@@ -49,13 +51,23 @@ export default function FrontPage({
 
   return (
     <div className="scroll-quiet flex flex-col gap-3 overflow-y-auto pb-6">
-      <div>
-        <Greeting />
-        {now && (
-          <p className="mt-1.5 text-[0.8rem] italic leading-snug text-paper-muted">
-            {quoteForToday(now)}
-          </p>
-        )}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <Greeting />
+          {now && (
+            <p className="mt-1.5 text-[0.8rem] italic leading-snug text-paper-muted">
+              {quoteForToday(now)}
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onOpenQuickDump}
+          aria-label="Quick Dump"
+          className="flex shrink-0 items-center gap-1 rounded-full bg-work px-3 py-2 text-[12px] font-medium text-paper-surface shadow-paper active:scale-95"
+        >
+          🧠 Dump
+        </button>
       </div>
 
       <OneThing value={oneThingText} onChange={onOneThingChange} />

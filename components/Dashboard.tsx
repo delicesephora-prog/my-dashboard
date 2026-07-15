@@ -17,7 +17,9 @@ import {
 } from "@/lib/types";
 import { RoutinesData } from "@/lib/routines";
 import { LifeScoreData } from "@/lib/lifescore";
+import { GroceryData, DumpData } from "@/lib/lists";
 import BoardMeeting from "./BoardMeeting";
+import QuickDump from "./QuickDump";
 import { todayKey } from "@/lib/date";
 import { weekKeyFor } from "@/lib/week";
 import WorldToggle from "./WorldToggle";
@@ -37,6 +39,7 @@ import ManageHabits from "./life/ManageHabits";
 import RoutinesView from "./life/routines/RoutinesView";
 import ManageRoutines from "./life/routines/ManageRoutines";
 import QuarterView from "./life/quarter/QuarterView";
+import ListsView from "./life/lists/ListsView";
 import BooksView from "./life/BooksView";
 import BucketListView from "./life/BucketListView";
 import YearView from "./life/year/YearView";
@@ -51,6 +54,7 @@ type LifeView =
   | "habits"
   | "manageHabits"
   | "quarter"
+  | "lists"
   | "books"
   | "bucketList"
   | "year";
@@ -68,6 +72,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   const [dailyReviewOpen, setDailyReviewOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [boardMeetingOpen, setBoardMeetingOpen] = useState(false);
+  const [quickDumpOpen, setQuickDumpOpen] = useState(false);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestData = useRef(data);
@@ -145,6 +150,63 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   // a single step) rather than threading a separate updater for each.
   function updateData(updater: (d: DashboardData) => DashboardData) {
     setData(updater);
+    scheduleSave();
+  }
+
+  function updateGrocery(updater: (g: GroceryData) => GroceryData) {
+    setData((prev) => ({ ...prev, lists: { ...prev.lists, grocery: updater(prev.lists.grocery) } }));
+    scheduleSave();
+  }
+
+  function updateDump(updater: (d: DumpData) => DumpData) {
+    setData((prev) => ({ ...prev, lists: { ...prev.lists, dump: updater(prev.lists.dump) } }));
+    scheduleSave();
+  }
+
+  function sendDumpItemToWork(text: string) {
+    setData((prev) => ({
+      ...prev,
+      workOps: {
+        tasks: [
+          ...prev.workOps.tasks,
+          {
+            id: crypto.randomUUID(),
+            title: text,
+            status: "in_progress",
+            priority: "medium",
+            category: "Administration",
+            dueDate: "",
+            notes: "",
+            topPriority: false,
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      },
+    }));
+    scheduleSave();
+  }
+
+  function sendDumpItemToLife(text: string) {
+    setData((prev) => {
+      const weekKey = weekKeyFor(new Date());
+      const weekData = weekDataFor(prev.lifeWeekly, weekKey);
+      return {
+        ...prev,
+        lifeWeekly: {
+          ...prev.lifeWeekly,
+          weeks: {
+            ...prev.lifeWeekly.weeks,
+            [weekKey]: {
+              ...weekData,
+              tasks: [
+                ...weekData.tasks,
+                { id: crypto.randomUUID(), text, done: false, createdAt: new Date().toISOString() },
+              ],
+            },
+          },
+        },
+      };
+    });
     scheduleSave();
   }
 
@@ -233,6 +295,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             counts={counts}
             onNavigate={handleFrontPageNavigate}
             onChangeLifeScore={updateLifeScore}
+            onOpenQuickDump={() => setQuickDumpOpen(true)}
           />
         ) : world === "work" ? (
           <>
@@ -265,6 +328,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                   { key: "routines", label: "Routines" },
                   { key: "habits", label: "Habits" },
                   { key: "quarter", label: "Quarter" },
+                  { key: "lists", label: "Lists" },
                   { key: "books", label: "Books" },
                   { key: "bucketList", label: "Bucket List" },
                   { key: "year", label: "Year" },
@@ -318,6 +382,16 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 onStartBoardMeeting={() => setBoardMeetingOpen(true)}
               />
             )}
+            {lifeView === "lists" && (
+              <ListsView
+                grocery={data.lists.grocery}
+                dump={data.lists.dump}
+                onChangeGrocery={updateGrocery}
+                onChangeDump={updateDump}
+                onSendToWork={sendDumpItemToWork}
+                onSendToLife={sendDumpItemToLife}
+              />
+            )}
             {lifeView === "books" && <BooksView books={data.books} onChange={updateBooks} />}
             {lifeView === "bucketList" && (
               <BucketListView bucketList={data.bucketList} onChange={updateBucketList} />
@@ -365,6 +439,10 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           onChangeData={updateData}
           onClose={() => setBoardMeetingOpen(false)}
         />
+      )}
+
+      {quickDumpOpen && (
+        <QuickDump onChange={updateDump} onClose={() => setQuickDumpOpen(false)} />
       )}
     </div>
   );
