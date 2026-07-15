@@ -64,6 +64,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   const [workView, setWorkView] = useState<WorkView>("dashboard");
   const [lifeView, setLifeView] = useState<LifeView>("week");
   const [status, setStatus] = useState<SaveStatus>("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [dailyReviewOpen, setDailyReviewOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [boardMeetingOpen, setBoardMeetingOpen] = useState(false);
@@ -94,9 +95,12 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
         }
         window.localStorage.setItem(LOCAL_KEY, JSON.stringify(latestData.current));
         setStatus("saved");
+        setSaveError(null);
       } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
         console.error("[dashboard] save failed:", err);
         setStatus("error");
+        setSaveError(message);
       }
     }, SAVE_DELAY_MS);
   }, []);
@@ -208,6 +212,15 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           </button>
         </div>
       </header>
+
+      {status === "error" && saveError && (
+        <div className="mx-5 mb-2 rounded-xl border border-[#B5574A] bg-[#B5574A]/5 px-3 py-2">
+          <p className="text-[11px] leading-snug text-paper-ink">
+            <span className="font-semibold">Save error (screenshot or copy this for support):</span>{" "}
+            {saveError}
+          </p>
+        </div>
+      )}
 
       <WorldToggle world={world} onChange={setWorld} counts={counts} />
 
