@@ -62,19 +62,26 @@ export async function saveDashboardData(data: DashboardData): Promise<void> {
   // Once the letter is sealed, no client can ever overwrite it again -
   // this also protects against a client that only ever saw the redacted
   // (blank) text echoing that blank back and erasing the real letter.
+  // This check is a bonus protection, not the primary job of this
+  // function - if it fails for any reason, the save must still go
+  // through rather than blocking every future save.
   let toSave = data;
-  const rows = await db`SELECT data FROM dashboard_state WHERE id = ${ROW_ID}`;
-  if (rows.length > 0) {
-    const existing = normalizeDashboardData(rows[0].data as Partial<DashboardData>);
-    if (existing.year.warRoom.letter.sealed) {
-      toSave = {
-        ...data,
-        year: {
-          ...data.year,
-          warRoom: { ...data.year.warRoom, letter: existing.year.warRoom.letter },
-        },
-      };
+  try {
+    const rows = await db`SELECT data FROM dashboard_state WHERE id = ${ROW_ID}`;
+    if (rows.length > 0) {
+      const existing = normalizeDashboardData(rows[0].data as Partial<DashboardData>);
+      if (existing.year.warRoom.letter.sealed) {
+        toSave = {
+          ...data,
+          year: {
+            ...data.year,
+            warRoom: { ...data.year.warRoom, letter: existing.year.warRoom.letter },
+          },
+        };
+      }
     }
+  } catch (err) {
+    console.error("[db] sealed-letter guard check failed, saving anyway:", err);
   }
 
   await db`
