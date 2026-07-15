@@ -8,6 +8,7 @@ import {
   LIFE_SCORE_CATEGORY_LABELS,
   LifeScoreWeights,
 } from "@/lib/lifescore";
+import { TextAlertsSettings } from "@/lib/textalerts";
 
 type ImportState =
   | { step: "idle" }
@@ -20,11 +21,13 @@ export default function SettingsSheet({
   data,
   onImported,
   onChangeLifeScoreWeights,
+  onChangeTextAlerts,
   onClose,
 }: {
   data: DashboardData;
   onImported: (data: DashboardData) => void;
   onChangeLifeScoreWeights: (updater: (w: LifeScoreWeights) => LifeScoreWeights) => void;
+  onChangeTextAlerts: (updater: (t: TextAlertsSettings) => TextAlertsSettings) => void;
   onClose: () => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -243,8 +246,108 @@ export default function SettingsSheet({
               ))}
             </div>
           </div>
+
+          <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
+            <p className="mb-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+              Text Alerts
+            </p>
+            <p className="mb-3 text-[13px] leading-relaxed text-paper-muted">
+              Never more than 3 texts a day, and nothing between 10pm and 6:30am, no matter what&apos;s
+              toggled on below.
+            </p>
+
+            <div className="flex flex-col gap-4">
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-[13.5px] text-paper-ink">Morning text</span>
+                  <ToggleSwitch
+                    checked={data.textAlerts.settings.morningEnabled}
+                    onChange={(v) => onChangeTextAlerts((t) => ({ ...t, morningEnabled: v }))}
+                  />
+                </div>
+                {data.textAlerts.settings.morningEnabled && (
+                  <div className="flex flex-col gap-2 pl-0.5">
+                    <label className="flex items-center justify-between text-[12.5px] text-paper-muted">
+                      Weekdays
+                      <input
+                        type="time"
+                        value={data.textAlerts.settings.morningWeekdayTime}
+                        onChange={(e) =>
+                          onChangeTextAlerts((t) => ({ ...t, morningWeekdayTime: e.target.value }))
+                        }
+                        className="rounded-md border border-paper-border bg-paper-surface2 px-2 py-1 text-[12.5px] text-paper-ink outline-none"
+                      />
+                    </label>
+                    <label className="flex items-center justify-between text-[12.5px] text-paper-muted">
+                      Weekends
+                      <input
+                        type="time"
+                        value={data.textAlerts.settings.morningWeekendTime}
+                        onChange={(e) =>
+                          onChangeTextAlerts((t) => ({ ...t, morningWeekendTime: e.target.value }))
+                        }
+                        className="rounded-md border border-paper-border bg-paper-surface2 px-2 py-1 text-[12.5px] text-paper-ink outline-none"
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between border-t border-paper-border pt-3">
+                <div>
+                  <p className="text-[13.5px] text-paper-ink">Anchor nudges</p>
+                  <p className="text-[11.5px] text-paper-muted">
+                    Set nudge times per anchor in Rhythm.
+                  </p>
+                </div>
+                <ToggleSwitch
+                  checked={data.textAlerts.settings.anchorNudgesEnabled}
+                  onChange={(v) => onChangeTextAlerts((t) => ({ ...t, anchorNudgesEnabled: v }))}
+                />
+              </div>
+
+              <div className="border-t border-paper-border pt-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-[13.5px] text-paper-ink">Night routine text</span>
+                  <ToggleSwitch
+                    checked={data.textAlerts.settings.nightEnabled}
+                    onChange={(v) => onChangeTextAlerts((t) => ({ ...t, nightEnabled: v }))}
+                  />
+                </div>
+                {data.textAlerts.settings.nightEnabled && (
+                  <label className="flex items-center justify-between pl-0.5 text-[12.5px] text-paper-muted">
+                    Only if not started by
+                    <input
+                      type="time"
+                      value={data.textAlerts.settings.nightTime}
+                      onChange={(e) => onChangeTextAlerts((t) => ({ ...t, nightTime: e.target.value }))}
+                      className="rounded-md border border-paper-border bg-paper-surface2 px-2 py-1 text-[12.5px] text-paper-ink outline-none"
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className={`relative h-6 w-11 shrink-0 rounded-full transition ${checked ? "bg-work" : "bg-paper-border"}`}
+    >
+      <span
+        className={`absolute top-0.5 h-5 w-5 rounded-full bg-paper-surface shadow transition ${
+          checked ? "left-[22px]" : "left-0.5"
+        }`}
+      />
+    </button>
   );
 }

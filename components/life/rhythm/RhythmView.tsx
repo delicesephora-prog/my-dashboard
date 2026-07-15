@@ -68,6 +68,10 @@ function DayCard({
     onChange((a) => a.map((x) => (x.id === id ? { ...x, text: newText } : x)));
   }
 
+  function updateNudgeTime(id: string, newTime: string) {
+    onChange((a) => a.map((x) => (x.id === id ? { ...x, nudgeTime: newTime } : x)));
+  }
+
   function deleteAnchor(id: string) {
     onChange((a) => a.filter((x) => x.id !== id));
   }
@@ -93,39 +97,59 @@ function DayCard({
       {sorted.length === 0 ? (
         <p className="mb-2 text-[13px] italic text-paper-muted">No anchors set for this day yet.</p>
       ) : (
-        <ul className="mb-2 flex flex-col gap-1.5">
+        <ul className="mb-2 flex flex-col gap-2">
           {sorted.map((a, i) => (
-            <li key={a.id} className="flex items-center gap-2">
-              <input
-                value={a.text}
-                onChange={(e) => updateText(a.id, e.target.value)}
-                className="min-w-0 flex-1 rounded-lg border border-paper-border bg-paper-surface2 px-2.5 py-2 text-[13.5px] text-paper-ink outline-none"
-              />
-              {a.conditional === "payday" && (
-                <span className="shrink-0 text-[10px] text-paper-muted" title="Only shows on actual paydays">
-                  💰
-                </span>
-              )}
-              <div className="flex shrink-0 items-center gap-1">
-                {i > 0 && (
-                  <button type="button" onClick={() => moveAnchor(a.id, -1)} className="text-paper-faint">
-                    ↑
-                  </button>
+            <li key={a.id} className="flex flex-col gap-1 border-b border-paper-border/60 pb-2 last:border-0 last:pb-0">
+              <div className="flex items-center gap-2">
+                <input
+                  value={a.text}
+                  onChange={(e) => updateText(a.id, e.target.value)}
+                  className="min-w-0 flex-1 rounded-lg border border-paper-border bg-paper-surface2 px-2.5 py-2 text-[13.5px] text-paper-ink outline-none"
+                />
+                {a.conditional === "payday" && (
+                  <span className="shrink-0 text-[10px] text-paper-muted" title="Only shows on actual paydays">
+                    💰
+                  </span>
                 )}
-                {i < sorted.length - 1 && (
-                  <button type="button" onClick={() => moveAnchor(a.id, 1)} className="text-paper-faint">
-                    ↓
+                <div className="flex shrink-0 items-center gap-1">
+                  {i > 0 && (
+                    <button type="button" onClick={() => moveAnchor(a.id, -1)} className="text-paper-faint">
+                      ↑
+                    </button>
+                  )}
+                  {i < sorted.length - 1 && (
+                    <button type="button" onClick={() => moveAnchor(a.id, 1)} className="text-paper-faint">
+                      ↓
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    aria-label="Delete anchor"
+                    onClick={() => deleteAnchor(a.id)}
+                    className="pl-0.5 text-paper-faint"
+                  >
+                    ×
                   </button>
-                )}
-                <button
-                  type="button"
-                  aria-label="Delete anchor"
-                  onClick={() => deleteAnchor(a.id)}
-                  className="pl-0.5 text-paper-faint"
-                >
-                  ×
-                </button>
+                </div>
               </div>
+              <label className="flex items-center gap-1.5 pl-0.5 text-[11.5px] text-paper-muted">
+                Text me at
+                <input
+                  type="time"
+                  value={a.nudgeTime ?? ""}
+                  onChange={(e) => updateNudgeTime(a.id, e.target.value)}
+                  className="rounded-md border border-paper-border bg-paper-surface2 px-1.5 py-0.5 text-[11.5px] text-paper-ink outline-none"
+                />
+                {a.nudgeTime && (
+                  <button
+                    type="button"
+                    onClick={() => updateNudgeTime(a.id, "")}
+                    className="text-paper-faint underline underline-offset-2"
+                  >
+                    clear
+                  </button>
+                )}
+              </label>
             </li>
           ))}
         </ul>

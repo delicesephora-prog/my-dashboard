@@ -457,10 +457,12 @@ const rhythmAnchorSchema = z.object({
   text: z.string().max(300),
   order: z.number().int(),
   conditional: z.literal("payday").optional(),
+  nudgeTime: z.string().max(10).optional(),
 });
 
 const rhythmDayLogSchema = z.object({
   completedAnchorIds: z.array(z.string()).max(50),
+  nudgedAnchorIds: z.array(z.string()).max(50),
 });
 
 const rhythmDataSchema = z.object({
@@ -568,6 +570,20 @@ const routinesDataSchema = z.object({
   days: z.record(routineDayLogSchema),
 });
 
+const textAlertsSettingsSchema = z.object({
+  morningEnabled: z.boolean(),
+  morningWeekdayTime: z.string().max(10),
+  morningWeekendTime: z.string().max(10),
+  anchorNudgesEnabled: z.boolean(),
+  nightEnabled: z.boolean(),
+  nightTime: z.string().max(10),
+});
+
+const textAlertsDataSchema = z.object({
+  settings: textAlertsSettingsSchema,
+  log: z.record(z.array(z.string()).max(10)),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -591,6 +607,7 @@ const dashboardSchema = z.object({
   lists: listsDataSchema,
   rhythm: rhythmDataSchema,
   glowUp: glowUpDataSchema,
+  textAlerts: textAlertsDataSchema,
 });
 
 export async function GET() {

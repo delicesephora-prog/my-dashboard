@@ -4,8 +4,6 @@ import { getDashboardData } from "@/lib/db";
 import { dateKey, formatElegantDate, todayKey } from "@/lib/date";
 import { isOverdue, STATUS_LABELS } from "@/lib/work-style";
 import { buildDigestHtml } from "@/lib/digest-email";
-import { buildMorningNudge } from "@/lib/sms-messages";
-import { sendSms, twilioConfigured } from "@/lib/sms";
 import { DailyReviewEntry, isDailyReviewEntryFilled } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -93,16 +91,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: result.error.message }, { status: 500 });
   }
 
-  // SMS is optional - only attempt it if Twilio is configured, and never
-  // let an SMS failure block the email that already sent successfully.
-  let smsError: string | null = null;
-  if (twilioConfigured()) {
-    try {
-      await sendSms(buildMorningNudge(oneThing, topPriorities));
-    } catch (err) {
-      smsError = err instanceof Error ? err.message : "SMS failed";
-    }
-  }
-
-  return NextResponse.json({ ok: true, smsError });
+  return NextResponse.json({ ok: true });
 }

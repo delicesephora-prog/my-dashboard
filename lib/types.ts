@@ -6,6 +6,7 @@ import { BoardMeetingData, emptyBoardMeetingData, normalizeBoardMeetingData } fr
 import { ListsData, emptyListsData, normalizeListsData } from "./lists";
 import { RhythmData, emptyRhythmData, normalizeRhythmData } from "./rhythm";
 import { GlowUpData, emptyGlowUpData, normalizeGlowUpData } from "./glowup";
+import { TextAlertsData, emptyTextAlertsData, normalizeTextAlertsData } from "./textalerts";
 
 export type TaskItem = {
   id: string;
@@ -755,6 +756,7 @@ export type DashboardData = {
   lists: ListsData;
   rhythm: RhythmData;
   glowUp: GlowUpData;
+  textAlerts: TextAlertsData;
 };
 
 export function emptyWorld(): WorldData {
@@ -789,6 +791,7 @@ export function defaultDashboardData(): DashboardData {
     lists: emptyListsData(),
     rhythm: emptyRhythmData(),
     glowUp: emptyGlowUpData(),
+    textAlerts: emptyTextAlertsData(),
   };
 }
 
@@ -872,6 +875,7 @@ export function normalizeDashboardData(
     lists: normalizeListsData(data.lists),
     rhythm: normalizeRhythmData(data.rhythm),
     glowUp: normalizeGlowUpData(data.glowUp),
+    textAlerts: normalizeTextAlertsData(data.textAlerts),
   };
 }
 

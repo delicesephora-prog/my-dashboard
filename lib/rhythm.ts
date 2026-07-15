@@ -49,10 +49,14 @@ export type RhythmAnchor = {
   // Only ever "payday" today - shown on its day only when that day is
   // actually (near) a pay date, once a payday anchor date is set.
   conditional?: "payday";
+  // "" or "HH:MM" 24h - when set, a one-time text nudge fires close to
+  // this time on the anchor's day, unless it's already done.
+  nudgeTime?: string;
 };
 
 export type RhythmDayLog = {
   completedAnchorIds: string[];
+  nudgedAnchorIds: string[];
 };
 
 export type RhythmData = {
@@ -122,7 +126,16 @@ export function normalizeRhythmData(partial: Partial<RhythmData> | null | undefi
   for (const key of RHYTHM_DAYS) {
     days[key] = partial?.days?.[key] ?? fallback[key];
   }
-  return { days, logs: partial?.logs ?? {} };
+  // Backfill nudgedAnchorIds on any log entries saved before that field
+  // existed, so old data doesn't fail validation on its next save.
+  const logs: Record<string, RhythmDayLog> = {};
+  for (const [day, log] of Object.entries(partial?.logs ?? {})) {
+    logs[day] = {
+      completedAnchorIds: log?.completedAnchorIds ?? [],
+      nudgedAnchorIds: log?.nudgedAnchorIds ?? [],
+    };
+  }
+  return { days, logs };
 }
 
 // Monday-first weekday key for a given date.
@@ -149,7 +162,8 @@ export function anchorsForDate(
 }
 
 export function logFor(rhythmData: RhythmData, dateStr: string): RhythmDayLog {
-  return rhythmData.logs[dateStr] ?? { completedAnchorIds: [] };
+  const stored = rhythmData.logs[dateStr];
+  return { completedAnchorIds: stored?.completedAnchorIds ?? [], nudgedAnchorIds: stored?.nudgedAnchorIds ?? [] };
 }
 
 // Past days are locked - only today's log can ever be written to.
@@ -163,7 +177,53 @@ export function toggleAnchorDone(
   const next = log.completedAnchorIds.includes(anchorId)
     ? log.completedAnchorIds.filter((id) => id !== anchorId)
     : [...log.completedAnchorIds, anchorId];
-  return { ...rhythmData, logs: { ...rhythmData.logs, [today]: { completedAnchorIds: next } } };
+  return {
+    ...rhythmData,
+    logs: { ...rhythmData.logs, [today]: { ...log, completedAnchorIds: next } },
+  };
+}
+
+// Marks an anchor as having already been texted about today, so the
+// anchor-nudge cron never sends the same nudge twice.
+export function markAnchorNudged(
+  rhythmData: RhythmData,
+  anchorId: string,
+  now: Date = new Date()
+): RhythmData {
+  const today = dateKey(now);
+  const log = logFor(rhythmData, today);
+  if (log.nudgedAnchorIds.includes(anchorId)) return rhythmData;
+  return {
+    ...rhythmData,
+    logs: {
+      ...rhythmData.logs,
+      [today]: { ...log, nudgedAnchorIds: [...log.nudgedAnchorIds, anchorId] },
+    },
+  };
+}
+
+// Anchors with a configured nudge time close to `now`, that aren't already
+// done and haven't already been nudged today - used by the anchor-nudge
+// cron. `now` should be a real-Eastern-clock Date (see servertime.ts).
+export function anchorsDueForNudge(
+  rhythmData: RhythmData,
+  paydayAnchorDate: string,
+  now: Date,
+  windowMinutes = 20
+): RhythmAnchor[] {
+  const anchors = anchorsForDate(rhythmData, paydayAnchorDate, now);
+  const log = logFor(rhythmData, dateKey(now));
+  const doneIds = new Set(log.completedAnchorIds);
+  const nudgedIds = new Set(log.nudgedAnchorIds);
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+
+  return anchors.filter((a) => {
+    if (!a.nudgeTime || doneIds.has(a.id) || nudgedIds.has(a.id)) return false;
+    const [h, m] = a.nudgeTime.split(":").map(Number);
+    if (Number.isNaN(h) || Number.isNaN(m)) return false;
+    const targetMins = h * 60 + m;
+    return nowMins >= targetMins && nowMins - targetMins <= windowMinutes;
+  });
 }
 
 export type AnchorState = "done" | "current" | "upNext";

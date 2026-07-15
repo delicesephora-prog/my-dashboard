@@ -20,6 +20,7 @@ import { LifeScoreData } from "@/lib/lifescore";
 import { GroceryData, DumpData } from "@/lib/lists";
 import { RhythmData } from "@/lib/rhythm";
 import { GlowUpData } from "@/lib/glowup";
+import { TextAlertsData } from "@/lib/textalerts";
 import BoardMeeting from "./BoardMeeting";
 import QuickDump from "./QuickDump";
 import { todayKey } from "@/lib/date";
@@ -166,6 +167,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
 
   function updateGlowUp(updater: (g: GlowUpData) => GlowUpData) {
     setData((prev) => ({ ...prev, glowUp: updater(prev.glowUp) }));
+    scheduleSave();
+  }
+
+  function updateTextAlerts(updater: (t: TextAlertsData) => TextAlertsData) {
+    setData((prev) => ({ ...prev, textAlerts: updater(prev.textAlerts) }));
     scheduleSave();
   }
 
@@ -453,6 +459,9 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           }}
           onChangeLifeScoreWeights={(updater) =>
             updateLifeScore((l) => ({ ...l, weights: updater(l.weights) }))
+          }
+          onChangeTextAlerts={(updater) =>
+            updateTextAlerts((t) => ({ ...t, settings: updater(t.settings) }))
           }
           onClose={() => setSettingsOpen(false)}
         />

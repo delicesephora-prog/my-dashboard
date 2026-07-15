@@ -1,23 +1,3 @@
-export function buildMorningNudge(
-  oneThing: string,
-  topPriorities: { title: string }[]
-): string {
-  const lines = ["Good morning! ☀️"];
-
-  if (oneThing) {
-    lines.push(`One Thing: ${oneThing}`);
-  }
-
-  if (topPriorities.length > 0) {
-    lines.push("Top priorities:");
-    topPriorities.forEach((p, i) => lines.push(`${i + 1}. ${p.title}`));
-  } else {
-    lines.push("No top priorities pinned yet.");
-  }
-
-  return lines.join("\n");
-}
-
 export function buildOverdueAlert(tasks: { title: string; dueDate: string }[]): string {
   const lines = [`⚠️ ${tasks.length} item${tasks.length === 1 ? "" : "s"} just went overdue:`];
   tasks.forEach((t) => {
@@ -26,30 +6,35 @@ export function buildOverdueAlert(tasks: { title: string; dueDate: string }[]): 
   return lines.join("\n");
 }
 
-// A warm, no-guilt evening check-in - returns null (send nothing) when
-// she's already on track. Silence is the reward.
-export function buildEveningNudge({
-  routinePct,
-  nightRemaining,
-  atRiskHabits,
+// Morning text - day type, One Thing if set, today's rhythm anchors.
+// Short, warm, direct. No calendar line - there's no calendar integration.
+export function buildMorningRhythmText({
+  dayLabel,
+  dayType,
+  oneThing,
+  anchors,
 }: {
-  routinePct: number | null;
-  nightRemaining: number;
-  atRiskHabits: { label: string; doneCount: number; weeklyGoal: number }[];
-}): string | null {
-  const routineBehind = routinePct !== null && routinePct < 50;
+  dayLabel: string;
+  dayType: string;
+  oneThing: string;
+  anchors: string[];
+}): string {
+  const lines = [`Morning. ${dayLabel} - ${dayType} day.`];
+  if (oneThing) lines.push(`One Thing: ${oneThing}`);
+  if (anchors.length > 0) lines.push(`Today: ${anchors.join(", ")}`);
+  lines.push("Make it count.");
+  return lines.join("\n");
+}
 
-  if (routineBehind && nightRemaining > 0) {
-    return `Your night routine is still open. ${nightRemaining} step${
-      nightRemaining === 1 ? "" : "s"
-    } left - a few minutes keeps the streak. — Your Dashboard`;
-  }
-  if (atRiskHabits.length > 0) {
-    const h = atRiskHabits[0];
-    return `${h.label} is close to slipping - ${h.doneCount}/${h.weeklyGoal} this week. A little now keeps it alive. — Your Dashboard`;
-  }
-  if (routineBehind) {
-    return "Today's routines are under halfway done. A few minutes tonight keeps things on track. — Your Dashboard";
-  }
-  return null;
+// A single, one-time nudge for a time-sensitive rhythm anchor.
+export function buildAnchorNudgeText(anchorText: string): string {
+  return `${anchorText} — coming up. Don't let it slide.`;
+}
+
+// Sent at 9pm only if the night routine hasn't been started at all -
+// direct and honest, grounded in the actual tracked step count, not guilt.
+export function buildNightRoutineText(totalSteps: number): string {
+  return `It's 9pm and the night routine hasn't been started - ${totalSteps} step${
+    totalSteps === 1 ? "" : "s"
+  } waiting. A few minutes now. Go.`;
 }
