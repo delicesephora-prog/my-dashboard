@@ -69,7 +69,6 @@ type LifeView =
   | "bucketList"
   | "year";
 
-const LOCAL_KEY = "dashboard-cache-v1";
 const SAVE_DELAY_MS = 700;
 
 export default function Dashboard({ initialData }: { initialData: DashboardData }) {
@@ -108,7 +107,6 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           const detail = await res.text().catch(() => "");
           throw new Error(`save failed (${res.status}): ${detail.slice(0, 500)}`);
         }
-        window.localStorage.setItem(LOCAL_KEY, JSON.stringify(latestData.current));
         setStatus("saved");
         setSaveError(null);
       } catch (err) {
