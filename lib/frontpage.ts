@@ -12,12 +12,14 @@ import { isOverdue, sortWorkTasks } from "./work-style";
 import { todayKey } from "./date";
 import { weekKeyFor } from "./week";
 import { quarterKeyFor } from "./quarter";
+import { hasMeetingThisWeek } from "./boardmeeting";
 
 export type FrontPageNavTarget =
   | { world: "work"; workView?: "dashboard" | "backbeat" | "reference" }
   | {
       world: "life";
       lifeView?: "week" | "habits" | "quarter" | "books" | "bucketList" | "year";
+      openBoardMeeting?: boolean;
     };
 
 // Monday = 0 ... Sunday = 6, matching how habit weeks are stored.
@@ -96,10 +98,10 @@ export function computeRecommendation(
     };
   }
 
-  if (now.getDay() === 0) {
+  if (now.getDay() === 0 && !hasMeetingThisWeek(data.boardMeetings, now)) {
     return {
-      text: "It's Sunday - time for your Board Meeting. Review your quarterly goals.",
-      target: { world: "life", lifeView: "quarter" },
+      text: "It's Sunday - time for your Weekly Board Meeting.",
+      target: { world: "life", lifeView: "quarter", openBoardMeeting: true },
     };
   }
 

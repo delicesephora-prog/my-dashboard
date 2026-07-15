@@ -17,6 +17,7 @@ import {
 } from "@/lib/types";
 import { RoutinesData } from "@/lib/routines";
 import { LifeScoreData } from "@/lib/lifescore";
+import BoardMeeting from "./BoardMeeting";
 import { todayKey } from "@/lib/date";
 import { weekKeyFor } from "@/lib/week";
 import WorldToggle from "./WorldToggle";
@@ -65,6 +66,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [dailyReviewOpen, setDailyReviewOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [boardMeetingOpen, setBoardMeetingOpen] = useState(false);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestData = useRef(data);
@@ -134,6 +136,14 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     scheduleSave();
   }
 
+  // For flows that touch several domains at once (e.g. the Board Meeting,
+  // which writes to boardMeetings, lifeQuarterly, lifeWeekly, and year in
+  // a single step) rather than threading a separate updater for each.
+  function updateData(updater: (d: DashboardData) => DashboardData) {
+    setData(updater);
+    scheduleSave();
+  }
+
   function updateHabits(updater: (h: HabitsData) => HabitsData) {
     setData((prev) => ({ ...prev, habits: updater(prev.habits) }));
     scheduleSave();
@@ -180,6 +190,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     setWorld(target.world);
     if (target.world === "work" && target.workView) setWorkView(target.workView);
     if (target.world === "life" && target.lifeView) setLifeView(target.lifeView);
+    if (target.world === "life" && target.openBoardMeeting) setBoardMeetingOpen(true);
   }
 
   return (
@@ -289,7 +300,9 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
               <QuarterView
                 lifeQuarterly={data.lifeQuarterly}
                 lifeWeekly={data.lifeWeekly}
+                boardMeetings={data.boardMeetings}
                 onChange={updateLifeQuarterly}
+                onStartBoardMeeting={() => setBoardMeetingOpen(true)}
               />
             )}
             {lifeView === "books" && <BooksView books={data.books} onChange={updateBooks} />}
@@ -330,6 +343,14 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             updateLifeScore((l) => ({ ...l, weights: updater(l.weights) }))
           }
           onClose={() => setSettingsOpen(false)}
+        />
+      )}
+
+      {boardMeetingOpen && (
+        <BoardMeeting
+          data={data}
+          onChangeData={updateData}
+          onClose={() => setBoardMeetingOpen(false)}
         />
       )}
     </div>

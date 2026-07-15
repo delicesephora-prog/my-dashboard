@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { LifeQuarterly, LifeWeekly, MoneyData, QuarterData, quarterDataFor } from "@/lib/types";
 import { PaydayChecklistData } from "@/lib/payday";
+import { BoardMeetingData } from "@/lib/boardmeeting";
 import { quarterKeyFor, shiftQuarterKey, formatQuarterLabel } from "@/lib/quarter";
 import WeekNav from "../../WeekNav";
 import MoneySection from "./MoneySection";
 import PaydayChecklistSection from "./PaydayChecklistSection";
+import BoardMeetingCard from "./BoardMeetingCard";
 import QuarterlyGoalsSection from "./QuarterlyGoalsSection";
 import AchievementsSection from "./AchievementsSection";
 import ParkingLotSection from "./ParkingLotSection";
@@ -15,11 +17,15 @@ import WorkoutConsistencyChart from "./WorkoutConsistencyChart";
 export default function QuarterView({
   lifeQuarterly,
   lifeWeekly,
+  boardMeetings,
   onChange,
+  onStartBoardMeeting,
 }: {
   lifeQuarterly: LifeQuarterly;
   lifeWeekly: LifeWeekly;
+  boardMeetings: BoardMeetingData;
   onChange: (updater: (lq: LifeQuarterly) => LifeQuarterly) => void;
+  onStartBoardMeeting: () => void;
 }) {
   const [quarterKey, setQuarterKey] = useState(() => quarterKeyFor(new Date()));
   const quarterData = quarterDataFor(lifeQuarterly, quarterKey);
@@ -52,6 +58,8 @@ export default function QuarterView({
       />
 
       <div className="flex flex-col gap-3">
+        <BoardMeetingCard boardMeetings={boardMeetings} onStart={onStartBoardMeeting} />
+
         <MoneySection money={lifeQuarterly.money} onChange={updateMoney} />
 
         <PaydayChecklistSection

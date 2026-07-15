@@ -422,6 +422,32 @@ const routineDayLogSchema = z.object({
   }),
 });
 
+const boardMeetingRecordSchema = z.object({
+  date: z.string(),
+  weekKeyReviewed: z.string(),
+  lifeScoreAvg: z.number().min(0).max(100).nullable(),
+  routineConsistencyAvg: z.number().min(0).max(100).nullable(),
+  wins: z.array(z.string().max(500)).max(50),
+  whatSlipped: z.string().max(5000),
+  vaultTotal: z.number(),
+  debtTotal: z.number(),
+  vaultDelta: z.number().nullable(),
+  debtDelta: z.number().nullable(),
+  weeklyFocus: z.array(z.string().max(200)).max(3),
+  goals: z.array(z.string().max(500)).max(3),
+  warRoomMoves: z.object({
+    Fitness: z.string().max(500),
+    Finances: z.string().max(500),
+    Faith: z.string().max(500),
+    Style: z.string().max(500),
+    Career: z.string().max(500),
+  }),
+});
+
+const boardMeetingDataSchema = z.object({
+  meetings: z.record(boardMeetingRecordSchema),
+});
+
 const lifeScoreWeightsSchema = z.object({
   routines: z.number().min(0).max(100),
   habits: z.number().min(0).max(100),
@@ -464,6 +490,7 @@ const dashboardSchema = z.object({
   smsAlerts: smsAlertsDataSchema,
   routines: routinesDataSchema,
   lifeScore: lifeScoreDataSchema,
+  boardMeetings: boardMeetingDataSchema,
 });
 
 export async function GET() {
