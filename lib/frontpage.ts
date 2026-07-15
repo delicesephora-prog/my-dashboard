@@ -19,7 +19,15 @@ export type FrontPageNavTarget =
   | { world: "work"; workView?: "dashboard" | "backbeat" | "reference" }
   | {
       world: "life";
-      lifeView?: "week" | "habits" | "quarter" | "rhythm" | "books" | "bucketList" | "year";
+      lifeView?:
+        | "week"
+        | "habits"
+        | "quarter"
+        | "rhythm"
+        | "glowUp"
+        | "books"
+        | "bucketList"
+        | "year";
       openBoardMeeting?: boolean;
     };
 
@@ -99,13 +107,16 @@ export function computeRecommendation(
     now
   );
   if (anchorText) {
-    const isBoardMeeting =
-      anchorText.toLowerCase() === "board meeting" && !hasMeetingThisWeek(data.boardMeetings, now);
+    const lower = anchorText.toLowerCase();
+    const isBoardMeeting = lower === "board meeting" && !hasMeetingThisWeek(data.boardMeetings, now);
+    const isSundayReset = lower === "sunday reset";
     return {
       text: `Up next: ${anchorText}`,
       target: isBoardMeeting
         ? { world: "life", lifeView: "quarter", openBoardMeeting: true }
-        : { world: "life", lifeView: "rhythm" },
+        : isSundayReset
+          ? { world: "life", lifeView: "glowUp" }
+          : { world: "life", lifeView: "rhythm" },
     };
   }
 

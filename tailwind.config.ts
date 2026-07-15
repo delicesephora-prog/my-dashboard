@@ -24,6 +24,13 @@ const config: Config = {
           DEFAULT: "#C9A227",
           soft: "#F5ECC9",
         },
+        // A dusty rose accent, reserved for Glow Up - feminine but still
+        // muted enough to sit inside the same paper/olive system.
+        glow: {
+          DEFAULT: "#B97C87",
+          soft: "#F3E3E5",
+          dark: "#7D4750",
+        },
         // Luxury paper-planner neutrals
         paper: {
           bg: "#F6F1E9",

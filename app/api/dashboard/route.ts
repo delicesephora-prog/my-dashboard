@@ -422,6 +422,36 @@ const routineDayLogSchema = z.object({
   }),
 });
 
+const glowUpItemSchema = z.object({
+  id: z.string(),
+  text: z.string().max(300),
+  order: z.number().int(),
+});
+
+const glowUpMonthlyItemSchema = z.object({
+  id: z.string(),
+  text: z.string().max(300),
+  order: z.number().int(),
+  lastDoneDate: z.string(),
+  warnAfterDays: z.number().int().min(1).max(365).optional(),
+});
+
+const diyLogEntrySchema = z.object({
+  date: z.string(),
+  itemId: z.string(),
+});
+
+const glowUpDataSchema = z.object({
+  dailyItems: z.array(glowUpItemSchema).max(50),
+  weeklyItems: z.array(glowUpItemSchema).max(50),
+  monthlyItems: z.array(glowUpMonthlyItemSchema).max(50),
+  diyItems: z.array(glowUpItemSchema).max(50),
+  dailyLogs: z.record(z.array(z.string()).max(50)),
+  weeklyLogs: z.record(z.array(z.string()).max(50)),
+  monthlyLogs: z.record(z.array(z.string()).max(50)),
+  diyLog: z.array(diyLogEntrySchema).max(500),
+});
+
 const rhythmAnchorSchema = z.object({
   id: z.string(),
   text: z.string().max(300),
@@ -560,6 +590,7 @@ const dashboardSchema = z.object({
   boardMeetings: boardMeetingDataSchema,
   lists: listsDataSchema,
   rhythm: rhythmDataSchema,
+  glowUp: glowUpDataSchema,
 });
 
 export async function GET() {

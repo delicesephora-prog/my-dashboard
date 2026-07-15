@@ -19,6 +19,7 @@ import { RoutinesData } from "@/lib/routines";
 import { LifeScoreData } from "@/lib/lifescore";
 import { GroceryData, DumpData } from "@/lib/lists";
 import { RhythmData } from "@/lib/rhythm";
+import { GlowUpData } from "@/lib/glowup";
 import BoardMeeting from "./BoardMeeting";
 import QuickDump from "./QuickDump";
 import { todayKey } from "@/lib/date";
@@ -42,6 +43,7 @@ import ManageRoutines from "./life/routines/ManageRoutines";
 import QuarterView from "./life/quarter/QuarterView";
 import ListsView from "./life/lists/ListsView";
 import RhythmView from "./life/rhythm/RhythmView";
+import GlowUpView from "./life/glowup/GlowUpView";
 import BooksView from "./life/BooksView";
 import BucketListView from "./life/BucketListView";
 import YearView from "./life/year/YearView";
@@ -58,6 +60,7 @@ type LifeView =
   | "quarter"
   | "lists"
   | "rhythm"
+  | "glowUp"
   | "books"
   | "bucketList"
   | "year";
@@ -158,6 +161,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
 
   function updateRhythm(updater: (r: RhythmData) => RhythmData) {
     setData((prev) => ({ ...prev, rhythm: updater(prev.rhythm) }));
+    scheduleSave();
+  }
+
+  function updateGlowUp(updater: (g: GlowUpData) => GlowUpData) {
+    setData((prev) => ({ ...prev, glowUp: updater(prev.glowUp) }));
     scheduleSave();
   }
 
@@ -339,6 +347,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                   { key: "quarter", label: "Quarter" },
                   { key: "lists", label: "Lists" },
                   { key: "rhythm", label: "Rhythm" },
+                  { key: "glowUp", label: "Glow Up" },
                   { key: "books", label: "Books" },
                   { key: "bucketList", label: "Bucket List" },
                   { key: "year", label: "Year" },
@@ -404,6 +413,9 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             )}
             {lifeView === "rhythm" && (
               <RhythmView rhythmData={data.rhythm} onChange={updateRhythm} />
+            )}
+            {lifeView === "glowUp" && (
+              <GlowUpView data={data.glowUp} onChange={updateGlowUp} />
             )}
             {lifeView === "books" && <BooksView books={data.books} onChange={updateBooks} />}
             {lifeView === "bucketList" && (
