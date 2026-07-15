@@ -584,6 +584,31 @@ const textAlertsDataSchema = z.object({
   log: z.record(z.array(z.string()).max(10)),
 });
 
+const plannerDaySchema = z.enum([
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+]);
+
+const plannerBlockSchema = z.object({
+  id: z.string(),
+  title: z.string().max(200),
+  category: z.enum(["Work", "Life", "Faith", "Fitness", "Admin"]),
+  notes: z.string().max(2000),
+  startTime: z.string().max(10),
+  endTime: z.string().max(10),
+  repeatDays: z.array(plannerDaySchema).max(7),
+  date: z.string().max(10),
+});
+
+const plannerDataSchema = z.object({
+  blocks: z.array(plannerBlockSchema).max(2000),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -608,6 +633,7 @@ const dashboardSchema = z.object({
   rhythm: rhythmDataSchema,
   glowUp: glowUpDataSchema,
   textAlerts: textAlertsDataSchema,
+  planner: plannerDataSchema,
 });
 
 export async function GET() {

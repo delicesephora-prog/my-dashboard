@@ -21,6 +21,7 @@ import { GroceryData, DumpData } from "@/lib/lists";
 import { RhythmData } from "@/lib/rhythm";
 import { GlowUpData } from "@/lib/glowup";
 import { TextAlertsData } from "@/lib/textalerts";
+import { PlannerData } from "@/lib/planner";
 import BoardMeeting from "./BoardMeeting";
 import QuickDump from "./QuickDump";
 import { todayKey } from "@/lib/date";
@@ -45,6 +46,7 @@ import QuarterView from "./life/quarter/QuarterView";
 import ListsView from "./life/lists/ListsView";
 import RhythmView from "./life/rhythm/RhythmView";
 import GlowUpView from "./life/glowup/GlowUpView";
+import PlannerView from "./life/planner/PlannerView";
 import BooksView from "./life/BooksView";
 import BucketListView from "./life/BucketListView";
 import YearView from "./life/year/YearView";
@@ -54,6 +56,7 @@ type World = "front" | "work" | "life";
 type WorkView = "dashboard" | "backbeat" | "reference";
 type LifeView =
   | "week"
+  | "planner"
   | "routines"
   | "manageRoutines"
   | "habits"
@@ -172,6 +175,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
 
   function updateTextAlerts(updater: (t: TextAlertsData) => TextAlertsData) {
     setData((prev) => ({ ...prev, textAlerts: updater(prev.textAlerts) }));
+    scheduleSave();
+  }
+
+  function updatePlanner(updater: (p: PlannerData) => PlannerData) {
+    setData((prev) => ({ ...prev, planner: updater(prev.planner) }));
     scheduleSave();
   }
 
@@ -348,6 +356,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
               <SubNav
                 items={[
                   { key: "week", label: "This Week" },
+                  { key: "planner", label: "Planner" },
                   { key: "routines", label: "Routines" },
                   { key: "habits", label: "Habits" },
                   { key: "quarter", label: "Quarter" },
@@ -368,6 +377,13 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 lifeWeekly={data.lifeWeekly}
                 currentlyReading={data.books.currentlyReading}
                 onChange={updateLifeWeekly}
+              />
+            )}
+            {lifeView === "planner" && (
+              <PlannerView
+                data={data.planner}
+                routinesConfig={data.routines.config}
+                onChange={updatePlanner}
               />
             )}
             {lifeView === "routines" && (
