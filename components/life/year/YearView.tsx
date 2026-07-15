@@ -3,14 +3,16 @@
 import { YearData } from "@/lib/types";
 import ReflectionsSection from "./ReflectionsSection";
 import YearBucketsSection from "./YearBucketsSection";
-import December8Section from "./December8Section";
+import WarRoomSection from "./WarRoomSection";
 import QuarterlyGoalsSection from "../quarter/QuarterlyGoalsSection";
 
 export default function YearView({
   year,
+  paydayAnchorDate,
   onChange,
 }: {
   year: YearData;
+  paydayAnchorDate: string;
   onChange: (updater: (y: YearData) => YearData) => void;
 }) {
   return (
@@ -32,11 +34,14 @@ export default function YearView({
           onChange={(updater) => onChange((y) => ({ ...y, goals: updater(y.goals) }))}
         />
 
-        <December8Section
+        <WarRoomSection
           transformations={year.transformations}
-          onChange={(updater) =>
+          warRoom={year.warRoom}
+          paydayAnchorDate={paydayAnchorDate}
+          onChangeTransformations={(updater) =>
             onChange((y) => ({ ...y, transformations: updater(y.transformations) }))
           }
+          onChangeWarRoom={(updater) => onChange((y) => ({ ...y, warRoom: updater(y.warRoom) }))}
         />
       </div>
     </div>

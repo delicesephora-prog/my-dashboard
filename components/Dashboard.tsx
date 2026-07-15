@@ -289,7 +289,13 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             {lifeView === "bucketList" && (
               <BucketListView bucketList={data.bucketList} onChange={updateBucketList} />
             )}
-            {lifeView === "year" && <YearView year={data.year} onChange={updateYear} />}
+            {lifeView === "year" && (
+              <YearView
+                year={data.year}
+                paydayAnchorDate={data.lifeQuarterly.paydayChecklist.anchorDate}
+                onChange={updateYear}
+              />
+            )}
           </>
         )}
       </main>

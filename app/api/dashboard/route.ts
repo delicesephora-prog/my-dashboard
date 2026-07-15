@@ -334,6 +334,35 @@ const transformationGoalSchema = z.object({
   done: z.boolean(),
 });
 
+const categorySnapshotSchema = z.object({
+  date: z.string(),
+  done: z.number().int().min(0),
+  total: z.number().int().min(0),
+});
+
+const categoryWarRoomDataSchema = z.object({
+  thisWeeksMove: z.string().max(500),
+  thisWeeksMoveSetDate: z.string(),
+  snapshots: z.array(categorySnapshotSchema).max(1000),
+});
+
+const letterToDecemberSephSchema = z.object({
+  text: z.string().max(20000),
+  sealed: z.boolean(),
+  sealedDate: z.string(),
+});
+
+const warRoomDataSchema = z.object({
+  categories: z.object({
+    Fitness: categoryWarRoomDataSchema,
+    Finances: categoryWarRoomDataSchema,
+    Faith: categoryWarRoomDataSchema,
+    Style: categoryWarRoomDataSchema,
+    Career: categoryWarRoomDataSchema,
+  }),
+  letter: letterToDecemberSephSchema,
+});
+
 const yearDataSchema = z.object({
   reflections: yearReflectionsSchema,
   buckets: z.array(yearBucketSchema).max(200),
@@ -345,6 +374,7 @@ const yearDataSchema = z.object({
     Style: z.array(transformationGoalSchema).max(200),
     Career: z.array(transformationGoalSchema).max(200),
   }),
+  warRoom: warRoomDataSchema,
 });
 
 const dailyReviewEntrySchema = z.object({

@@ -1,5 +1,6 @@
 import { RoutinesData, emptyRoutinesData, normalizeRoutinesData } from "./routines";
 import { PaydayChecklistData, emptyPaydayChecklistData } from "./payday";
+import { WarRoomData, emptyWarRoomData, normalizeWarRoomData } from "./warroom";
 
 export type TaskItem = {
   id: string;
@@ -626,6 +627,7 @@ export type YearData = {
   buckets: YearBucket[];
   goals: YearGoal[];
   transformations: Record<TransformationCategoryKey, TransformationGoal[]>;
+  warRoom: WarRoomData;
 };
 
 export function emptyTransformations(): Record<TransformationCategoryKey, TransformationGoal[]> {
@@ -638,6 +640,7 @@ export function emptyYearData(): YearData {
     buckets: [],
     goals: [],
     transformations: emptyTransformations(),
+    warRoom: emptyWarRoomData(),
   };
 }
 
@@ -840,6 +843,7 @@ export function normalizeDashboardData(
       buckets: data.year?.buckets ?? [],
       goals: data.year?.goals ?? [],
       transformations: { ...fallback.year.transformations, ...data.year?.transformations },
+      warRoom: normalizeWarRoomData(data.year?.warRoom),
     },
     dailyReview: {
       entries: data.dailyReview?.entries ?? {},
