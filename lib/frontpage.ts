@@ -13,12 +13,13 @@ import { todayKey } from "./date";
 import { weekKeyFor } from "./week";
 import { quarterKeyFor } from "./quarter";
 import { hasMeetingThisWeek } from "./boardmeeting";
+import { suggestedAnchorText } from "./rhythm";
 
 export type FrontPageNavTarget =
   | { world: "work"; workView?: "dashboard" | "backbeat" | "reference" }
   | {
       world: "life";
-      lifeView?: "week" | "habits" | "quarter" | "books" | "bucketList" | "year";
+      lifeView?: "week" | "habits" | "quarter" | "rhythm" | "books" | "bucketList" | "year";
       openBoardMeeting?: boolean;
     };
 
@@ -78,15 +79,6 @@ export function computeRecommendation(
   now: Date = new Date()
 ): FrontPageRecommendation | null {
   const today = todayKey(now);
-  const hour = now.getHours();
-  const habitProgress = todayHabitProgress(data.habits, now);
-
-  if (hour < 12 && habitProgress.total > 0 && habitProgress.done === 0) {
-    return {
-      text: "Your morning routine hasn't been started yet.",
-      target: { world: "life", lifeView: "habits" },
-    };
-  }
 
   const dueToday = data.workOps.tasks.find(
     (t) => t.topPriority && t.status !== "completed" && t.dueDate === today
@@ -98,10 +90,22 @@ export function computeRecommendation(
     };
   }
 
-  if (now.getDay() === 0 && !hasMeetingThisWeek(data.boardMeetings, now)) {
+  // The day's rhythm is the main driver of "what's next" - gentle,
+  // time-of-day aware, and Sunday's Board Meeting anchor routes straight
+  // into the guided flow instead of just pointing at a tab.
+  const anchorText = suggestedAnchorText(
+    data.rhythm,
+    data.lifeQuarterly.paydayChecklist.anchorDate,
+    now
+  );
+  if (anchorText) {
+    const isBoardMeeting =
+      anchorText.toLowerCase() === "board meeting" && !hasMeetingThisWeek(data.boardMeetings, now);
     return {
-      text: "It's Sunday - time for your Weekly Board Meeting.",
-      target: { world: "life", lifeView: "quarter", openBoardMeeting: true },
+      text: `Up next: ${anchorText}`,
+      target: isBoardMeeting
+        ? { world: "life", lifeView: "quarter", openBoardMeeting: true }
+        : { world: "life", lifeView: "rhythm" },
     };
   }
 
@@ -115,6 +119,14 @@ export function computeRecommendation(
           ? "You have 1 overdue task."
           : `You have ${overdueCount} overdue tasks.`,
       target: { world: "work", workView: "dashboard" },
+    };
+  }
+
+  const habitProgress = todayHabitProgress(data.habits, now);
+  if (now.getHours() < 12 && habitProgress.total > 0 && habitProgress.done === 0) {
+    return {
+      text: "Your morning routine hasn't been started yet.",
+      target: { world: "life", lifeView: "habits" },
     };
   }
 

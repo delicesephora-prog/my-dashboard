@@ -18,6 +18,7 @@ import {
 import { RoutinesData } from "@/lib/routines";
 import { LifeScoreData } from "@/lib/lifescore";
 import { GroceryData, DumpData } from "@/lib/lists";
+import { RhythmData } from "@/lib/rhythm";
 import BoardMeeting from "./BoardMeeting";
 import QuickDump from "./QuickDump";
 import { todayKey } from "@/lib/date";
@@ -40,6 +41,7 @@ import RoutinesView from "./life/routines/RoutinesView";
 import ManageRoutines from "./life/routines/ManageRoutines";
 import QuarterView from "./life/quarter/QuarterView";
 import ListsView from "./life/lists/ListsView";
+import RhythmView from "./life/rhythm/RhythmView";
 import BooksView from "./life/BooksView";
 import BucketListView from "./life/BucketListView";
 import YearView from "./life/year/YearView";
@@ -55,6 +57,7 @@ type LifeView =
   | "manageHabits"
   | "quarter"
   | "lists"
+  | "rhythm"
   | "books"
   | "bucketList"
   | "year";
@@ -150,6 +153,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   // a single step) rather than threading a separate updater for each.
   function updateData(updater: (d: DashboardData) => DashboardData) {
     setData(updater);
+    scheduleSave();
+  }
+
+  function updateRhythm(updater: (r: RhythmData) => RhythmData) {
+    setData((prev) => ({ ...prev, rhythm: updater(prev.rhythm) }));
     scheduleSave();
   }
 
@@ -295,6 +303,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             counts={counts}
             onNavigate={handleFrontPageNavigate}
             onChangeLifeScore={updateLifeScore}
+            onChangeRhythm={updateRhythm}
             onOpenQuickDump={() => setQuickDumpOpen(true)}
           />
         ) : world === "work" ? (
@@ -329,6 +338,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                   { key: "habits", label: "Habits" },
                   { key: "quarter", label: "Quarter" },
                   { key: "lists", label: "Lists" },
+                  { key: "rhythm", label: "Rhythm" },
                   { key: "books", label: "Books" },
                   { key: "bucketList", label: "Bucket List" },
                   { key: "year", label: "Year" },
@@ -391,6 +401,9 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 onSendToWork={sendDumpItemToWork}
                 onSendToLife={sendDumpItemToLife}
               />
+            )}
+            {lifeView === "rhythm" && (
+              <RhythmView rhythmData={data.rhythm} onChange={updateRhythm} />
             )}
             {lifeView === "books" && <BooksView books={data.books} onChange={updateBooks} />}
             {lifeView === "bucketList" && (

@@ -17,10 +17,12 @@ import {
   last30DaysScoreHistory,
   recordTodayScore,
 } from "@/lib/lifescore";
+import { RhythmData } from "@/lib/rhythm";
 import Greeting from "./Greeting";
 import OneThing from "./OneThing";
 import LifeScoreRing from "./LifeScoreRing";
 import LifeScoreSheet from "./LifeScoreSheet";
+import RhythmStrip from "./RhythmStrip";
 
 export default function FrontPage({
   data,
@@ -29,6 +31,7 @@ export default function FrontPage({
   counts,
   onNavigate,
   onChangeLifeScore,
+  onChangeRhythm,
   onOpenQuickDump,
 }: {
   data: DashboardData;
@@ -37,6 +40,7 @@ export default function FrontPage({
   counts: { work: number; life: number };
   onNavigate: (target: FrontPageNavTarget) => void;
   onChangeLifeScore: (updater: (l: LifeScoreData) => LifeScoreData) => void;
+  onChangeRhythm: (updater: (r: RhythmData) => RhythmData) => void;
   onOpenQuickDump: () => void;
 }) {
   // Deferred to the client, same as Greeting - the recommendation, "today"
@@ -80,6 +84,7 @@ export default function FrontPage({
           focusTasks={focusTasks}
           onNavigate={onNavigate}
           onChangeLifeScore={onChangeLifeScore}
+          onChangeRhythm={onChangeRhythm}
         />
       )}
     </div>
@@ -93,6 +98,7 @@ function FrontPageBody({
   focusTasks,
   onNavigate,
   onChangeLifeScore,
+  onChangeRhythm,
 }: {
   data: DashboardData;
   now: Date;
@@ -100,6 +106,7 @@ function FrontPageBody({
   focusTasks: ReturnType<typeof pinnedFocusTasks>;
   onNavigate: (target: FrontPageNavTarget) => void;
   onChangeLifeScore: (updater: (l: LifeScoreData) => LifeScoreData) => void;
+  onChangeRhythm: (updater: (r: RhythmData) => RhythmData) => void;
 }) {
   const habitProgress = todayHabitProgress(data.habits, now);
   const atRisk = habitsAtRisk(data.habits, now);
@@ -191,6 +198,13 @@ function FrontPageBody({
           </div>
         )}
       </div>
+
+      <RhythmStrip
+        rhythmData={data.rhythm}
+        paydayAnchorDate={data.lifeQuarterly.paydayChecklist.anchorDate}
+        now={now}
+        onChange={onChangeRhythm}
+      />
 
       <button
         type="button"

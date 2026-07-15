@@ -422,6 +422,30 @@ const routineDayLogSchema = z.object({
   }),
 });
 
+const rhythmAnchorSchema = z.object({
+  id: z.string(),
+  text: z.string().max(300),
+  order: z.number().int(),
+  conditional: z.literal("payday").optional(),
+});
+
+const rhythmDayLogSchema = z.object({
+  completedAnchorIds: z.array(z.string()).max(50),
+});
+
+const rhythmDataSchema = z.object({
+  days: z.object({
+    monday: z.array(rhythmAnchorSchema).max(20),
+    tuesday: z.array(rhythmAnchorSchema).max(20),
+    wednesday: z.array(rhythmAnchorSchema).max(20),
+    thursday: z.array(rhythmAnchorSchema).max(20),
+    friday: z.array(rhythmAnchorSchema).max(20),
+    saturday: z.array(rhythmAnchorSchema).max(20),
+    sunday: z.array(rhythmAnchorSchema).max(20),
+  }),
+  logs: z.record(rhythmDayLogSchema),
+});
+
 const groceryCategorySchema = z.enum([
   "Produce",
   "Protein",
@@ -535,6 +559,7 @@ const dashboardSchema = z.object({
   lifeScore: lifeScoreDataSchema,
   boardMeetings: boardMeetingDataSchema,
   lists: listsDataSchema,
+  rhythm: rhythmDataSchema,
 });
 
 export async function GET() {

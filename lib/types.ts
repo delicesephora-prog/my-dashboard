@@ -4,6 +4,7 @@ import { WarRoomData, emptyWarRoomData, normalizeWarRoomData } from "./warroom";
 import { LifeScoreData, emptyLifeScoreData, normalizeLifeScoreData } from "./lifescore";
 import { BoardMeetingData, emptyBoardMeetingData, normalizeBoardMeetingData } from "./boardmeeting";
 import { ListsData, emptyListsData, normalizeListsData } from "./lists";
+import { RhythmData, emptyRhythmData, normalizeRhythmData } from "./rhythm";
 
 export type TaskItem = {
   id: string;
@@ -751,6 +752,7 @@ export type DashboardData = {
   lifeScore: LifeScoreData;
   boardMeetings: BoardMeetingData;
   lists: ListsData;
+  rhythm: RhythmData;
 };
 
 export function emptyWorld(): WorldData {
@@ -783,6 +785,7 @@ export function defaultDashboardData(): DashboardData {
     lifeScore: emptyLifeScoreData(),
     boardMeetings: emptyBoardMeetingData(),
     lists: emptyListsData(),
+    rhythm: emptyRhythmData(),
   };
 }
 
@@ -864,6 +867,7 @@ export function normalizeDashboardData(
     lifeScore: normalizeLifeScoreData(data.lifeScore),
     boardMeetings: normalizeBoardMeetingData(data.boardMeetings),
     lists: normalizeListsData(data.lists),
+    rhythm: normalizeRhythmData(data.rhythm),
   };
 }
 
