@@ -22,6 +22,11 @@ function sql() {
       "DATABASE_URL is not set. Add it in Vercel Project Settings -> Environment Variables."
     );
   }
+  try {
+    console.log("[TEMP-DEBUG] using DATABASE_URL host:", new URL(url).host);
+  } catch {
+    console.log("[TEMP-DEBUG] DATABASE_URL is set but not a parseable URL");
+  }
   return neon(url);
 }
 
@@ -52,6 +57,10 @@ export async function getDashboardData(): Promise<DashboardData> {
     return initial;
   }
 
+  console.log(
+    "[TEMP-DEBUG] getDashboardData read, raw brainDump:",
+    JSON.stringify((rows[0].data as Partial<DashboardData> | null)?.brainDump ?? null)
+  );
   return redactLockedLetter(normalizeDashboardData(rows[0].data as Partial<DashboardData>));
 }
 
@@ -84,9 +93,13 @@ export async function saveDashboardData(data: DashboardData): Promise<void> {
     console.error("[db] sealed-letter guard check failed, saving anyway:", err);
   }
 
-  await db`
+  console.log("[TEMP-DEBUG] about to write, brainDump:", JSON.stringify(toSave.brainDump));
+
+  const result = await db`
     INSERT INTO dashboard_state (id, data, updated_at)
     VALUES (${ROW_ID}, ${JSON.stringify(toSave)}::jsonb, now())
     ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()
+    RETURNING data->>'brainDump' AS brain_dump_after_write
   `;
+  console.log("[TEMP-DEBUG] write completed, DB now reports brainDump:", JSON.stringify(result[0]?.brain_dump_after_write ?? null));
 }
