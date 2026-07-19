@@ -107,6 +107,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(latestData.current),
+          cache: "no-store",
         });
         if (!res.ok) {
           const detail = await res.text().catch(() => "");
@@ -130,7 +131,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   async function checkDbNow() {
     setDebugPanel((prev) => ({ ...prev, dbCheckLoading: true }));
     try {
-      const res = await fetch("/api/dashboard?debug=1");
+      const res = await fetch("/api/dashboard?debug=1", { cache: "no-store" });
       const body = await res.json().catch(() => null);
       if (res.ok && body?.debug) {
         setDebugPanel((prev) => ({ ...prev, dbCheck: body.debug, dbCheckLoading: false }));

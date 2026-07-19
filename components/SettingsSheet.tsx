@@ -84,6 +84,7 @@ export default function SettingsSheet({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(normalized),
+        cache: "no-store",
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
