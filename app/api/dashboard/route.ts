@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getDashboardData, saveDashboardData } from "@/lib/db";
+import { getDashboardData, getDebugSnapshot, saveDashboardData } from "@/lib/db";
 import { normalizeDashboardData } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -636,7 +636,22 @@ const dashboardSchema = z.object({
   planner: plannerDataSchema,
 });
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Temporary: ?debug=1 returns a lightweight snapshot of what's actually
+  // in the database right now, without the full dashboard payload -
+  // viewable directly in-app so nothing needs to be checked in Vercel.
+  if (req.nextUrl.searchParams.get("debug") === "1") {
+    try {
+      const debug = await getDebugSnapshot();
+      return NextResponse.json({ ok: true, debug });
+    } catch (err) {
+      return NextResponse.json(
+        { ok: false, error: err instanceof Error ? err.message : "Unknown error" },
+        { status: 500 }
+      );
+    }
+  }
+
   try {
     const data = await getDashboardData();
     return NextResponse.json({ ok: true, data });
@@ -650,10 +665,6 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
   const body = await req.json().catch(() => null);
-  console.log(
-    "[TEMP-DEBUG] PUT received, brainDump:",
-    JSON.stringify((body as { brainDump?: unknown } | null)?.brainDump ?? null)
-  );
   // Backfill any fields the request is missing (e.g. a browser tab that's
   // been open since before a newer field was added) so a slightly stale
   // client never gets its save silently rejected.
@@ -661,21 +672,16 @@ export async function PUT(req: NextRequest) {
   const parsed = dashboardSchema.safeParse(normalized);
 
   if (!parsed.success) {
-    console.log("[TEMP-DEBUG] PUT validation FAILED:", JSON.stringify(parsed.error.issues).slice(0, 2000));
     return NextResponse.json(
       { ok: false, error: "Invalid dashboard data", issues: parsed.error.issues },
       { status: 400 }
     );
   }
 
-  console.log("[TEMP-DEBUG] PUT validated, brainDump:", JSON.stringify(parsed.data.brainDump));
-
   try {
-    await saveDashboardData(parsed.data);
-    console.log("[TEMP-DEBUG] PUT saveDashboardData completed without throwing");
-    return NextResponse.json({ ok: true });
+    const debug = await saveDashboardData(parsed.data);
+    return NextResponse.json({ ok: true, debug });
   } catch (err) {
-    console.log("[TEMP-DEBUG] PUT saveDashboardData THREW:", err instanceof Error ? err.message : String(err));
     return NextResponse.json(
       { ok: false, error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }

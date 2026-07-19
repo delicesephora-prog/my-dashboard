@@ -22,11 +22,6 @@ function sql() {
       "DATABASE_URL is not set. Add it in Vercel Project Settings -> Environment Variables."
     );
   }
-  try {
-    console.log("[TEMP-DEBUG] using DATABASE_URL host:", new URL(url).host);
-  } catch {
-    console.log("[TEMP-DEBUG] DATABASE_URL is set but not a parseable URL");
-  }
   return neon(url);
 }
 
@@ -57,14 +52,34 @@ export async function getDashboardData(): Promise<DashboardData> {
     return initial;
   }
 
-  console.log(
-    "[TEMP-DEBUG] getDashboardData read, raw brainDump:",
-    JSON.stringify((rows[0].data as Partial<DashboardData> | null)?.brainDump ?? null)
-  );
   return redactLockedLetter(normalizeDashboardData(rows[0].data as Partial<DashboardData>));
 }
 
-export async function saveDashboardData(data: DashboardData): Promise<void> {
+export type SaveDebugInfo = {
+  dbHost: string;
+  brainDumpReceived: string;
+  brainDumpConfirmedByDb: string;
+};
+
+// Temporary: a lightweight, no-Vercel-required way to see exactly what the
+// database has stored right now, viewable directly in the app UI.
+export async function getDebugSnapshot(): Promise<{ dbHost: string; brainDumpNow: string; updatedAt: string | null }> {
+  const url = process.env.DATABASE_URL ?? "";
+  let dbHost = "(not set)";
+  try {
+    dbHost = new URL(url).host;
+  } catch {
+    dbHost = "(unparseable)";
+  }
+  const db = sql();
+  await ensureTable();
+  const rows = await db`SELECT data, updated_at FROM dashboard_state WHERE id = ${ROW_ID}`;
+  const brainDumpNow = rows.length > 0 ? String((rows[0].data as Partial<DashboardData>)?.brainDump ?? "") : "(no row yet)";
+  const updatedAt = rows.length > 0 ? String(rows[0].updated_at) : null;
+  return { dbHost, brainDumpNow, updatedAt };
+}
+
+export async function saveDashboardData(data: DashboardData): Promise<SaveDebugInfo> {
   const db = sql();
   await ensureTable();
 
@@ -93,7 +108,13 @@ export async function saveDashboardData(data: DashboardData): Promise<void> {
     console.error("[db] sealed-letter guard check failed, saving anyway:", err);
   }
 
-  console.log("[TEMP-DEBUG] about to write, brainDump:", JSON.stringify(toSave.brainDump));
+  const url = process.env.DATABASE_URL ?? "";
+  let dbHost = "(not set)";
+  try {
+    dbHost = new URL(url).host;
+  } catch {
+    dbHost = "(unparseable)";
+  }
 
   const result = await db`
     INSERT INTO dashboard_state (id, data, updated_at)
@@ -101,5 +122,10 @@ export async function saveDashboardData(data: DashboardData): Promise<void> {
     ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()
     RETURNING data->>'brainDump' AS brain_dump_after_write
   `;
-  console.log("[TEMP-DEBUG] write completed, DB now reports brainDump:", JSON.stringify(result[0]?.brain_dump_after_write ?? null));
+
+  return {
+    dbHost,
+    brainDumpReceived: toSave.brainDump,
+    brainDumpConfirmedByDb: String(result[0]?.brain_dump_after_write ?? ""),
+  };
 }

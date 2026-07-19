@@ -78,6 +78,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   const [lifeView, setLifeView] = useState<LifeView>("week");
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [debugPanel, setDebugPanel] = useState<{
+    lastSave?: { dbHost: string; brainDumpReceived: string; brainDumpConfirmedByDb: string };
+    dbCheck?: { dbHost: string; brainDumpNow: string; updatedAt: string | null };
+    dbCheckLoading?: boolean;
+  } | null>(null);
   const [dailyReviewOpen, setDailyReviewOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [boardMeetingOpen, setBoardMeetingOpen] = useState(false);
@@ -107,6 +112,10 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           const detail = await res.text().catch(() => "");
           throw new Error(`save failed (${res.status}): ${detail.slice(0, 500)}`);
         }
+        const body = await res.json().catch(() => null);
+        if (body?.debug) {
+          setDebugPanel((prev) => ({ ...prev, lastSave: body.debug }));
+        }
         setStatus("saved");
         setSaveError(null);
       } catch (err) {
@@ -117,6 +126,33 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
       }
     }, SAVE_DELAY_MS);
   }, []);
+
+  async function checkDbNow() {
+    setDebugPanel((prev) => ({ ...prev, dbCheckLoading: true }));
+    try {
+      const res = await fetch("/api/dashboard?debug=1");
+      const body = await res.json().catch(() => null);
+      if (res.ok && body?.debug) {
+        setDebugPanel((prev) => ({ ...prev, dbCheck: body.debug, dbCheckLoading: false }));
+      } else {
+        setDebugPanel((prev) => ({
+          ...prev,
+          dbCheck: { dbHost: "(error)", brainDumpNow: body?.error ?? "unknown error", updatedAt: null },
+          dbCheckLoading: false,
+        }));
+      }
+    } catch (err) {
+      setDebugPanel((prev) => ({
+        ...prev,
+        dbCheck: {
+          dbHost: "(error)",
+          brainDumpNow: err instanceof Error ? err.message : String(err),
+          updatedAt: null,
+        },
+        dbCheckLoading: false,
+      }));
+    }
+  }
 
   function setOneThing(text: string) {
     setData((prev) => ({ ...prev, oneThing: { text, date: todayKey() } }));
@@ -311,6 +347,29 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           </p>
         </div>
       )}
+
+      <div className="mx-5 mb-2 rounded-xl border border-[#C7A46B] bg-[#C7A46B]/10 px-3 py-2.5">
+        <p className="mb-1.5 text-[11px] font-semibold text-paper-ink">
+          Temporary Debug Panel (screenshot this whole box)
+        </p>
+        <button
+          type="button"
+          onClick={checkDbNow}
+          className="mb-2 rounded-full bg-[#C7A46B] px-3 py-1 text-[11px] font-medium text-paper-surface"
+        >
+          {debugPanel?.dbCheckLoading ? "Checking…" : "Check Database Now"}
+        </button>
+        <div className="space-y-1 text-[10.5px] leading-snug text-paper-ink">
+          <p>
+            <span className="font-semibold">Last save sent to server:</span>{" "}
+            {debugPanel?.lastSave ? JSON.stringify(debugPanel.lastSave) : "(no save yet this session)"}
+          </p>
+          <p>
+            <span className="font-semibold">Database right now (tap button above):</span>{" "}
+            {debugPanel?.dbCheck ? JSON.stringify(debugPanel.dbCheck) : "(not checked yet)"}
+          </p>
+        </div>
+      </div>
 
       <WorldToggle world={world} onChange={setWorld} counts={counts} />
 
