@@ -79,8 +79,20 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [debugPanel, setDebugPanel] = useState<{
-    lastSave?: { dbHost: string; brainDumpReceived: string; brainDumpConfirmedByDb: string };
-    dbCheck?: { dbHost: string; brainDumpNow: string; updatedAt: string | null };
+    lastSave?: {
+      dbHost: string;
+      brainDumpReceived: string;
+      brainDumpConfirmedByDb: string;
+      dumpItemCountReceived: number;
+      dumpLatestItemReceived: string;
+    };
+    dbCheck?: {
+      dbHost: string;
+      brainDumpNow: string;
+      dumpItemCount: number;
+      dumpLatestItem: string;
+      updatedAt: string | null;
+    };
     dbCheckLoading?: boolean;
   } | null>(null);
   const [dailyReviewOpen, setDailyReviewOpen] = useState(false);
@@ -138,7 +150,13 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
       } else {
         setDebugPanel((prev) => ({
           ...prev,
-          dbCheck: { dbHost: "(error)", brainDumpNow: body?.error ?? "unknown error", updatedAt: null },
+          dbCheck: {
+            dbHost: "(error)",
+            brainDumpNow: body?.error ?? "unknown error",
+            dumpItemCount: 0,
+            dumpLatestItem: "(error)",
+            updatedAt: null,
+          },
           dbCheckLoading: false,
         }));
       }
@@ -148,6 +166,8 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
         dbCheck: {
           dbHost: "(error)",
           brainDumpNow: err instanceof Error ? err.message : String(err),
+          dumpItemCount: 0,
+          dumpLatestItem: "(error)",
           updatedAt: null,
         },
         dbCheckLoading: false,

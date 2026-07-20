@@ -59,11 +59,28 @@ export type SaveDebugInfo = {
   dbHost: string;
   brainDumpReceived: string;
   brainDumpConfirmedByDb: string;
+  dumpItemCountReceived: number;
+  dumpLatestItemReceived: string;
 };
 
+function latestDumpText(data: Partial<DashboardData> | null | undefined): { count: number; latest: string } {
+  const items = data?.lists?.dump?.items ?? [];
+  if (items.length === 0) return { count: 0, latest: "(none)" };
+  const sorted = [...items].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return { count: items.length, latest: sorted[0].text };
+}
+
 // Temporary: a lightweight, no-Vercel-required way to see exactly what the
-// database has stored right now, viewable directly in the app UI.
-export async function getDebugSnapshot(): Promise<{ dbHost: string; brainDumpNow: string; updatedAt: string | null }> {
+// database has stored right now, viewable directly in the app UI. Checks
+// both Brain Dump (the free-text pencil-icon field) and the Dump list (the
+// green "Dump" quick-capture button) since they're easy to mix up.
+export async function getDebugSnapshot(): Promise<{
+  dbHost: string;
+  brainDumpNow: string;
+  dumpItemCount: number;
+  dumpLatestItem: string;
+  updatedAt: string | null;
+}> {
   const url = process.env.DATABASE_URL ?? "";
   let dbHost = "(not set)";
   try {
@@ -74,9 +91,14 @@ export async function getDebugSnapshot(): Promise<{ dbHost: string; brainDumpNow
   const db = sql();
   await ensureTable();
   const rows = await db`SELECT data, updated_at FROM dashboard_state WHERE id = ${ROW_ID}`;
-  const brainDumpNow = rows.length > 0 ? String((rows[0].data as Partial<DashboardData>)?.brainDump ?? "") : "(no row yet)";
-  const updatedAt = rows.length > 0 ? String(rows[0].updated_at) : null;
-  return { dbHost, brainDumpNow, updatedAt };
+  if (rows.length === 0) {
+    return { dbHost, brainDumpNow: "(no row yet)", dumpItemCount: 0, dumpLatestItem: "(no row yet)", updatedAt: null };
+  }
+  const rowData = rows[0].data as Partial<DashboardData>;
+  const brainDumpNow = String(rowData?.brainDump ?? "");
+  const { count, latest } = latestDumpText(rowData);
+  const updatedAt = String(rows[0].updated_at);
+  return { dbHost, brainDumpNow, dumpItemCount: count, dumpLatestItem: latest, updatedAt };
 }
 
 export async function saveDashboardData(data: DashboardData): Promise<SaveDebugInfo> {
@@ -123,9 +145,13 @@ export async function saveDashboardData(data: DashboardData): Promise<SaveDebugI
     RETURNING data->>'brainDump' AS brain_dump_after_write
   `;
 
+  const { count, latest } = latestDumpText(toSave);
+
   return {
     dbHost,
     brainDumpReceived: toSave.brainDump,
     brainDumpConfirmedByDb: String(result[0]?.brain_dump_after_write ?? ""),
+    dumpItemCountReceived: count,
+    dumpLatestItemReceived: latest,
   };
 }
