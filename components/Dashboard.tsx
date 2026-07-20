@@ -58,6 +58,7 @@ import BucketListView from "./life/BucketListView";
 import YearView from "./life/year/YearView";
 import WarRoomSection from "./life/year/WarRoomSection";
 import SaveIndicator, { SaveStatus } from "./SaveIndicator";
+import TabErrorBoundary from "./TabErrorBoundary";
 
 type World = "front" | "work" | "life";
 type WorkView = "dashboard" | "backbeat" | "reference";
@@ -420,6 +421,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
       <WorldToggle world={world} onChange={setWorld} counts={counts} />
 
       <main className="flex min-h-0 flex-1 flex-col px-5 pt-3">
+       <TabErrorBoundary key={`${world}-${workView}-${lifeView}`}>
         {world === "front" ? (
           <FrontPage
             data={data}
@@ -573,6 +575,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             )}
           </>
         )}
+       </TabErrorBoundary>
       </main>
 
       <DailyReviewBar dailyReview={data.dailyReview} onOpen={() => setDailyReviewOpen(true)} />

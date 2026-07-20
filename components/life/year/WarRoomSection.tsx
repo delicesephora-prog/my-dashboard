@@ -126,17 +126,28 @@ function CategoryCard({
   onChangeCategoryData: (updater: (c: CategoryWarRoomData) => CategoryWarRoomData) => void;
 }) {
   const [text, setText] = useState("");
-  const doneCount = goals.filter((g) => g.done).length;
-  const pct = goals.length > 0 ? Math.round((doneCount / goals.length) * 100) : 0;
-  const pace = categoryPace(categoryData, goals);
+  // Defensive: normalize() should always guarantee these shapes, but a
+  // tab crashing the whole app over one malformed field is a much worse
+  // failure mode than quietly treating it as empty here.
+  const safeGoals = Array.isArray(goals) ? goals : [];
+  const safeSnapshots = Array.isArray(categoryData?.snapshots) ? categoryData.snapshots : [];
+  const doneCount = safeGoals.filter((g) => g.done).length;
+  const pct = safeGoals.length > 0 ? Math.round((doneCount / safeGoals.length) * 100) : 0;
+  const pace = categoryPace(categoryData, safeGoals);
 
   function submit() {
     if (!text.trim()) return;
-    onChangeGoals((gs) => [...gs, { id: crypto.randomUUID(), text: text.trim(), done: false }]);
+    onChangeGoals((gs) => [...(Array.isArray(gs) ? gs : []), { id: crypto.randomUUID(), text: text.trim(), done: false }]);
     setText("");
   }
 
-  const maxSnapshot = Math.max(1, ...categoryData.snapshots.map((s) => (s.total > 0 ? (s.done / s.total) * 100 : 0)));
+  // A reduce, not Math.max(...array), so this stays safe no matter how
+  // much snapshot history has piled up - spreading a very large array
+  // into a function call can itself blow the stack.
+  const maxSnapshot = safeSnapshots.reduce(
+    (max, s) => Math.max(max, s.total > 0 ? (s.done / s.total) * 100 : 0),
+    1
+  );
 
   return (
     <div className="rounded-xl2 border-l-4 border-l-life bg-paper-surface p-4 shadow-paper">
@@ -150,16 +161,16 @@ function CategoryCard({
 
       <div className="mb-1 flex items-center justify-between text-[11px] text-paper-muted">
         <span>
-          {doneCount}/{goals.length} goals
+          {doneCount}/{safeGoals.length} goals
         </span>
       </div>
       <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-paper-surface2">
         <div className="h-full rounded-full bg-gold transition-all" style={{ width: `${pct}%` }} />
       </div>
 
-      {categoryData.snapshots.length > 1 && (
+      {safeSnapshots.length > 1 && (
         <div className="mb-3 flex h-6 items-end gap-[1.5px]">
-          {categoryData.snapshots.slice(-30).map((s) => {
+          {safeSnapshots.slice(-30).map((s) => {
             const spct = s.total > 0 ? (s.done / s.total) * 100 : 0;
             const height = Math.max((spct / maxSnapshot) * 100, spct > 0 ? 10 : 0);
             return (
@@ -179,7 +190,7 @@ function CategoryCard({
           This Week&apos;s Move
         </p>
         <input
-          value={categoryData.thisWeeksMove}
+          value={categoryData?.thisWeeksMove ?? ""}
           onChange={(e) =>
             onChangeCategoryData((c) => ({
               ...c,
@@ -192,14 +203,14 @@ function CategoryCard({
         />
       </div>
 
-      {goals.length > 0 && (
+      {safeGoals.length > 0 && (
         <div className="mb-2 flex flex-col gap-1.5">
-          {goals.map((goal) => (
+          {safeGoals.map((goal) => (
             <div key={goal.id} className="flex items-center gap-2">
               <CheckCircle
                 done={goal.done}
                 onToggle={() =>
-                  onChangeGoals((gs) => gs.map((g) => (g.id === goal.id ? { ...g, done: !g.done } : g)))
+                  onChangeGoals((gs) => (Array.isArray(gs) ? gs : []).map((g) => (g.id === goal.id ? { ...g, done: !g.done } : g)))
                 }
                 accentClass="bg-life"
                 size="sm"
@@ -215,7 +226,7 @@ function CategoryCard({
               <button
                 type="button"
                 aria-label="Delete goal"
-                onClick={() => onChangeGoals((gs) => gs.filter((g) => g.id !== goal.id))}
+                onClick={() => onChangeGoals((gs) => (Array.isArray(gs) ? gs : []).filter((g) => g.id !== goal.id))}
                 className="shrink-0 text-paper-faint"
               >
                 ×

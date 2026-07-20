@@ -46,7 +46,10 @@ export function normalizeWarRoomData(partial: Partial<WarRoomData> | null | unde
     categories[key] = {
       thisWeeksMove: p?.thisWeeksMove ?? "",
       thisWeeksMoveSetDate: p?.thisWeeksMoveSetDate ?? "",
-      snapshots: p?.snapshots ?? [],
+      // ?? only catches missing/null - a field that exists but got saved
+      // as the wrong type needs an explicit check, or it'd pass straight
+      // through and fail validation on the very next save.
+      snapshots: Array.isArray(p?.snapshots) ? p.snapshots : [],
     };
   }
   return {
@@ -106,10 +109,12 @@ export function recordTodaySnapshot(
   now: Date = new Date()
 ): CategoryWarRoomData {
   const today = dateKey(now);
-  const done = goals.filter((g) => g.done).length;
-  const total = goals.length;
-  const existingIndex = categoryData.snapshots.findIndex((s) => s.date === today);
-  const snapshots = [...categoryData.snapshots];
+  const safeGoals = Array.isArray(goals) ? goals : [];
+  const done = safeGoals.filter((g) => g.done).length;
+  const total = safeGoals.length;
+  const existingSnapshots = Array.isArray(categoryData?.snapshots) ? categoryData.snapshots : [];
+  const existingIndex = existingSnapshots.findIndex((s) => s.date === today);
+  const snapshots = [...existingSnapshots];
   if (existingIndex >= 0) {
     if (snapshots[existingIndex].done === done && snapshots[existingIndex].total === total) {
       return categoryData;
@@ -134,7 +139,7 @@ export function categoryPace(
   const done = goals.filter((g) => g.done).length;
   if (done >= total) return "complete";
 
-  const snapshots = categoryData.snapshots;
+  const snapshots = Array.isArray(categoryData?.snapshots) ? categoryData.snapshots : [];
   if (snapshots.length < 2) return "insufficient-data";
 
   const first = snapshots[0];
