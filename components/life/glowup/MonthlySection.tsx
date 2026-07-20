@@ -49,7 +49,7 @@ export default function MonthlySection({
     <div className="flex flex-col gap-3">
       <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
         <div className="flex items-center gap-3">
-          <ProgressRing pct={pct} size={56} strokeWidth={5} color="#B97C87" />
+          <ProgressRing pct={pct} size={56} strokeWidth={5} color="#5B2333" />
           <div className="min-w-0 flex-1">
             <p className="font-serif text-[1.05rem] text-paper-ink">Monthly Maintenance</p>
             <p className="text-xs text-paper-muted">

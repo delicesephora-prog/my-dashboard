@@ -39,7 +39,8 @@ export default function DiySection({
           <p className="mb-1 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-glow-dark">
             This Week&apos;s Pick
           </p>
-          <p className="mb-3 font-serif text-[1.1rem] leading-snug text-paper-ink">{suggested.text}</p>
+          <p className="mb-1 font-serif text-[1.1rem] leading-snug text-paper-ink">{suggested.text}</p>
+          <p className="mb-3 text-[11.5px] italic text-paper-muted">One is plenty — no need to do them all.</p>
           <button
             type="button"
             onClick={() => logDone(suggested.id)}
