@@ -678,8 +678,15 @@ export async function PUT(req: NextRequest) {
     );
   }
 
+  // A client-generated timestamp identifying how recent this save is - lets
+  // the database itself reject a save that arrives after a newer one, no
+  // matter which HTTP request the server happens to finish processing
+  // last. Falls back to "now" if a client hasn't been updated to send it.
+  const headerSeq = Number(req.headers.get("x-save-seq"));
+  const clientSeq = Number.isFinite(headerSeq) && headerSeq > 0 ? headerSeq : Date.now();
+
   try {
-    const debug = await saveDashboardData(parsed.data);
+    const debug = await saveDashboardData(parsed.data, clientSeq);
     return NextResponse.json({ ok: true, debug });
   } catch (err) {
     return NextResponse.json(

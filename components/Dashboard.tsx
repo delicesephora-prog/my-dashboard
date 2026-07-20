@@ -94,6 +94,15 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   const latestData = useRef(data);
   latestData.current = data;
 
+  // A slow save from an earlier edit can still be in flight when a newer
+  // edit's save fires - without tracking this, whichever response happens
+  // to arrive last wins, even if it's the older one. saveSeq is sent to
+  // the server (which enforces the real ordering guarantee at the database
+  // level); the abort controller additionally stops the client from acting
+  // on a response that's already been superseded.
+  const saveSeq = useRef(0);
+  const activeAbort = useRef<AbortController | null>(null);
+
   useEffect(() => {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -104,24 +113,37 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     setStatus("saving");
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
+      activeAbort.current?.abort();
+      const controller = new AbortController();
+      activeAbort.current = controller;
+      const mySeq = Date.now();
+      saveSeq.current = mySeq;
+
       try {
         const res = await fetch("/api/dashboard", {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "X-Save-Seq": String(mySeq) },
           body: JSON.stringify(latestData.current),
           cache: "no-store",
+          signal: controller.signal,
         });
         if (!res.ok) {
           const detail = await res.text().catch(() => "");
           throw new Error(`save failed (${res.status}): ${detail.slice(0, 500)}`);
         }
         const body = await res.json().catch(() => null);
+        // A newer save may have started (and possibly already finished)
+        // while this one was in flight - its result is stale even though
+        // this request itself succeeded, so don't let it override state.
+        if (mySeq !== saveSeq.current) return;
         if (body?.debug) {
           setDebugPanel((prev) => ({ ...prev, lastSave: body.debug }));
         }
         setStatus("saved");
         setSaveError(null);
       } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        if (mySeq !== saveSeq.current) return;
         const message = err instanceof Error ? err.message : String(err);
         console.error("[dashboard] save failed:", err);
         setStatus("error");

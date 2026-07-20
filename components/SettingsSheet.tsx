@@ -82,7 +82,7 @@ export default function SettingsSheet({
     try {
       const res = await fetch("/api/dashboard", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Save-Seq": String(Date.now()) },
         body: JSON.stringify(normalized),
         cache: "no-store",
       });

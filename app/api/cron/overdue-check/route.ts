@@ -45,10 +45,13 @@ export async function GET(req: NextRequest) {
   // Keep the alerted set in sync with what's currently overdue, so a task
   // that's completed (or its due date pushed out) and later becomes
   // overdue again will trigger a fresh alert.
-  await saveDashboardData({
-    ...data,
-    smsAlerts: { alertedOverdueTaskIds: Array.from(currentlyOverdueIds) },
-  });
+  await saveDashboardData(
+    {
+      ...data,
+      smsAlerts: { alertedOverdueTaskIds: Array.from(currentlyOverdueIds) },
+    },
+    Date.now()
+  );
 
   return NextResponse.json({ ok: true, newlyOverdueCount: newlyOverdue.length });
 }

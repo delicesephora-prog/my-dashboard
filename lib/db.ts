@@ -36,6 +36,13 @@ async function ensureTable() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `;
+  // save_seq is a client-generated timestamp (Date.now()) sent with every
+  // save. Two saves can reach the server out of order (a slow request from
+  // an earlier edit can complete after a fast request from a later one) -
+  // comparing save_seq lets the write itself be rejected atomically when
+  // it's older than what's already stored, instead of silently winning a
+  // race and overwriting newer data.
+  await db`ALTER TABLE dashboard_state ADD COLUMN IF NOT EXISTS save_seq BIGINT NOT NULL DEFAULT 0`;
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
@@ -63,6 +70,8 @@ export type SaveDebugInfo = {
   dumpItemCountReceived: number;
   dumpLatestItemReceived: string;
   rowsWrittenByInsert: number;
+  clientSeqSent: number;
+  writeAccepted: boolean;
 };
 
 function latestDumpText(data: Partial<DashboardData> | null | undefined): { count: number; latest: string } {
@@ -83,7 +92,8 @@ export async function getDebugSnapshot(): Promise<{
   dumpItemCount: number;
   dumpLatestItem: string;
   updatedAt: string | null;
-  allRows: { id: string; updatedAt: string }[];
+  saveSeqNow: number | null;
+  allRows: { id: string; updatedAt: string; saveSeq: number }[];
 }> {
   const url = process.env.DATABASE_URL ?? "";
   let dbHost = "(not set)";
@@ -100,10 +110,14 @@ export async function getDebugSnapshot(): Promise<{
 
   // Every row in the table, not just "main" - reveals whether writes are
   // silently landing under a different id than the app reads from.
-  const allRowsRaw = await db`SELECT id, updated_at FROM dashboard_state ORDER BY updated_at DESC`;
-  const allRows = allRowsRaw.map((r) => ({ id: String(r.id), updatedAt: String(r.updated_at) }));
+  const allRowsRaw = await db`SELECT id, updated_at, save_seq FROM dashboard_state ORDER BY updated_at DESC`;
+  const allRows = allRowsRaw.map((r) => ({
+    id: String(r.id),
+    updatedAt: String(r.updated_at),
+    saveSeq: Number(r.save_seq),
+  }));
 
-  const rows = await db`SELECT data, updated_at FROM dashboard_state WHERE id = ${ROW_ID}`;
+  const rows = await db`SELECT data, updated_at, save_seq FROM dashboard_state WHERE id = ${ROW_ID}`;
   if (rows.length === 0) {
     return {
       dbHost,
@@ -112,6 +126,7 @@ export async function getDebugSnapshot(): Promise<{
       dumpItemCount: 0,
       dumpLatestItem: "(no row yet)",
       updatedAt: null,
+      saveSeqNow: null,
       allRows,
     };
   }
@@ -119,10 +134,20 @@ export async function getDebugSnapshot(): Promise<{
   const brainDumpNow = String(rowData?.brainDump ?? "");
   const { count, latest } = latestDumpText(rowData);
   const updatedAt = String(rows[0].updated_at);
-  return { dbHost, dbPath, brainDumpNow, dumpItemCount: count, dumpLatestItem: latest, updatedAt, allRows };
+  const saveSeqNow = Number(rows[0].save_seq);
+  return {
+    dbHost,
+    dbPath,
+    brainDumpNow,
+    dumpItemCount: count,
+    dumpLatestItem: latest,
+    updatedAt,
+    saveSeqNow,
+    allRows,
+  };
 }
 
-export async function saveDashboardData(data: DashboardData): Promise<SaveDebugInfo> {
+export async function saveDashboardData(data: DashboardData, clientSeq: number): Promise<SaveDebugInfo> {
   const db = sql();
   await ensureTable();
 
@@ -162,10 +187,17 @@ export async function saveDashboardData(data: DashboardData): Promise<SaveDebugI
     dbHost = "(unparseable)";
   }
 
+  // The WHERE clause on DO UPDATE makes this atomic and race-proof: if a
+  // save carrying an older clientSeq reaches the database after a newer
+  // one already landed, this UPDATE simply matches zero rows instead of
+  // overwriting the newer data - regardless of which HTTP request actually
+  // arrived at the server last.
   const result = await db`
-    INSERT INTO dashboard_state (id, data, updated_at)
-    VALUES (${ROW_ID}, ${JSON.stringify(toSave)}::jsonb, now())
-    ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()
+    INSERT INTO dashboard_state (id, data, updated_at, save_seq)
+    VALUES (${ROW_ID}, ${JSON.stringify(toSave)}::jsonb, now(), ${clientSeq})
+    ON CONFLICT (id) DO UPDATE
+      SET data = EXCLUDED.data, updated_at = now(), save_seq = EXCLUDED.save_seq
+      WHERE EXCLUDED.save_seq >= dashboard_state.save_seq
     RETURNING data->>'brainDump' AS brain_dump_after_write
   `;
 
@@ -179,5 +211,7 @@ export async function saveDashboardData(data: DashboardData): Promise<SaveDebugI
     dumpItemCountReceived: count,
     dumpLatestItemReceived: latest,
     rowsWrittenByInsert: result.length,
+    clientSeqSent: clientSeq,
+    writeAccepted: result.length > 0,
   };
 }

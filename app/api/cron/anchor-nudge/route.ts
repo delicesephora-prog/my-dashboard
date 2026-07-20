@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (sentCount > 0) {
-    await saveDashboardData({ ...data, textAlerts, rhythm });
+    await saveDashboardData({ ...data, textAlerts, rhythm }, Date.now());
   }
 
   return NextResponse.json({ ok: true, sent: sentCount });

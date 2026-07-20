@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  await saveDashboardData({ ...data, textAlerts: recordSent(textAlerts, today, "morning") });
+  await saveDashboardData({ ...data, textAlerts: recordSent(textAlerts, today, "morning") }, Date.now());
 
   return NextResponse.json({ ok: true, sent: true });
 }
