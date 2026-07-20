@@ -3,17 +3,17 @@ import {
   DashboardData,
   Habit,
   HabitsData,
-  WorkTask,
   habitCompletionsFor,
   quarterDataFor,
   weekDataFor,
 } from "./types";
-import { isOverdue, sortWorkTasks } from "./work-style";
-import { todayKey } from "./date";
+import { sortWorkTasks } from "./work-style";
 import { weekKeyFor } from "./week";
 import { quarterKeyFor } from "./quarter";
-import { hasMeetingThisWeek } from "./boardmeeting";
-import { suggestedAnchorText } from "./rhythm";
+import { completionForDate } from "./routines";
+import { weeklyProgress } from "./glowup";
+import { zoneForDate, completedTaskIds } from "./home";
+import { dateKey } from "./date";
 
 export type FrontPageNavTarget =
   | { world: "work"; workView?: "dashboard" | "backbeat" | "reference" }
@@ -21,6 +21,7 @@ export type FrontPageNavTarget =
       world: "life";
       lifeView?:
         | "week"
+        | "routines"
         | "habits"
         | "quarter"
         | "rhythm"
@@ -37,11 +38,26 @@ function mondayFirstDayIndex(d: Date): number {
   return jsDay === 0 ? 6 : jsDay - 1;
 }
 
-export function pinnedFocusTasks(data: DashboardData, limit = 3): WorkTask[] {
-  const topPriority = data.workOps.tasks.filter(
-    (t) => t.topPriority && t.status !== "completed"
-  );
-  return sortWorkTasks(topPriority).slice(0, limit);
+// A pinned task from either side, for Today's Focus - both Work's
+// topPriority and Life's focus flags cap at 3, so up to 6 total can show.
+export type TodayFocusItem = {
+  id: string;
+  title: string;
+  side: "work" | "life";
+};
+
+export function pinnedFocusTasks(data: DashboardData): TodayFocusItem[] {
+  const work = sortWorkTasks(
+    data.workOps.tasks.filter((t) => t.topPriority && t.status !== "completed")
+  ).map((t) => ({ id: t.id, title: t.title, side: "work" as const }));
+
+  const weekKey = weekKeyFor(new Date());
+  const weekData = weekDataFor(data.lifeWeekly, weekKey);
+  const life = weekData.tasks
+    .filter((t) => t.focus && !t.done)
+    .map((t) => ({ id: t.id, title: t.text, side: "life" as const }));
+
+  return [...work, ...life];
 }
 
 export function todayHabitProgress(
@@ -80,68 +96,54 @@ export function habitsAtRisk(habits: HabitsData, now: Date = new Date()): HabitA
   return risky;
 }
 
-export type FrontPageRecommendation = { text: string; target: FrontPageNavTarget };
+export type FrontPageRecommendation = { text: string; target: FrontPageNavTarget | null };
 
+// Suggested Next, in the fixed priority order specified: morning routine,
+// Sunday Reset, midday reset, night routine, an unchecked home zone, and
+// finally a nudge to set tomorrow's One Thing. Only one shows at a time.
 export function computeRecommendation(
   data: DashboardData,
   now: Date = new Date()
-): FrontPageRecommendation | null {
-  const today = todayKey(now);
+): FrontPageRecommendation {
+  const hour = now.getHours();
+  const jsDay = now.getDay(); // 0 = Sunday
+  const isWeekday = jsDay >= 1 && jsDay <= 5;
 
-  const dueToday = data.workOps.tasks.find(
-    (t) => t.topPriority && t.status !== "completed" && t.dueDate === today
-  );
-  if (dueToday) {
-    return {
-      text: `"${dueToday.title}" is due today.`,
-      target: { world: "work", workView: "dashboard" },
-    };
+  const morning = completionForDate(data.routines.config, data.routines, "morning", now);
+  const dayRoutine = completionForDate(data.routines.config, data.routines, "day", now);
+  const night = completionForDate(data.routines.config, data.routines, "night", now);
+
+  if (hour < 11 && morning.total > 0 && morning.done < morning.total) {
+    return { text: "Morning routine", target: { world: "life", lifeView: "routines" } };
   }
 
-  // The day's rhythm is the main driver of "what's next" - gentle,
-  // time-of-day aware, and Sunday's Board Meeting anchor routes straight
-  // into the guided flow instead of just pointing at a tab.
-  const anchorText = suggestedAnchorText(
-    data.rhythm,
-    data.lifeQuarterly.paydayChecklist.anchorDate,
-    now
-  );
-  if (anchorText) {
-    const lower = anchorText.toLowerCase();
-    const isBoardMeeting = lower === "board meeting" && !hasMeetingThisWeek(data.boardMeetings, now);
-    const isSundayReset = lower === "sunday reset";
-    return {
-      text: `Up next: ${anchorText}`,
-      target: isBoardMeeting
-        ? { world: "life", lifeView: "quarter", openBoardMeeting: true }
-        : isSundayReset
-          ? { world: "life", lifeView: "glowUp" }
-          : { world: "life", lifeView: "rhythm" },
-    };
+  if (jsDay === 0 && hour >= 11) {
+    const weekly = weeklyProgress(data.glowUp, now);
+    if (weekly.total > 0 && weekly.done < weekly.total) {
+      return { text: "Sunday Reset — Glow Up weekly", target: { world: "life", lifeView: "glowUp" } };
+    }
   }
 
-  const overdueCount = data.workOps.tasks.filter((t) =>
-    isOverdue(t.dueDate, today, t.status)
-  ).length;
-  if (overdueCount > 0) {
-    return {
-      text:
-        overdueCount === 1
-          ? "You have 1 overdue task."
-          : `You have ${overdueCount} overdue tasks.`,
-      target: { world: "work", workView: "dashboard" },
-    };
+  if (isWeekday && hour >= 12 && hour < 17 && dayRoutine.total > 0 && dayRoutine.done < dayRoutine.total) {
+    return { text: "Midday reset", target: { world: "life", lifeView: "routines" } };
   }
 
-  const habitProgress = todayHabitProgress(data.habits, now);
-  if (now.getHours() < 12 && habitProgress.total > 0 && habitProgress.done === 0) {
-    return {
-      text: "Your morning routine hasn't been started yet.",
-      target: { world: "life", lifeView: "habits" },
-    };
+  if (hour >= 20 && night.total > 0 && night.done < night.total) {
+    return { text: "Night routine", target: { world: "life", lifeView: "routines" } };
   }
 
-  return null;
+  const zone = zoneForDate(data.homeZones, now);
+  if (zone) {
+    const doneIds = new Set(completedTaskIds(data.homeZones, dateKey(now), zone.id));
+    const unchecked = zone.tasks.some((t) => !doneIds.has(t.id));
+    if (unchecked) {
+      // Today's Home Zone widget is already on this same page - no
+      // separate tab to jump to yet.
+      return { text: `${zone.label} — today's home zone`, target: null };
+    }
+  }
+
+  return { text: "Set tomorrow's One Thing tonight.", target: null };
 }
 
 export type WeekRecap = {

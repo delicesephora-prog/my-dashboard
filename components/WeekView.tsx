@@ -38,6 +38,7 @@ export default function WeekView({
       text: trimmed,
       done: false,
       createdAt: new Date().toISOString(),
+      focus: false,
     };
     updateWeek((w) => ({ ...w, tasks: [task, ...w.tasks] }));
   }
@@ -47,6 +48,20 @@ export default function WeekView({
       ...w,
       tasks: w.tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
     }));
+  }
+
+  function toggleFocus(id: string) {
+    updateWeek((w) => {
+      const pinnedCount = w.tasks.filter((t) => t.focus).length;
+      return {
+        ...w,
+        tasks: w.tasks.map((t) => {
+          if (t.id !== id) return t;
+          if (!t.focus && pinnedCount >= 3) return t;
+          return { ...t, focus: !t.focus };
+        }),
+      };
+    });
   }
 
   function removeTask(id: string) {
@@ -91,6 +106,7 @@ export default function WeekView({
           tasks={weekData.tasks}
           onAdd={addTask}
           onToggle={toggleTask}
+          onToggleFocus={toggleFocus}
           onRemove={removeTask}
         />
 

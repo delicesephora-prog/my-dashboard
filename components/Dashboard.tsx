@@ -22,6 +22,8 @@ import { RhythmData } from "@/lib/rhythm";
 import { GlowUpData } from "@/lib/glowup";
 import { TextAlertsData } from "@/lib/textalerts";
 import { PlannerData } from "@/lib/planner";
+import { HomeZonesData } from "@/lib/home";
+import { TodayFocusItem } from "@/lib/frontpage";
 import BoardMeeting from "./BoardMeeting";
 import QuickDump from "./QuickDump";
 import { todayKey } from "@/lib/date";
@@ -238,6 +240,39 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     scheduleSave();
   }
 
+  function updateHomeZones(updater: (h: HomeZonesData) => HomeZonesData) {
+    setData((prev) => ({ ...prev, homeZones: updater(prev.homeZones) }));
+    scheduleSave();
+  }
+
+  function toggleTodayFocusTask(item: TodayFocusItem) {
+    if (item.side === "work") {
+      updateWorkOps((wo) => ({
+        ...wo,
+        tasks: wo.tasks.map((t) =>
+          t.id === item.id
+            ? { ...t, status: t.status === "completed" ? "in_progress" : "completed" }
+            : t
+        ),
+      }));
+    } else {
+      updateLifeWeekly((lw) => {
+        const weekKey = weekKeyFor(new Date());
+        const week = weekDataFor(lw, weekKey);
+        return {
+          ...lw,
+          weeks: {
+            ...lw.weeks,
+            [weekKey]: {
+              ...week,
+              tasks: week.tasks.map((t) => (t.id === item.id ? { ...t, done: !t.done } : t)),
+            },
+          },
+        };
+      });
+    }
+  }
+
   function updateGrocery(updater: (g: GroceryData) => GroceryData) {
     setData((prev) => ({ ...prev, lists: { ...prev.lists, grocery: updater(prev.lists.grocery) } }));
     scheduleSave();
@@ -285,7 +320,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
               ...weekData,
               tasks: [
                 ...weekData.tasks,
-                { id: crypto.randomUUID(), text, done: false, createdAt: new Date().toISOString() },
+                { id: crypto.randomUUID(), text, done: false, createdAt: new Date().toISOString(), focus: false },
               ],
             },
           },
@@ -405,6 +440,8 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             onChangeLifeScore={updateLifeScore}
             onChangeRhythm={updateRhythm}
             onOpenQuickDump={() => setQuickDumpOpen(true)}
+            onToggleFocusTask={toggleTodayFocusTask}
+            onChangeHomeZones={updateHomeZones}
           />
         ) : world === "work" ? (
           <>

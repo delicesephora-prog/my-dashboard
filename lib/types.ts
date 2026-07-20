@@ -8,6 +8,7 @@ import { RhythmData, emptyRhythmData, normalizeRhythmData } from "./rhythm";
 import { GlowUpData, emptyGlowUpData, normalizeGlowUpData } from "./glowup";
 import { TextAlertsData, emptyTextAlertsData, normalizeTextAlertsData } from "./textalerts";
 import { PlannerData, emptyPlannerData, normalizePlannerData } from "./planner";
+import { HomeZonesData, emptyHomeZonesData, normalizeHomeZonesData } from "./home";
 
 export type TaskItem = {
   id: string;
@@ -34,6 +35,9 @@ export type WeekTask = {
   text: string;
   done: boolean;
   createdAt: string;
+  // Pinned to Today's Focus on the Front Page - capped at 3, same as
+  // Work's topPriority.
+  focus: boolean;
 };
 
 export type WeekData = {
@@ -759,6 +763,7 @@ export type DashboardData = {
   glowUp: GlowUpData;
   textAlerts: TextAlertsData;
   planner: PlannerData;
+  homeZones: HomeZonesData;
 };
 
 export function emptyWorld(): WorldData {
@@ -795,6 +800,7 @@ export function defaultDashboardData(): DashboardData {
     glowUp: emptyGlowUpData(),
     textAlerts: emptyTextAlertsData(),
     planner: emptyPlannerData(),
+    homeZones: emptyHomeZonesData(),
   };
 }
 
@@ -817,7 +823,14 @@ export function normalizeDashboardData(
         ...fallback.lifeWeekly.currentlyReading,
         ...data.lifeWeekly?.currentlyReading,
       },
-      weeks: data.lifeWeekly?.weeks ?? {},
+      // Backfill `focus` on any tasks saved before that field existed, so
+      // old data doesn't fail validation on its next save.
+      weeks: Object.fromEntries(
+        Object.entries(data.lifeWeekly?.weeks ?? {}).map(([weekKey, week]) => [
+          weekKey,
+          { ...week, tasks: (week.tasks ?? []).map((t) => ({ ...t, focus: t.focus ?? false })) },
+        ])
+      ),
     },
     workOps: {
       tasks: data.workOps?.tasks ?? [],
@@ -880,6 +893,7 @@ export function normalizeDashboardData(
     glowUp: normalizeGlowUpData(data.glowUp),
     textAlerts: normalizeTextAlertsData(data.textAlerts),
     planner: normalizePlannerData(data.planner),
+    homeZones: normalizeHomeZonesData(data.homeZones),
   };
 }
 

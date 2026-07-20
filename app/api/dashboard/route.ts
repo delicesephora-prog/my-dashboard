@@ -29,6 +29,7 @@ const weekTaskSchema = z.object({
   text: z.string().max(500),
   done: z.boolean(),
   createdAt: z.string(),
+  focus: z.boolean(),
 });
 
 const weekDataSchema = z.object({
@@ -609,6 +610,33 @@ const plannerDataSchema = z.object({
   blocks: z.array(plannerBlockSchema).max(2000),
 });
 
+const homeDaySchema = z.enum([
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+]);
+
+const homeZoneTaskSchema = z.object({
+  id: z.string(),
+  text: z.string().max(200),
+});
+
+const homeZoneSchema = z.object({
+  id: z.string(),
+  day: homeDaySchema,
+  label: z.string().max(200),
+  tasks: z.array(homeZoneTaskSchema).max(20),
+});
+
+const homeZonesDataSchema = z.object({
+  zones: z.array(homeZoneSchema).max(50),
+  logs: z.record(z.record(z.array(z.string()).max(20))),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -634,6 +662,7 @@ const dashboardSchema = z.object({
   glowUp: glowUpDataSchema,
   textAlerts: textAlertsDataSchema,
   planner: plannerDataSchema,
+  homeZones: homeZonesDataSchema,
 });
 
 export async function GET(req: NextRequest) {

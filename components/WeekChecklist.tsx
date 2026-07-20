@@ -15,11 +15,13 @@ export default function WeekChecklist({
   tasks,
   onAdd,
   onToggle,
+  onToggleFocus,
   onRemove,
 }: {
   tasks: WeekTask[];
   onAdd: (text: string) => void;
   onToggle: (id: string) => void;
+  onToggleFocus: (id: string) => void;
   onRemove: (id: string) => void;
 }) {
   const [text, setText] = useState("");
@@ -78,6 +80,16 @@ export default function WeekChecklist({
               >
                 {task.text}
               </span>
+              <button
+                type="button"
+                aria-label={task.focus ? "Unpin from Today's Focus" : "Pin to Today's Focus"}
+                onClick={() => onToggleFocus(task.id)}
+                className={`shrink-0 text-base leading-none ${
+                  task.focus ? "text-gold" : "text-paper-faint"
+                }`}
+              >
+                {task.focus ? "★" : "☆"}
+              </button>
               <button
                 aria-label="Delete task"
                 onClick={() => onRemove(task.id)}
