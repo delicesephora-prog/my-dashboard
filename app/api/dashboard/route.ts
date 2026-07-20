@@ -624,9 +624,12 @@ const homeDaySchema = z.enum([
   "saturday",
 ]);
 
+const assigneeSchema = z.enum(["me", "O", "both"]);
+
 const homeZoneTaskSchema = z.object({
   id: z.string(),
   text: z.string().max(200),
+  assignee: assigneeSchema.optional(),
 });
 
 const homeZoneSchema = z.object({
@@ -636,9 +639,28 @@ const homeZoneSchema = z.object({
   tasks: z.array(homeZoneTaskSchema).max(20),
 });
 
+const homeDailyItemSchema = z.object({
+  id: z.string(),
+  text: z.string().max(200),
+  assignee: assigneeSchema.optional(),
+});
+
+const homeMonthlyItemSchema = z.object({
+  id: z.string(),
+  text: z.string().max(200),
+  assignee: assigneeSchema.optional(),
+  lastDoneDate: z.string(),
+  expectedIntervalDays: z.number().int().min(1).max(3650),
+});
+
 const homeZonesDataSchema = z.object({
   zones: z.array(homeZoneSchema).max(50),
   logs: z.record(z.record(z.array(z.string()).max(20))),
+  dailyReset: z.object({
+    items: z.array(homeDailyItemSchema).max(50),
+    logs: z.record(z.array(z.string()).max(50)),
+  }),
+  monthly: z.array(homeMonthlyItemSchema).max(50),
 });
 
 const dashboardSchema = z.object({

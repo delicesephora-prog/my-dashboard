@@ -51,6 +51,7 @@ import MoneyView from "./life/MoneyView";
 import ListsView from "./life/lists/ListsView";
 import RhythmView from "./life/rhythm/RhythmView";
 import GlowUpView from "./life/glowup/GlowUpView";
+import HomeView from "./life/HomeView";
 import PlannerView from "./life/planner/PlannerView";
 import BooksView from "./life/BooksView";
 import BucketListView from "./life/BucketListView";
@@ -72,6 +73,7 @@ type LifeView =
   | "lists"
   | "rhythm"
   | "glowUp"
+  | "home"
   | "books"
   | "bucketList"
   | "year";
@@ -438,6 +440,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                   { key: "lists", label: "Lists" },
                   { key: "rhythm", label: "Rhythm" },
                   { key: "glowUp", label: "Glow Up" },
+                  { key: "home", label: "Home" },
                   { key: "books", label: "Books" },
                   { key: "bucketList", label: "Bucket List" },
                   { key: "year", label: "Year" },
@@ -517,6 +520,9 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             )}
             {lifeView === "glowUp" && (
               <GlowUpView data={data.glowUp} onChange={updateGlowUp} />
+            )}
+            {lifeView === "home" && (
+              <HomeView data={data.homeZones} onChange={updateHomeZones} />
             )}
             {lifeView === "books" && <BooksView books={data.books} onChange={updateBooks} />}
             {lifeView === "bucketList" && (
