@@ -45,6 +45,41 @@ async function ensureTable() {
   await db`ALTER TABLE dashboard_state ADD COLUMN IF NOT EXISTS save_seq BIGINT NOT NULL DEFAULT 0`;
 }
 
+// TEMPORARY diagnostic helper - returns exactly what's physically stored
+// right now, with no normalization, so we can see the raw database state
+// directly instead of guessing. Remove once the save-reliability issue is
+// confirmed fully resolved.
+export async function getDebugSnapshot(): Promise<{
+  serverNow: string;
+  rowExists: boolean;
+  updatedAt: string | null;
+  saveSeq: string | null;
+  glowUpDailyLogs: unknown;
+  glowUpDailyItemIds: unknown;
+}> {
+  const db = sql();
+  const rows = await db`SELECT data, updated_at, save_seq FROM dashboard_state WHERE id = ${ROW_ID}`;
+  if (rows.length === 0) {
+    return {
+      serverNow: new Date().toISOString(),
+      rowExists: false,
+      updatedAt: null,
+      saveSeq: null,
+      glowUpDailyLogs: null,
+      glowUpDailyItemIds: null,
+    };
+  }
+  const raw = rows[0].data as { glowUp?: { dailyLogs?: unknown; dailyItems?: { id: string }[] } };
+  return {
+    serverNow: new Date().toISOString(),
+    rowExists: true,
+    updatedAt: String(rows[0].updated_at),
+    saveSeq: String(rows[0].save_seq),
+    glowUpDailyLogs: raw.glowUp?.dailyLogs ?? null,
+    glowUpDailyItemIds: raw.glowUp?.dailyItems?.map((i) => i.id) ?? null,
+  };
+}
+
 export async function getDashboardData(): Promise<DashboardData> {
   const db = sql();
   await ensureTable();
