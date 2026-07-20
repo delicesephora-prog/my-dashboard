@@ -2,18 +2,26 @@
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
+function formatSavedTime(date: Date): string {
+  return date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+
 export default function SaveIndicator({
   status,
+  lastSavedAt,
   onRetry,
 }: {
   status: SaveStatus;
+  lastSavedAt?: Date | null;
   onRetry?: () => void;
 }) {
   const label =
     status === "saving"
       ? "Saving…"
       : status === "saved"
-        ? "Saved"
+        ? lastSavedAt
+          ? `Saved · ${formatSavedTime(lastSavedAt)}`
+          : "Saved"
         : status === "error"
           ? "Couldn't save · Tap to retry"
           : "";

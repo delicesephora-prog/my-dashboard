@@ -89,6 +89,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   const [lifeView, setLifeView] = useState<LifeView>("week");
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [dailyReviewOpen, setDailyReviewOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [boardMeetingOpen, setBoardMeetingOpen] = useState(false);
@@ -141,6 +142,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
         if (mySeq !== saveSeq.current) return;
         setStatus("saved");
         setSaveError(null);
+        setLastSavedAt(new Date());
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         if (mySeq !== saveSeq.current) return;
@@ -358,7 +360,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     <div className="flex h-dvh flex-col overflow-hidden bg-paper-bg">
       <header className="safe-top px-5 pb-2 pt-2">
         <div className="flex items-center justify-end gap-2">
-          <SaveIndicator status={status} onRetry={scheduleSave} />
+          <SaveIndicator status={status} lastSavedAt={lastSavedAt} onRetry={scheduleSave} />
           <button
             type="button"
             onClick={() => setSettingsOpen(true)}
@@ -555,6 +557,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           onImported={(imported) => {
             setData(imported);
             setStatus("saved");
+            setLastSavedAt(new Date());
           }}
           onChangeLifeScoreWeights={(updater) =>
             updateLifeScore((l) => ({ ...l, weights: updater(l.weights) }))
