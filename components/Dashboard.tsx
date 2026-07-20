@@ -290,26 +290,16 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   }
 
   function sendDumpItemToLife(text: string) {
-    setData((prev) => {
-      const weekKey = weekKeyFor(new Date());
-      const weekData = weekDataFor(prev.lifeWeekly, weekKey);
-      return {
-        ...prev,
-        lifeWeekly: {
-          ...prev.lifeWeekly,
-          weeks: {
-            ...prev.lifeWeekly.weeks,
-            [weekKey]: {
-              ...weekData,
-              tasks: [
-                ...weekData.tasks,
-                { id: crypto.randomUUID(), text, done: false, createdAt: new Date().toISOString(), focus: false },
-              ],
-            },
-          },
-        },
-      };
-    });
+    setData((prev) => ({
+      ...prev,
+      life: {
+        ...prev.life,
+        tasks: [
+          ...prev.life.tasks,
+          { id: crypto.randomUUID(), text, done: false, focus: false, createdAt: new Date().toISOString() },
+        ],
+      },
+    }));
     scheduleSave();
   }
 

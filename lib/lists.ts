@@ -34,8 +34,22 @@ export type GroceryData = {
   staples: StapleItem[];
 };
 
+function staple(text: string, category: GroceryCategory): StapleItem {
+  return { id: crypto.randomUUID(), text, category };
+}
+
+function seedStaples(): StapleItem[] {
+  return [
+    staple("Eggs", "Protein"),
+    staple("Chicken", "Protein"),
+    staple("Rice", "Pantry"),
+    staple("Spinach", "Produce"),
+    staple("Paper towels", "Household"),
+  ];
+}
+
 export function emptyGroceryData(): GroceryData {
-  return { items: [], staples: [] };
+  return { items: [], staples: seedStaples() };
 }
 
 export function normalizeGroceryData(
@@ -43,7 +57,9 @@ export function normalizeGroceryData(
 ): GroceryData {
   return {
     items: partial?.items ?? [],
-    staples: partial?.staples ?? [],
+    // An empty staples list is functionally identical to "never set up" -
+    // seed the default staple chips rather than leaving the row blank.
+    staples: partial?.staples && partial.staples.length > 0 ? partial.staples : seedStaples(),
   };
 }
 
