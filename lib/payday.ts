@@ -14,10 +14,27 @@ export type PaydayChecklistData = {
   steps: PaydayStep[];
   // Keyed by pay period date (YYYY-MM-DD) -> completed step ids.
   periods: Record<string, string[]>;
+  seedVersion: number;
 };
 
+// Bump whenever the seed content below changes and existing saved steps
+// should be replaced rather than left alone - see the seedVersion migration
+// in normalizeDashboardData. The anchor date is real user data, not seeded
+// content, so a migration never touches it.
+export const PAYDAY_SEED_VERSION = 1;
+
+export function seedPaydaySteps(): PaydayStep[] {
+  return [
+    "Transfer → Emergency",
+    "Transfer → Jamaica",
+    "Debt snowball payment",
+    "Personal spending → vault",
+    "Update balances here",
+  ].map((text, order) => ({ id: crypto.randomUUID(), text, amount: null, order }));
+}
+
 export function emptyPaydayChecklistData(): PaydayChecklistData {
-  return { anchorDate: "", steps: [], periods: {} };
+  return { anchorDate: "", steps: seedPaydaySteps(), periods: {}, seedVersion: PAYDAY_SEED_VERSION };
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;

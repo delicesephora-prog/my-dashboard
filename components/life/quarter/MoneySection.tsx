@@ -51,7 +51,7 @@ export default function MoneySection({
     0
   );
   const totalPct = totalStarting > 0 ? Math.min(100, Math.round((totalPaid / totalStarting) * 100)) : 0;
-  const sortedDebts = [...money.debts].sort((a, b) => a.currentBalance - b.currentBalance);
+  const sortedDebts = [...money.debts].sort((a, b) => a.startingBalance - b.startingBalance);
 
   return (
     <div className="flex flex-col gap-3">
@@ -127,7 +127,7 @@ export default function MoneySection({
                     </div>
                   </div>
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-paper-surface2">
-                    <div className="h-full rounded-full bg-life transition-all" style={{ width: `${pct}%` }} />
+                    <div className="h-full rounded-full bg-gold transition-all" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );
@@ -137,7 +137,7 @@ export default function MoneySection({
       </div>
 
       <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-1 flex items-center justify-between">
           <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
             Debt Snowball
           </p>
@@ -149,6 +149,9 @@ export default function MoneySection({
             + Add Debt
           </button>
         </div>
+        <p className="mb-3 text-[11px] italic text-paper-muted">
+          Placeholder balances - edit them to match your real numbers.
+        </p>
 
         {money.debts.length === 0 ? (
           <p className="py-2 text-center text-xs italic text-paper-muted">No debts tracked - nicely done.</p>
@@ -162,7 +165,7 @@ export default function MoneySection({
                 </span>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-paper-surface2">
-                <div className="h-full rounded-full bg-work transition-all" style={{ width: `${totalPct}%` }} />
+                <div className="h-full rounded-full bg-sage transition-all" style={{ width: `${totalPct}%` }} />
               </div>
             </div>
 
@@ -170,21 +173,25 @@ export default function MoneySection({
               {sortedDebts.map((debt) => {
                 const paid = Math.max(0, debt.startingBalance - debt.currentBalance);
                 const pct = debt.startingBalance > 0 ? Math.min(100, (paid / debt.startingBalance) * 100) : 0;
+                const paidOff = debt.startingBalance > 0 && debt.currentBalance <= 0;
                 return (
                   <div key={debt.id}>
                     <div className="mb-1 flex items-center justify-between gap-2">
-                      <input
-                        value={debt.name}
-                        onChange={(e) =>
-                          onChange((m) => ({
-                            ...m,
-                            debts: m.debts.map((d) =>
-                              d.id === debt.id ? { ...d, name: e.target.value } : d
-                            ),
-                          }))
-                        }
-                        className="min-w-0 flex-1 bg-transparent text-[14px] text-paper-ink outline-none"
-                      />
+                      <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                        <input
+                          value={debt.name}
+                          onChange={(e) =>
+                            onChange((m) => ({
+                              ...m,
+                              debts: m.debts.map((d) =>
+                                d.id === debt.id ? { ...d, name: e.target.value } : d
+                              ),
+                            }))
+                          }
+                          className="min-w-0 flex-1 bg-transparent text-[14px] text-paper-ink outline-none"
+                        />
+                        {paidOff && <span aria-label="Paid off">🎉</span>}
+                      </div>
                       <div className="flex shrink-0 items-center gap-1 text-[13px] text-paper-muted">
                         <InlineAmount
                           value={debt.currentBalance}
@@ -197,18 +204,7 @@ export default function MoneySection({
                             }))
                           }
                         />
-                        <span>/</span>
-                        <InlineAmount
-                          value={debt.startingBalance}
-                          onChange={(n) =>
-                            onChange((m) => ({
-                              ...m,
-                              debts: m.debts.map((d) =>
-                                d.id === debt.id ? { ...d, startingBalance: n } : d
-                              ),
-                            }))
-                          }
-                        />
+                        <span>of {formatMoney(debt.startingBalance)}</span>
                         <button
                           type="button"
                           aria-label="Delete debt"

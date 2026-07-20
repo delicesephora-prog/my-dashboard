@@ -226,6 +226,7 @@ const debtSchema = z.object({
 const moneyDataSchema = z.object({
   vaults: z.array(vaultSchema).max(200),
   debts: z.array(debtSchema).max(200),
+  seedVersion: z.number().int(),
 });
 
 const paydayStepSchema = z.object({
@@ -239,6 +240,7 @@ const paydayChecklistDataSchema = z.object({
   anchorDate: z.string(),
   steps: z.array(paydayStepSchema).max(100),
   periods: z.record(z.array(z.string()).max(200)),
+  seedVersion: z.number().int(),
 });
 
 const quarterGoalSchema = z.object({

@@ -47,6 +47,7 @@ import ManageHabits from "./life/ManageHabits";
 import RoutinesView from "./life/routines/RoutinesView";
 import ManageRoutines from "./life/routines/ManageRoutines";
 import QuarterView from "./life/quarter/QuarterView";
+import MoneyView from "./life/MoneyView";
 import ListsView from "./life/lists/ListsView";
 import RhythmView from "./life/rhythm/RhythmView";
 import GlowUpView from "./life/glowup/GlowUpView";
@@ -66,6 +67,7 @@ type LifeView =
   | "manageRoutines"
   | "habits"
   | "manageHabits"
+  | "money"
   | "quarter"
   | "lists"
   | "rhythm"
@@ -431,6 +433,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                   { key: "planner", label: "Planner" },
                   { key: "routines", label: "Routines" },
                   { key: "habits", label: "Habits" },
+                  { key: "money", label: "Money" },
                   { key: "quarter", label: "Quarter" },
                   { key: "lists", label: "Lists" },
                   { key: "rhythm", label: "Rhythm" },
@@ -486,6 +489,9 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 onChange={updateHabits}
                 onBack={() => setLifeView("habits")}
               />
+            )}
+            {lifeView === "money" && (
+              <MoneyView lifeQuarterly={data.lifeQuarterly} onChange={updateLifeQuarterly} />
             )}
             {lifeView === "quarter" && (
               <QuarterView

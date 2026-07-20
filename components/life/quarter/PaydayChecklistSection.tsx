@@ -212,8 +212,8 @@ export default function PaydayChecklistSection({
                       <span
                         className="h-4 w-4 rounded-full"
                         style={{
-                          backgroundColor: complete ? "#8FA37E" : "transparent",
-                          border: isCurrent ? "2px solid #4B5A24" : "1px solid #E7DFCF",
+                          backgroundColor: complete ? "#8A9B7C" : "transparent",
+                          border: isCurrent ? "2px solid #5B2333" : "1px solid #E8DFD0",
                         }}
                         title={`${formatPayDate(key)}: ${complete ? "complete" : "incomplete"}`}
                       />

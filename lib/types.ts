@@ -1,5 +1,5 @@
 import { RoutinesData, emptyRoutinesData, normalizeRoutinesData } from "./routines";
-import { PaydayChecklistData, emptyPaydayChecklistData } from "./payday";
+import { PaydayChecklistData, emptyPaydayChecklistData, seedPaydaySteps, PAYDAY_SEED_VERSION } from "./payday";
 import { WarRoomData, emptyWarRoomData, normalizeWarRoomData } from "./warroom";
 import { LifeScoreData, emptyLifeScoreData, normalizeLifeScoreData } from "./lifescore";
 import { BoardMeetingData, emptyBoardMeetingData, normalizeBoardMeetingData } from "./boardmeeting";
@@ -467,10 +467,36 @@ export type Debt = {
 export type MoneyData = {
   vaults: Vault[];
   debts: Debt[];
+  seedVersion: number;
 };
 
+// Bump whenever the seed content below changes and existing saved vaults/
+// debts should be replaced rather than left alone - see the seedVersion
+// migration in normalizeDashboardData.
+export const MONEY_SEED_VERSION = 1;
+
+function seedVaults(): Vault[] {
+  return [
+    { id: crypto.randomUUID(), name: "Emergency Fund", currentAmount: 0, goalAmount: 1000 },
+    { id: crypto.randomUUID(), name: "Jamaica Trip", currentAmount: 0, goalAmount: 1500 },
+    { id: crypto.randomUUID(), name: "Personal Spending", currentAmount: 0, goalAmount: 300 },
+  ];
+}
+
+// Placeholder balances the user will correct - ordered smallest starting
+// balance first for the debt snowball method.
+function seedDebts(): Debt[] {
+  return [
+    { id: crypto.randomUUID(), name: "ZIP", currentBalance: 100, startingBalance: 100 },
+    { id: crypto.randomUUID(), name: "Affirm", currentBalance: 300, startingBalance: 300 },
+    { id: crypto.randomUUID(), name: "Apple", currentBalance: 500, startingBalance: 500 },
+    { id: crypto.randomUUID(), name: "Chase", currentBalance: 800, startingBalance: 800 },
+    { id: crypto.randomUUID(), name: "Capital One", currentBalance: 1200, startingBalance: 1200 },
+  ];
+}
+
 export function emptyMoneyData(): MoneyData {
-  return { vaults: [], debts: [] };
+  return { vaults: seedVaults(), debts: seedDebts(), seedVersion: MONEY_SEED_VERSION };
 }
 
 export type GoalCategory = "Finance" | "Health" | "Faith" | "Personal" | "Career";
@@ -879,15 +905,28 @@ export function normalizeDashboardData(
     },
     brainDump: data.brainDump ?? "",
     lifeQuarterly: {
-      money: {
-        vaults: data.lifeQuarterly?.money?.vaults ?? [],
-        debts: data.lifeQuarterly?.money?.debts ?? [],
-      },
-      paydayChecklist: {
-        anchorDate: data.lifeQuarterly?.paydayChecklist?.anchorDate ?? "",
-        steps: data.lifeQuarterly?.paydayChecklist?.steps ?? [],
-        periods: data.lifeQuarterly?.paydayChecklist?.periods ?? {},
-      },
+      money:
+        (data.lifeQuarterly?.money?.seedVersion ?? 0) < MONEY_SEED_VERSION
+          ? { vaults: seedVaults(), debts: seedDebts(), seedVersion: MONEY_SEED_VERSION }
+          : {
+              vaults: data.lifeQuarterly?.money?.vaults ?? [],
+              debts: data.lifeQuarterly?.money?.debts ?? [],
+              seedVersion: data.lifeQuarterly?.money?.seedVersion ?? MONEY_SEED_VERSION,
+            },
+      paydayChecklist:
+        (data.lifeQuarterly?.paydayChecklist?.seedVersion ?? 0) < PAYDAY_SEED_VERSION
+          ? {
+              anchorDate: data.lifeQuarterly?.paydayChecklist?.anchorDate ?? "",
+              steps: seedPaydaySteps(),
+              periods: {},
+              seedVersion: PAYDAY_SEED_VERSION,
+            }
+          : {
+              anchorDate: data.lifeQuarterly?.paydayChecklist?.anchorDate ?? "",
+              steps: data.lifeQuarterly?.paydayChecklist?.steps ?? [],
+              periods: data.lifeQuarterly?.paydayChecklist?.periods ?? {},
+              seedVersion: data.lifeQuarterly?.paydayChecklist?.seedVersion ?? PAYDAY_SEED_VERSION,
+            },
       quarters: data.lifeQuarterly?.quarters ?? {},
     },
     books: {
