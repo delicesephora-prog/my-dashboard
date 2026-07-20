@@ -121,7 +121,7 @@ export default function GuidedRoutine({
             <span
               key={s.id}
               className="h-1.5 w-6 rounded-full"
-              style={{ backgroundColor: i <= clampedIndex ? color : "#E7DFCF" }}
+              style={{ backgroundColor: i <= clampedIndex ? color : "#E8DFD0" }}
             />
           ))}
         </div>

@@ -570,6 +570,7 @@ const routinesDataSchema = z.object({
     night: routineSchema,
   }),
   days: z.record(routineDayLogSchema),
+  seedVersion: z.number().int(),
 });
 
 const textAlertsSettingsSchema = z.object({

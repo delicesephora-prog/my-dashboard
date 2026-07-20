@@ -67,6 +67,7 @@ export default function RoutinesView({
           const log = logFor(routinesData, today);
           const doneIds = log.completedStepIds[key] ?? [];
           const color = ROUTINE_COLORS[key];
+          const nextStepId = steps.find((s) => !doneIds.includes(s.id))?.id;
 
           return (
             <div
@@ -109,7 +110,12 @@ export default function RoutinesView({
               {expanded === key && steps.length > 0 && (
                 <ul className="mt-3 flex flex-col gap-2 border-t border-paper-border pt-3">
                   {steps.map((step) => (
-                    <li key={step.id} className="flex items-center gap-2.5">
+                    <li
+                      key={step.id}
+                      className={`flex items-center gap-2.5 rounded-lg px-1.5 py-1 -mx-1.5 ${
+                        step.id === nextStepId ? "bg-gold-soft/60" : ""
+                      }`}
+                    >
                       <CheckCircle
                         done={doneIds.includes(step.id)}
                         onToggle={() => toggleStep(key, step.id)}

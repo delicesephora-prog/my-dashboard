@@ -21,9 +21,9 @@ export const ROUTINE_ICONS: Record<RoutineKey, string> = {
   night: "🌙",
 };
 export const ROUTINE_COLORS: Record<RoutineKey, string> = {
-  morning: "#C7A46B",
-  day: "#4B5A24",
-  night: "#6B6E9B",
+  morning: "#B08B4F",
+  day: "#5B2333",
+  night: "#3D1622",
 };
 
 export type RoutineStep = {
@@ -53,6 +53,7 @@ export type RoutinesData = {
   config: RoutinesConfig;
   // Keyed by YYYY-MM-DD.
   days: Record<string, RoutineDayLog>;
+  seedVersion: number;
 };
 
 function emptyVariant(): RoutineVariant {
@@ -65,10 +66,112 @@ export function emptyRoutine(): Routine {
   };
 }
 
+// Bump whenever the seed content below changes and existing saved routines
+// should be replaced rather than left alone - see the seedVersion migration
+// in normalizeRoutinesData.
+export const ROUTINES_SEED_VERSION = 1;
+
+function step(text: string, targetTime = "", durationMinutes: number | null = null): Omit<RoutineStep, "id" | "order"> {
+  return { text, targetTime, durationMinutes };
+}
+
+function variant(steps: Omit<RoutineStep, "id" | "order">[]): RoutineVariant {
+  return {
+    steps: steps.map((s, i) => ({ ...s, id: crypto.randomUUID(), order: i })),
+  };
+}
+
+export function seedRoutinesConfig(): RoutinesConfig {
+  return {
+    morning: {
+      variants: {
+        office: variant([
+          step("Wake — no phone 15 min", "06:00"),
+          step("Make bed + water"),
+          step("Devotional + prayer", "06:15"),
+          step("Shower + get ready"),
+          step("Breakfast / grab lunch", "07:15"),
+          step("Out the door", "07:35"),
+          step("Commute: worship or audiobook"),
+        ]),
+        remote: variant([
+          step("Wake — no phone 15 min", "06:30"),
+          step("Make bed + water"),
+          step("Devotional + prayer (20 min)"),
+          step("Workout or walk"),
+          step("Shower + dress like it counts"),
+          step("Breakfast + set One Thing", "08:30"),
+          step("At desk", "09:00"),
+        ]),
+        weekend: variant([
+          step("Wake naturally — make the bed"),
+          step("Unhurried devotional + journal"),
+          step("Slow breakfast with O"),
+          step("Movement: gym / walk / stretch"),
+          step("One \"future me\" task"),
+        ]),
+      },
+    },
+    day: {
+      variants: {
+        office: variant([
+          step("Real lunch away from desk", "12:30"),
+          step("5-min walk outside"),
+          step("Water check"),
+          step("Inbox + task triage", "15:00"),
+          step("Write tomorrow's top 3"),
+        ]),
+        remote: variant([
+          step("Lunch away from laptop", "12:30"),
+          step("10-min walk outside"),
+          step("Water check"),
+          step("Triage + one home micro-task", "15:00"),
+          step("Hard stop — plan tomorrow", "17:30"),
+        ]),
+        weekend: variant([
+          step("Water + light lunch"),
+          step("One home zone task"),
+          step("Something that fills you"),
+        ]),
+      },
+    },
+    night: {
+      variants: {
+        office: variant([
+          step("Kitchen reset + pack lunch", "20:30"),
+          step("Pick tomorrow's outfit"),
+          step("Skincare"),
+          step("Phone charges across room", "21:30"),
+          step("Daily review (2 min)"),
+          step("Prayer + 3 gratitudes"),
+          step("Lights out", "22:30"),
+        ]),
+        remote: variant([
+          step("Kitchen reset", "20:30"),
+          step("Tidy desk for tomorrow"),
+          step("Skincare"),
+          step("Phone charges across room", "21:30"),
+          step("Daily review (2 min)"),
+          step("Prayer + 3 gratitudes"),
+          step("Lights out", "22:30"),
+        ]),
+        weekend: variant([
+          step("Kitchen reset"),
+          step("Skincare"),
+          step("Daily review"),
+          step("Prayer + 3 gratitudes"),
+          step("Sunday: peek at week ahead"),
+        ]),
+      },
+    },
+  };
+}
+
 export function emptyRoutinesData(): RoutinesData {
   return {
-    config: { morning: emptyRoutine(), day: emptyRoutine(), night: emptyRoutine() },
+    config: seedRoutinesConfig(),
     days: {},
+    seedVersion: ROUTINES_SEED_VERSION,
   };
 }
 
@@ -88,6 +191,9 @@ export function normalizeRoutine(partial: Partial<Routine> | null | undefined): 
 export function normalizeRoutinesData(
   partial: Partial<RoutinesData> | null | undefined
 ): RoutinesData {
+  if ((partial?.seedVersion ?? 0) < ROUTINES_SEED_VERSION) {
+    return { config: seedRoutinesConfig(), days: {}, seedVersion: ROUTINES_SEED_VERSION };
+  }
   const fallback = emptyRoutinesData();
   return {
     config: {
@@ -96,6 +202,7 @@ export function normalizeRoutinesData(
       night: normalizeRoutine(partial?.config?.night),
     },
     days: partial?.days ?? fallback.days,
+    seedVersion: partial?.seedVersion ?? ROUTINES_SEED_VERSION,
   };
 }
 
