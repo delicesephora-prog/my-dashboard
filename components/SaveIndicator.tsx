@@ -22,10 +22,10 @@ export default function SaveIndicator({
 
   const dotClass =
     status === "saving"
-      ? "bg-[#C7A46B] animate-pulse"
+      ? "bg-gold animate-pulse"
       : status === "saved"
-        ? "bg-[#8FA37E]"
-        : "bg-[#B5574A]";
+        ? "bg-sage"
+        : "bg-[#A54B3F]";
 
   const content = (
     <div className="flex items-center gap-1.5 text-xs text-paper-muted">

@@ -91,16 +91,48 @@ export async function saveDashboardData(data: DashboardData, clientSeq: number):
     console.error("[db] sealed-letter guard check failed, saving anyway:", err);
   }
 
+  // clientSeq is a wall-clock timestamp from whichever device is saving.
+  // A client whose clock is simply wrong (wrong time zone, a phone that
+  // drifted, anything) could otherwise send a wildly-future value that
+  // gets stored as save_seq - after which every future legitimate save
+  // from every device would compare as "older" and be silently dropped
+  // forever. Clamp to the server's own clock (plus a little slack for
+  // normal skew) so a bad client clock can never poison this for good.
+  const serverNow = Date.now();
+  const safeSeq = clientSeq > 0 && clientSeq <= serverNow + 5 * 60 * 1000 ? clientSeq : serverNow;
+
   // The WHERE clause on DO UPDATE makes this atomic and race-proof: if a
-  // save carrying an older clientSeq reaches the database after a newer
+  // save carrying an older save_seq reaches the database after a newer
   // one already landed, this UPDATE simply matches zero rows instead of
   // overwriting the newer data - regardless of which HTTP request actually
-  // arrived at the server last.
-  await db`
+  // arrived at the server last. RETURNING lets us notice when that happens.
+  const result = await db`
     INSERT INTO dashboard_state (id, data, updated_at, save_seq)
-    VALUES (${ROW_ID}, ${JSON.stringify(toSave)}::jsonb, now(), ${clientSeq})
+    VALUES (${ROW_ID}, ${JSON.stringify(toSave)}::jsonb, now(), ${safeSeq})
     ON CONFLICT (id) DO UPDATE
       SET data = EXCLUDED.data, updated_at = now(), save_seq = EXCLUDED.save_seq
       WHERE EXCLUDED.save_seq >= dashboard_state.save_seq
+    RETURNING save_seq
   `;
+
+  if (result.length > 0) return;
+
+  // Nothing was written. Normally that means a genuinely newer save
+  // already won the race, which is correct and not an error. But if the
+  // value currently stored is itself implausibly far in the future (a
+  // save_seq that could only have come from a broken client clock), every
+  // future save would be stuck rejecting forever - self-heal by forcing
+  // this write through and resetting save_seq to the server's own clock.
+  const existingRows = await db`SELECT save_seq FROM dashboard_state WHERE id = ${ROW_ID}`;
+  const storedSeq = existingRows.length > 0 ? Number(existingRows[0].save_seq) : 0;
+  if (storedSeq > serverNow + 5 * 60 * 1000) {
+    console.error(
+      `[db] save_seq ${storedSeq} is implausibly far ahead of server time ${serverNow} - repairing.`
+    );
+    await db`
+      UPDATE dashboard_state
+      SET data = ${JSON.stringify(toSave)}::jsonb, updated_at = now(), save_seq = ${serverNow}
+      WHERE id = ${ROW_ID}
+    `;
+  }
 }

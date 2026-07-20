@@ -704,7 +704,19 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  const body = await req.json().catch(() => null);
+  const body = await req.json().catch(() => undefined);
+  // A request body that fails to parse (a flaky mobile connection cutting
+  // off the upload mid-stream, for example) must never be treated as "no
+  // data" - normalizeDashboardData(null/undefined) fills in full blank
+  // defaults, and saving that would silently wipe everything. Bail out
+  // instead, before anything gets normalized or written.
+  if (body === undefined || body === null || typeof body !== "object") {
+    return NextResponse.json(
+      { ok: false, error: "Request body missing or unreadable - save not applied." },
+      { status: 400 }
+    );
+  }
+
   // Backfill any fields the request is missing (e.g. a browser tab that's
   // been open since before a newer field was added) so a slightly stale
   // client never gets its save silently rejected.
