@@ -153,6 +153,7 @@ const habitWeekDataSchema = z.object({
 const habitsDataSchema = z.object({
   habits: z.array(habitSchema).max(100),
   weeks: z.record(habitWeekDataSchema),
+  seedVersion: z.number().int(),
 });
 
 const contactSchema = z.object({

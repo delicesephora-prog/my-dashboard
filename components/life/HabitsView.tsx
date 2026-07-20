@@ -3,8 +3,19 @@
 import { Habit, HabitsData, habitCompletionsFor } from "@/lib/types";
 import { weekKeyFor } from "@/lib/week";
 import HabitCell from "./HabitCell";
+import ProgressRing from "../ProgressRing";
 
-const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
+// Storage is Monday-first (index 0 = Monday ... 6 = Sunday). Display is
+// Sunday-first per spec - this maps each displayed column back to its
+// underlying storage index.
+const DISPLAY_TO_STORAGE = [6, 0, 1, 2, 3, 4, 5];
+const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+
+function todayDisplayIndex(): number {
+  const jsDay = new Date().getDay(); // 0 = Sunday
+  const storageIndex = jsDay === 0 ? 6 : jsDay - 1;
+  return DISPLAY_TO_STORAGE.indexOf(storageIndex);
+}
 
 export default function HabitsView({
   habitsData,
@@ -18,13 +29,14 @@ export default function HabitsView({
   const weekKey = weekKeyFor(new Date());
   const faith = habitsData.habits.filter((h) => h.section === "faith").sort((a, b) => a.order - b.order);
   const daily = habitsData.habits.filter((h) => h.section === "daily").sort((a, b) => a.order - b.order);
+  const todayCol = todayDisplayIndex();
 
-  function toggleDay(habitId: string, dayIndex: number) {
+  function toggleDay(habitId: string, storageIndex: number) {
     onChange((h) => {
       const week = h.weeks[weekKey] ?? { completions: {} };
       const current = week.completions[habitId] ?? [false, false, false, false, false, false, false];
       const next = [...current];
-      next[dayIndex] = !next[dayIndex];
+      next[storageIndex] = !next[storageIndex];
       return {
         ...h,
         weeks: {
@@ -47,11 +59,14 @@ export default function HabitsView({
   return (
     <div className="scroll-quiet safe-bottom flex-1 overflow-y-auto">
       <div className="mb-3 flex items-center justify-between">
-        <div>
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
-            This Week&apos;s Habits
-          </p>
-          <p className="font-serif text-2xl text-paper-ink">{pct}%</p>
+        <div className="flex items-center gap-3">
+          <ProgressRing pct={pct} size={56} strokeWidth={6} color="#5B2333" label={`${pct}%`} />
+          <div>
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+              This Week&apos;s Habits
+            </p>
+            <p className="font-serif text-[0.95rem] text-paper-ink">Overall</p>
+          </div>
         </div>
         <button
           type="button"
@@ -63,13 +78,20 @@ export default function HabitsView({
       </div>
 
       <div className="rounded-xl2 border border-paper-border bg-paper-surface p-3.5 shadow-paper">
-        <DayHeader />
+        <DayHeader todayCol={todayCol} />
 
         {faith.length > 0 && (
           <>
             <SectionLabel label="Faith" />
             {faith.map((habit) => (
-              <HabitRow key={habit.id} habit={habit} habitsData={habitsData} weekKey={weekKey} onToggle={toggleDay} />
+              <HabitRow
+                key={habit.id}
+                habit={habit}
+                habitsData={habitsData}
+                weekKey={weekKey}
+                todayCol={todayCol}
+                onToggle={toggleDay}
+              />
             ))}
           </>
         )}
@@ -78,7 +100,14 @@ export default function HabitsView({
           <>
             <SectionLabel label="Daily" />
             {daily.map((habit) => (
-              <HabitRow key={habit.id} habit={habit} habitsData={habitsData} weekKey={weekKey} onToggle={toggleDay} />
+              <HabitRow
+                key={habit.id}
+                habit={habit}
+                habitsData={habitsData}
+                weekKey={weekKey}
+                todayCol={todayCol}
+                onToggle={toggleDay}
+              />
             ))}
           </>
         )}
@@ -89,40 +118,21 @@ export default function HabitsView({
           </p>
         )}
       </div>
-
-      {habitsData.habits.length > 0 && (
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          {habitsData.habits.map((habit) => {
-            const cells = habitCompletionsFor(habitsData, weekKey, habit.id);
-            const count = cells.filter(Boolean).length;
-            return (
-              <div
-                key={habit.id}
-                className="rounded-xl border-l-4 bg-paper-surface p-2.5 shadow-paper"
-                style={{ borderColor: habit.color }}
-              >
-                <div className="flex items-center gap-1.5 text-[13px] text-paper-ink">
-                  <span aria-hidden>{habit.icon}</span>
-                  <span className="truncate">{habit.label}</span>
-                </div>
-                <p className="mt-0.5 text-[11px] text-paper-muted">
-                  {count} of {habit.weeklyGoal} this week
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
 
-function DayHeader() {
+function DayHeader({ todayCol }: { todayCol: number }) {
   return (
-    <div className="mb-2 grid grid-cols-[108px_repeat(7,1fr)] items-center gap-1">
+    <div className="mb-2 grid grid-cols-[92px_repeat(7,1fr)] items-center gap-1">
       <span />
       {DAY_LABELS.map((d, i) => (
-        <span key={i} className="text-center text-[10px] font-medium text-paper-muted">
+        <span
+          key={i}
+          className={`text-center text-[10px] font-medium ${
+            i === todayCol ? "text-gold" : "text-paper-muted"
+          }`}
+        >
           {d}
         </span>
       ))}
@@ -142,30 +152,38 @@ function HabitRow({
   habit,
   habitsData,
   weekKey,
+  todayCol,
   onToggle,
 }: {
   habit: Habit;
   habitsData: HabitsData;
   weekKey: string;
-  onToggle: (habitId: string, dayIndex: number) => void;
+  todayCol: number;
+  onToggle: (habitId: string, storageIndex: number) => void;
 }) {
   const cells = habitCompletionsFor(habitsData, weekKey, habit.id);
+  const count = cells.filter(Boolean).length;
+  const goalMet = count >= habit.weeklyGoal;
 
   return (
-    <div className="mb-1.5 grid grid-cols-[108px_repeat(7,1fr)] items-center gap-1">
-      <div className="flex min-w-0 items-center gap-1.5 pr-1">
+    <div className="mb-2 grid grid-cols-[92px_repeat(7,1fr)] items-center gap-1">
+      <div className="flex min-w-0 items-center gap-1 pr-1">
         <span className="shrink-0" aria-hidden>
           {habit.icon}
         </span>
-        <span className="text-[10.5px] leading-tight text-paper-ink">{habit.label}</span>
+        <span className="min-w-0 truncate text-[10px] leading-tight text-paper-ink">{habit.label}</span>
+        <span className={`shrink-0 text-[9.5px] ${goalMet ? "font-semibold text-sage" : "text-paper-faint"}`}>
+          {count}/{habit.weeklyGoal}
+        </span>
       </div>
-      {cells.map((done, i) => (
-        <div key={i} className="flex justify-center">
+      {DISPLAY_TO_STORAGE.map((storageIndex, displayIndex) => (
+        <div key={displayIndex} className="flex justify-center">
           <HabitCell
-            done={done}
+            done={cells[storageIndex]}
             color={habit.color}
-            onToggle={() => onToggle(habit.id, i)}
-            ariaLabel={`${habit.label} - day ${i + 1}`}
+            isToday={displayIndex === todayCol}
+            onToggle={() => onToggle(habit.id, storageIndex)}
+            ariaLabel={`${habit.label} - ${DAY_LABELS[displayIndex]}`}
           />
         </div>
       ))}

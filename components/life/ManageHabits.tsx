@@ -191,8 +191,8 @@ function HabitEditor({
                   onClick={() => onUpdate((h) => ({ ...h, icon }))}
                   className="flex h-8 w-8 items-center justify-center rounded-lg text-base"
                   style={{
-                    backgroundColor: habit.icon === icon ? "#E6E9D3" : "transparent",
-                    border: `1px solid ${habit.icon === icon ? "#4B5A24" : "#E7DFCF"}`,
+                    backgroundColor: habit.icon === icon ? "#EEE0E3" : "transparent",
+                    border: `1px solid ${habit.icon === icon ? "#5B2333" : "#E8DFD0"}`,
                   }}
                 >
                   {icon}

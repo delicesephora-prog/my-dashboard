@@ -262,60 +262,74 @@ export const HABIT_ICON_OPTIONS = [
 ];
 
 export const HABIT_COLOR_OPTIONS = [
-  "#6E5C4B", // espresso
-  "#C1815F", // terracotta
-  "#8FA37E", // sage
-  "#C7A46B", // ochre
-  "#8C97B0", // dusty blue
-  "#9B7B94", // muted plum
+  "#B08B4F", // gold
+  "#5B2333", // plum
+  "#3D1622", // deep plum
+  "#6B7A8F", // slate blue
+  "#8A9B7C", // sage
+  "#A54B3F", // brick red
 ];
+
+// Bump whenever the seed content below changes and existing saved habits
+// should be replaced rather than left alone - see the seedVersion
+// migration in normalizeDashboardData.
+export const HABITS_SEED_VERSION = 2;
 
 function seedHabits(): Habit[] {
   return [
     {
       id: crypto.randomUUID(),
-      label: "Morning Prayer",
+      label: "Devotional",
+      icon: "🕊️",
+      color: "#B08B4F",
+      section: "faith",
+      weeklyGoal: 7,
+      order: 0,
+    },
+    {
+      id: crypto.randomUUID(),
+      label: "Prayer",
       icon: "🙏",
-      color: "#8FA37E",
+      color: "#5B2333",
       section: "faith",
-      weeklyGoal: 7,
-      order: 0,
-    },
-    {
-      id: crypto.randomUUID(),
-      label: "Scripture Reading",
-      icon: "📖",
-      color: "#C7A46B",
-      section: "faith",
-      weeklyGoal: 5,
-      order: 1,
-    },
-    {
-      id: crypto.randomUUID(),
-      label: "Move My Body",
-      icon: "🏃",
-      color: "#C1815F",
-      section: "daily",
-      weeklyGoal: 5,
-      order: 0,
-    },
-    {
-      id: crypto.randomUUID(),
-      label: "Drink Water",
-      icon: "💧",
-      color: "#8C97B0",
-      section: "daily",
       weeklyGoal: 7,
       order: 1,
     },
     {
       id: crypto.randomUUID(),
-      label: "Journal",
-      icon: "✍️",
-      color: "#6E5C4B",
+      label: "Workout",
+      icon: "💪",
+      color: "#3D1622",
       section: "daily",
       weeklyGoal: 4,
+      order: 0,
+    },
+    {
+      id: crypto.randomUUID(),
+      label: "Water Goal",
+      icon: "💧",
+      color: "#6B7A8F",
+      section: "daily",
+      weeklyGoal: 7,
+      order: 1,
+    },
+    {
+      id: crypto.randomUUID(),
+      label: "Read",
+      icon: "📖",
+      color: "#8A9B7C",
+      section: "daily",
+      weeklyGoal: 5,
       order: 2,
+    },
+    {
+      id: crypto.randomUUID(),
+      label: "No-Spend Day",
+      icon: "🚫",
+      color: "#A54B3F",
+      section: "daily",
+      weeklyGoal: 4,
+      order: 3,
     },
   ];
 }
@@ -332,10 +346,11 @@ export function emptyHabitWeekData(): HabitWeekData {
 export type HabitsData = {
   habits: Habit[];
   weeks: Record<string, HabitWeekData>;
+  seedVersion: number;
 };
 
 export function emptyHabitsData(): HabitsData {
-  return { habits: seedHabits(), weeks: {} };
+  return { habits: seedHabits(), weeks: {}, seedVersion: HABITS_SEED_VERSION };
 }
 
 export function habitCompletionsFor(
@@ -842,10 +857,20 @@ export function normalizeDashboardData(
       edcAccess: data.backBeat?.edcAccess ?? [],
       uberHealth: data.backBeat?.uberHealth ?? [],
     },
-    habits: {
-      habits: data.habits?.habits ?? fallback.habits.habits,
-      weeks: data.habits?.weeks ?? {},
-    },
+    // A one-time reset: habits saved under an older seed version are
+    // replaced with the current seed content (and their weekly history
+    // cleared, since it references habit ids that no longer exist) -
+    // requested explicitly rather than the usual "never overwrite real
+    // data" rule. Once migrated, seedVersion matches and this never
+    // fires again, so later edits persist normally.
+    habits:
+      (data.habits?.seedVersion ?? 0) < HABITS_SEED_VERSION
+        ? { habits: seedHabits(), weeks: {}, seedVersion: HABITS_SEED_VERSION }
+        : {
+            habits: data.habits?.habits ?? fallback.habits.habits,
+            weeks: data.habits?.weeks ?? {},
+            seedVersion: data.habits?.seedVersion ?? HABITS_SEED_VERSION,
+          },
     reference: {
       contacts: data.reference?.contacts ?? [],
       approvalChains: data.reference?.approvalChains ?? fallback.reference.approvalChains,

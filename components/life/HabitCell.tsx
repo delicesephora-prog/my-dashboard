@@ -7,11 +7,13 @@ import { playPopSound } from "@/lib/pop-sound";
 export default function HabitCell({
   done,
   color,
+  isToday,
   onToggle,
   ariaLabel,
 }: {
   done: boolean;
   color: string;
+  isToday?: boolean;
   onToggle: () => void;
   ariaLabel: string;
 }) {
@@ -33,10 +35,10 @@ export default function HabitCell({
       onClick={handleClick}
       className={`flex h-6 w-6 items-center justify-center rounded-md border transition active:scale-90 ${
         done ? "ring-2 ring-gold/50 ring-offset-2 ring-offset-paper-bg" : ""
-      }`}
+      } ${isToday ? "outline outline-2 outline-offset-1 outline-gold" : ""}`}
       style={{
         backgroundColor: done ? color : "transparent",
-        borderColor: done ? "transparent" : "#E7DFCF",
+        borderColor: done ? "transparent" : "#E8DFD0",
       }}
     >
       {done && (
