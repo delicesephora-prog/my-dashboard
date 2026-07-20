@@ -114,16 +114,25 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     };
   }, []);
 
-  const scheduleSave = useCallback(() => {
-    setStatus("saving");
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      activeAbort.current?.abort();
-      const controller = new AbortController();
-      activeAbort.current = controller;
-      const mySeq = Date.now();
-      saveSeq.current = mySeq;
+  const runSave = useCallback(() => {
+    // A tab sitting in the background can hold data that's gone stale
+    // while edits happen elsewhere (another tab, another device) - never
+    // let a hidden tab write anything. Once it's actually visible again,
+    // the visibilitychange handler below either lets this pending save
+    // through (if something genuinely changed while hidden) or pulls
+    // fresh data first (if nothing did).
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+      saveTimer.current = setTimeout(runSave, SAVE_DELAY_MS);
+      return;
+    }
 
+    activeAbort.current?.abort();
+    const controller = new AbortController();
+    activeAbort.current = controller;
+    const mySeq = Date.now();
+    saveSeq.current = mySeq;
+
+    (async () => {
       try {
         const res = await fetch("/api/dashboard", {
           method: "PUT",
@@ -151,8 +160,35 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
         setStatus("error");
         setSaveError(message);
       }
-    }, SAVE_DELAY_MS);
+    })();
   }, []);
+
+  const scheduleSave = useCallback(() => {
+    setStatus("saving");
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(runSave, SAVE_DELAY_MS);
+  }, [runSave]);
+
+  // A tab that's been sitting hidden in the background is the classic way
+  // stale data creeps back in: it never sent anything while hidden (see
+  // runSave above), but its in-memory state can still be minutes or hours
+  // old. The moment it's visible again, if nothing here is actually
+  // waiting to be saved, pull the current server state instead of letting
+  // this tab keep operating on an old snapshot.
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState !== "visible") return;
+      if (saveTimer.current || status === "saving") return;
+      fetch("/api/dashboard", { cache: "no-store" })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((json) => {
+          if (json?.ok && json.data) setData(json.data);
+        })
+        .catch(() => {});
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [status]);
 
   function setOneThing(text: string) {
     setData((prev) => ({ ...prev, oneThing: { text, date: todayKey() } }));
