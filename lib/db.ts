@@ -91,48 +91,39 @@ export async function saveDashboardData(data: DashboardData, clientSeq: number):
     console.error("[db] sealed-letter guard check failed, saving anyway:", err);
   }
 
-  // clientSeq is a wall-clock timestamp from whichever device is saving.
-  // A client whose clock is simply wrong (wrong time zone, a phone that
-  // drifted, anything) could otherwise send a wildly-future value that
-  // gets stored as save_seq - after which every future legitimate save
-  // from every device would compare as "older" and be silently dropped
-  // forever. Clamp to the server's own clock (plus a little slack for
-  // normal skew) so a bad client clock can never poison this for good.
-  const serverNow = Date.now();
-  const safeSeq = clientSeq > 0 && clientSeq <= serverNow + 5 * 60 * 1000 ? clientSeq : serverNow;
-
-  // The WHERE clause on DO UPDATE makes this atomic and race-proof: if a
-  // save carrying an older save_seq reaches the database after a newer
-  // one already landed, this UPDATE simply matches zero rows instead of
-  // overwriting the newer data - regardless of which HTTP request actually
-  // arrived at the server last. RETURNING lets us notice when that happens.
+  // clientSeq is a wall-clock timestamp from whichever device is saving,
+  // used to stop a same-device request that started editing earlier from
+  // overwriting one that started later, even if their network requests
+  // arrive at the server out of order. Comparing raw clientSeq values
+  // ACROSS devices is not safe on its own: two real devices' clocks are
+  // very often a little different (a phone that's a few minutes off is
+  // completely ordinary, not a malfunction), and once one device's clock
+  // reads "behind," every save it ever makes would compare as older and
+  // get silently dropped - forever, with no error, while the app still
+  // says "Saved". That exact failure is why saves stopped landing.
+  //
+  // Fix: only enforce the ordering check within a short window right
+  // after the last write (long enough to cover a real same-device race,
+  // which resolves in well under a second in practice) - any write more
+  // than a few seconds after the last one always goes through no matter
+  // what its timestamp says, because by then this can only be a
+  // genuinely later edit, not a stale request finally arriving.
+  // (window is 10 seconds - hardcoded directly below since it's a fixed
+  // SQL interval literal, not something that needs to vary at runtime)
   const result = await db`
     INSERT INTO dashboard_state (id, data, updated_at, save_seq)
-    VALUES (${ROW_ID}, ${JSON.stringify(toSave)}::jsonb, now(), ${safeSeq})
+    VALUES (${ROW_ID}, ${JSON.stringify(toSave)}::jsonb, now(), ${clientSeq})
     ON CONFLICT (id) DO UPDATE
       SET data = EXCLUDED.data, updated_at = now(), save_seq = EXCLUDED.save_seq
       WHERE EXCLUDED.save_seq >= dashboard_state.save_seq
+         OR now() - dashboard_state.updated_at > interval '10 seconds'
     RETURNING save_seq
   `;
 
-  if (result.length > 0) return;
-
-  // Nothing was written. Normally that means a genuinely newer save
-  // already won the race, which is correct and not an error. But if the
-  // value currently stored is itself implausibly far in the future (a
-  // save_seq that could only have come from a broken client clock), every
-  // future save would be stuck rejecting forever - self-heal by forcing
-  // this write through and resetting save_seq to the server's own clock.
-  const existingRows = await db`SELECT save_seq FROM dashboard_state WHERE id = ${ROW_ID}`;
-  const storedSeq = existingRows.length > 0 ? Number(existingRows[0].save_seq) : 0;
-  if (storedSeq > serverNow + 5 * 60 * 1000) {
-    console.error(
-      `[db] save_seq ${storedSeq} is implausibly far ahead of server time ${serverNow} - repairing.`
-    );
-    await db`
-      UPDATE dashboard_state
-      SET data = ${JSON.stringify(toSave)}::jsonb, updated_at = now(), save_seq = ${serverNow}
-      WHERE id = ${ROW_ID}
-    `;
+  if (result.length === 0) {
+    // Only reachable if another save landed within the last few seconds
+    // and genuinely does carry a later save_seq - a real, intentional
+    // race loss, not a bug. Nothing to repair.
+    console.warn("[db] save skipped: a newer save already landed within the race window.");
   }
 }
