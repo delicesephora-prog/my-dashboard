@@ -20,20 +20,12 @@ import { dateKey } from "@/lib/date";
 import CheckCircle from "../../CheckCircle";
 import LetterToDecemberSephCard from "./LetterToDecemberSephCard";
 
-const CATEGORY_COLORS: Record<TransformationCategoryKey, string> = {
-  Fitness: "#C1815F",
-  Finances: "#C7A46B",
-  Faith: "#8FA37E",
-  Style: "#9B7B94",
-  Career: "#6E5C4B",
-};
-
 const PACE_DOT: Record<string, string> = {
-  "no-goals": "#C9BEA9",
-  "insufficient-data": "#C9BEA9",
-  complete: "#8FA37E",
-  "on-pace": "#8FA37E",
-  "off-pace": "#B5574A",
+  "no-goals": "#C7B9BC",
+  "insufficient-data": "#C7B9BC",
+  complete: "#8A9B7C",
+  "on-pace": "#8A9B7C",
+  "off-pace": "#A54B3F",
 };
 
 export default function WarRoomSection({
@@ -78,13 +70,13 @@ export default function WarRoomSection({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="rounded-xl2 border border-life bg-paper-surface p-5 text-center shadow-paper-lg">
-        <p className="mb-1 text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-life">
-          December 8 War Room
+      <div className="rounded-xl2 bg-life p-6 text-center shadow-paper-lg">
+        <p className="mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-gold-soft">
+          Days Until December 8
         </p>
-        <p className="font-serif text-4xl text-paper-ink">{days}</p>
-        <p className="mb-2 text-[12px] text-paper-muted">day{days === 1 ? "" : "s"} to go</p>
-        <div className="flex justify-center gap-4 text-[12px] text-paper-muted">
+        <p className="font-serif text-6xl text-paper-surface">{days}</p>
+        <p className="mt-2 text-[13px] italic text-paper-surface/80">Unrecognizable, on schedule.</p>
+        <div className="mt-3 flex justify-center gap-4 text-[12px] text-paper-surface/70">
           <span>{weeks} week{weeks === 1 ? "" : "s"}</span>
           {paydays !== null && (
             <span>
@@ -134,7 +126,6 @@ function CategoryCard({
   onChangeCategoryData: (updater: (c: CategoryWarRoomData) => CategoryWarRoomData) => void;
 }) {
   const [text, setText] = useState("");
-  const color = CATEGORY_COLORS[category];
   const doneCount = goals.filter((g) => g.done).length;
   const pct = goals.length > 0 ? Math.round((doneCount / goals.length) * 100) : 0;
   const pace = categoryPace(categoryData, goals);
@@ -148,7 +139,7 @@ function CategoryCard({
   const maxSnapshot = Math.max(1, ...categoryData.snapshots.map((s) => (s.total > 0 ? (s.done / s.total) * 100 : 0)));
 
   return (
-    <div className="rounded-xl2 border-l-4 bg-paper-surface p-4 shadow-paper" style={{ borderColor: color }}>
+    <div className="rounded-xl2 border-l-4 border-l-life bg-paper-surface p-4 shadow-paper">
       <div className="mb-1.5 flex items-center justify-between">
         <p className="font-serif text-[1rem] text-paper-ink">{category}</p>
         <div className="flex items-center gap-1.5">
@@ -163,7 +154,7 @@ function CategoryCard({
         </span>
       </div>
       <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-paper-surface2">
-        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+        <div className="h-full rounded-full bg-gold transition-all" style={{ width: `${pct}%` }} />
       </div>
 
       {categoryData.snapshots.length > 1 && (
@@ -175,8 +166,8 @@ function CategoryCard({
               <div
                 key={s.date}
                 title={`${s.date}: ${Math.round(spct)}%`}
-                className="flex-1 rounded-t-sm"
-                style={{ height: `${height}%`, backgroundColor: color, opacity: 0.6 }}
+                className="flex-1 rounded-t-sm bg-gold"
+                style={{ height: `${height}%`, opacity: 0.6 }}
               />
             );
           })}
@@ -247,8 +238,7 @@ function CategoryCard({
         <button
           type="button"
           onClick={submit}
-          className="rounded-lg px-2.5 text-sm text-paper-surface"
-          style={{ backgroundColor: color }}
+          className="rounded-lg bg-life px-2.5 text-sm text-paper-surface"
         >
           +
         </button>

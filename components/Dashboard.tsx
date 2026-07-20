@@ -56,6 +56,7 @@ import PlannerView from "./life/planner/PlannerView";
 import BooksView from "./life/BooksView";
 import BucketListView from "./life/BucketListView";
 import YearView from "./life/year/YearView";
+import WarRoomSection from "./life/year/WarRoomSection";
 import SaveIndicator, { SaveStatus } from "./SaveIndicator";
 
 type World = "front" | "work" | "life";
@@ -76,7 +77,8 @@ type LifeView =
   | "home"
   | "books"
   | "bucketList"
-  | "year";
+  | "year"
+  | "dec8";
 
 const SAVE_DELAY_MS = 700;
 
@@ -434,6 +436,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                   { key: "books", label: "Books" },
                   { key: "bucketList", label: "Bucket List" },
                   { key: "year", label: "Year" },
+                  { key: "dec8", label: "Dec 8" },
                 ]}
                 active={lifeView}
                 onChange={setLifeView}
@@ -518,11 +521,16 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             {lifeView === "bucketList" && (
               <BucketListView bucketList={data.bucketList} onChange={updateBucketList} />
             )}
-            {lifeView === "year" && (
-              <YearView
-                year={data.year}
+            {lifeView === "year" && <YearView year={data.year} onChange={updateYear} />}
+            {lifeView === "dec8" && (
+              <WarRoomSection
+                transformations={data.year.transformations}
+                warRoom={data.year.warRoom}
                 paydayAnchorDate={data.lifeQuarterly.paydayChecklist.anchorDate}
-                onChange={updateYear}
+                onChangeTransformations={(updater) =>
+                  updateYear((y) => ({ ...y, transformations: updater(y.transformations) }))
+                }
+                onChangeWarRoom={(updater) => updateYear((y) => ({ ...y, warRoom: updater(y.warRoom) }))}
               />
             )}
           </>
