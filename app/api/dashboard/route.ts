@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getDashboardData, getDebugSnapshot, saveDashboardData } from "@/lib/db";
+import { getDashboardData, saveDashboardData } from "@/lib/db";
 import { normalizeDashboardData } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -665,22 +665,7 @@ const dashboardSchema = z.object({
   homeZones: homeZonesDataSchema,
 });
 
-export async function GET(req: NextRequest) {
-  // Temporary: ?debug=1 returns a lightweight snapshot of what's actually
-  // in the database right now, without the full dashboard payload -
-  // viewable directly in-app so nothing needs to be checked in Vercel.
-  if (req.nextUrl.searchParams.get("debug") === "1") {
-    try {
-      const debug = await getDebugSnapshot();
-      return NextResponse.json({ ok: true, debug });
-    } catch (err) {
-      return NextResponse.json(
-        { ok: false, error: err instanceof Error ? err.message : "Unknown error" },
-        { status: 500 }
-      );
-    }
-  }
-
+export async function GET() {
   try {
     const data = await getDashboardData();
     return NextResponse.json({ ok: true, data });
@@ -715,8 +700,8 @@ export async function PUT(req: NextRequest) {
   const clientSeq = Number.isFinite(headerSeq) && headerSeq > 0 ? headerSeq : Date.now();
 
   try {
-    const debug = await saveDashboardData(parsed.data, clientSeq);
-    return NextResponse.json({ ok: true, debug });
+    await saveDashboardData(parsed.data, clientSeq);
+    return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json(
       { ok: false, error: err instanceof Error ? err.message : "Unknown error" },

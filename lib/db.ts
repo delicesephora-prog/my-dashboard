@@ -62,92 +62,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   return redactLockedLetter(normalizeDashboardData(rows[0].data as Partial<DashboardData>));
 }
 
-export type SaveDebugInfo = {
-  dbHost: string;
-  dbPath: string;
-  brainDumpReceived: string;
-  brainDumpConfirmedByDb: string;
-  dumpItemCountReceived: number;
-  dumpLatestItemReceived: string;
-  rowsWrittenByInsert: number;
-  clientSeqSent: number;
-  writeAccepted: boolean;
-};
-
-function latestDumpText(data: Partial<DashboardData> | null | undefined): { count: number; latest: string } {
-  const items = data?.lists?.dump?.items ?? [];
-  if (items.length === 0) return { count: 0, latest: "(none)" };
-  const sorted = [...items].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  return { count: items.length, latest: sorted[0].text };
-}
-
-// Temporary: a lightweight, no-Vercel-required way to see exactly what the
-// database has stored right now, viewable directly in the app UI. Checks
-// both Brain Dump (the free-text pencil-icon field) and the Dump list (the
-// green "Dump" quick-capture button) since they're easy to mix up.
-export async function getDebugSnapshot(): Promise<{
-  dbHost: string;
-  dbPath: string;
-  brainDumpNow: string;
-  dumpItemCount: number;
-  dumpLatestItem: string;
-  updatedAt: string | null;
-  saveSeqNow: number | null;
-  allRows: { id: string; updatedAt: string; saveSeq: number }[];
-}> {
-  const url = process.env.DATABASE_URL ?? "";
-  let dbHost = "(not set)";
-  let dbPath = "(not set)";
-  try {
-    const parsed = new URL(url);
-    dbHost = parsed.host;
-    dbPath = parsed.pathname;
-  } catch {
-    dbHost = "(unparseable)";
-  }
-  const db = sql();
-  await ensureTable();
-
-  // Every row in the table, not just "main" - reveals whether writes are
-  // silently landing under a different id than the app reads from.
-  const allRowsRaw = await db`SELECT id, updated_at, save_seq FROM dashboard_state ORDER BY updated_at DESC`;
-  const allRows = allRowsRaw.map((r) => ({
-    id: String(r.id),
-    updatedAt: String(r.updated_at),
-    saveSeq: Number(r.save_seq),
-  }));
-
-  const rows = await db`SELECT data, updated_at, save_seq FROM dashboard_state WHERE id = ${ROW_ID}`;
-  if (rows.length === 0) {
-    return {
-      dbHost,
-      dbPath,
-      brainDumpNow: "(no row yet)",
-      dumpItemCount: 0,
-      dumpLatestItem: "(no row yet)",
-      updatedAt: null,
-      saveSeqNow: null,
-      allRows,
-    };
-  }
-  const rowData = rows[0].data as Partial<DashboardData>;
-  const brainDumpNow = String(rowData?.brainDump ?? "");
-  const { count, latest } = latestDumpText(rowData);
-  const updatedAt = String(rows[0].updated_at);
-  const saveSeqNow = Number(rows[0].save_seq);
-  return {
-    dbHost,
-    dbPath,
-    brainDumpNow,
-    dumpItemCount: count,
-    dumpLatestItem: latest,
-    updatedAt,
-    saveSeqNow,
-    allRows,
-  };
-}
-
-export async function saveDashboardData(data: DashboardData, clientSeq: number): Promise<SaveDebugInfo> {
+export async function saveDashboardData(data: DashboardData, clientSeq: number): Promise<void> {
   const db = sql();
   await ensureTable();
 
@@ -176,42 +91,16 @@ export async function saveDashboardData(data: DashboardData, clientSeq: number):
     console.error("[db] sealed-letter guard check failed, saving anyway:", err);
   }
 
-  const url = process.env.DATABASE_URL ?? "";
-  let dbHost = "(not set)";
-  let dbPath = "(not set)";
-  try {
-    const parsedUrl = new URL(url);
-    dbHost = parsedUrl.host;
-    dbPath = parsedUrl.pathname;
-  } catch {
-    dbHost = "(unparseable)";
-  }
-
   // The WHERE clause on DO UPDATE makes this atomic and race-proof: if a
   // save carrying an older clientSeq reaches the database after a newer
   // one already landed, this UPDATE simply matches zero rows instead of
   // overwriting the newer data - regardless of which HTTP request actually
   // arrived at the server last.
-  const result = await db`
+  await db`
     INSERT INTO dashboard_state (id, data, updated_at, save_seq)
     VALUES (${ROW_ID}, ${JSON.stringify(toSave)}::jsonb, now(), ${clientSeq})
     ON CONFLICT (id) DO UPDATE
       SET data = EXCLUDED.data, updated_at = now(), save_seq = EXCLUDED.save_seq
       WHERE EXCLUDED.save_seq >= dashboard_state.save_seq
-    RETURNING data->>'brainDump' AS brain_dump_after_write
   `;
-
-  const { count, latest } = latestDumpText(toSave);
-
-  return {
-    dbHost,
-    dbPath,
-    brainDumpReceived: toSave.brainDump,
-    brainDumpConfirmedByDb: String(result[0]?.brain_dump_after_write ?? ""),
-    dumpItemCountReceived: count,
-    dumpLatestItemReceived: latest,
-    rowsWrittenByInsert: result.length,
-    clientSeqSent: clientSeq,
-    writeAccepted: result.length > 0,
-  };
 }
