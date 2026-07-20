@@ -12,7 +12,9 @@ export const config = {
 // time, since this app's entire point is that every device always sees
 // the current database state.
 function noStore(res: NextResponse): NextResponse {
-  res.headers.set("Cache-Control", "no-store, must-revalidate");
+  res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.headers.set("Pragma", "no-cache");
+  res.headers.set("Expires", "0");
   return res;
 }
 

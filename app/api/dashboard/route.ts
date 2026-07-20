@@ -5,6 +5,21 @@ import { normalizeDashboardData } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
+// Defense in depth: middleware already sets no-store on every response,
+// but this route's replies carry the actual dashboard data, so the
+// header goes directly on the response here too - nothing between this
+// server and the browser (a CDN edge, a proxy, the browser's own cache)
+// should ever be able to serve a stale copy of it.
+function noStoreJson<T>(body: T, init?: { status?: number }) {
+  const res = NextResponse.json(body, init);
+  res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.headers.set("Pragma", "no-cache");
+  res.headers.set("Expires", "0");
+  return res;
+}
 
 const taskSchema = z.object({
   id: z.string(),
@@ -694,9 +709,9 @@ const dashboardSchema = z.object({
 export async function GET() {
   try {
     const data = await getDashboardData();
-    return NextResponse.json({ ok: true, data });
+    return noStoreJson({ ok: true, data });
   } catch (err) {
-    return NextResponse.json(
+    return noStoreJson(
       { ok: false, error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }
     );
@@ -711,7 +726,7 @@ export async function PUT(req: NextRequest) {
   // defaults, and saving that would silently wipe everything. Bail out
   // instead, before anything gets normalized or written.
   if (body === undefined || body === null || typeof body !== "object") {
-    return NextResponse.json(
+    return noStoreJson(
       { ok: false, error: "Request body missing or unreadable - save not applied." },
       { status: 400 }
     );
@@ -724,7 +739,7 @@ export async function PUT(req: NextRequest) {
   const parsed = dashboardSchema.safeParse(normalized);
 
   if (!parsed.success) {
-    return NextResponse.json(
+    return noStoreJson(
       { ok: false, error: "Invalid dashboard data", issues: parsed.error.issues },
       { status: 400 }
     );
@@ -739,9 +754,9 @@ export async function PUT(req: NextRequest) {
 
   try {
     await saveDashboardData(parsed.data, clientSeq);
-    return NextResponse.json({ ok: true });
+    return noStoreJson({ ok: true });
   } catch (err) {
-    return NextResponse.json(
+    return noStoreJson(
       { ok: false, error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }
     );
