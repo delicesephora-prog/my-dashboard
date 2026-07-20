@@ -43,21 +43,29 @@ function mondayFirstDayIndex(d: Date): number {
 export type TodayFocusItem = {
   id: string;
   title: string;
+  // "side" is purely a display label (Work vs Life); "source" says which
+  // underlying pool to toggle, since Life has two independent places a
+  // task can be pinned from (the Week checklist and the simple Life tab).
   side: "work" | "life";
+  source: "workOps" | "week" | "lifeTasks";
 };
 
 export function pinnedFocusTasks(data: DashboardData): TodayFocusItem[] {
   const work = sortWorkTasks(
     data.workOps.tasks.filter((t) => t.topPriority && t.status !== "completed")
-  ).map((t) => ({ id: t.id, title: t.title, side: "work" as const }));
+  ).map((t) => ({ id: t.id, title: t.title, side: "work" as const, source: "workOps" as const }));
 
   const weekKey = weekKeyFor(new Date());
   const weekData = weekDataFor(data.lifeWeekly, weekKey);
-  const life = weekData.tasks
+  const week = weekData.tasks
     .filter((t) => t.focus && !t.done)
-    .map((t) => ({ id: t.id, title: t.text, side: "life" as const }));
+    .map((t) => ({ id: t.id, title: t.text, side: "life" as const, source: "week" as const }));
 
-  return [...work, ...life];
+  const lifeTasks = data.life.tasks
+    .filter((t) => t.focus && !t.done)
+    .map((t) => ({ id: t.id, title: t.text, side: "life" as const, source: "lifeTasks" as const }));
+
+  return [...work, ...week, ...lifeTasks];
 }
 
 export function todayHabitProgress(

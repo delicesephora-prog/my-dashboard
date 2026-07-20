@@ -12,6 +12,7 @@ import {
   LifeWeekly,
   Reference as ReferenceData,
   WorkOps,
+  WorldData,
   YearData,
   weekDataFor,
 } from "@/lib/types";
@@ -31,6 +32,7 @@ import { weekKeyFor } from "@/lib/week";
 import WorldToggle from "./WorldToggle";
 import SubNav from "./SubNav";
 import WeekView from "./WeekView";
+import LifeTasksView from "./life/LifeTasksView";
 import BrainDump from "./BrainDump";
 import DailyReviewBar from "./DailyReviewBar";
 import DailyReviewSheet from "./DailyReviewSheet";
@@ -57,6 +59,7 @@ import SaveIndicator, { SaveStatus } from "./SaveIndicator";
 type World = "front" | "work" | "life";
 type WorkView = "dashboard" | "backbeat" | "reference";
 type LifeView =
+  | "tasks"
   | "week"
   | "planner"
   | "routines"
@@ -158,6 +161,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     scheduleSave();
   }
 
+  function updateLife(updater: (w: WorldData) => WorldData) {
+    setData((prev) => ({ ...prev, life: updater(prev.life) }));
+    scheduleSave();
+  }
+
   function updateWorkOps(updater: (wo: WorkOps) => WorkOps) {
     setData((prev) => ({ ...prev, workOps: updater(prev.workOps) }));
     scheduleSave();
@@ -212,7 +220,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   }
 
   function toggleTodayFocusTask(item: TodayFocusItem) {
-    if (item.side === "work") {
+    if (item.source === "workOps") {
       updateWorkOps((wo) => ({
         ...wo,
         tasks: wo.tasks.map((t) =>
@@ -221,7 +229,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             : t
         ),
       }));
-    } else {
+    } else if (item.source === "week") {
       updateLifeWeekly((lw) => {
         const weekKey = weekKeyFor(new Date());
         const week = weekDataFor(lw, weekKey);
@@ -236,6 +244,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           },
         };
       });
+    } else {
+      updateLife((w) => ({
+        ...w,
+        tasks: w.tasks.map((t) => (t.id === item.id ? { ...t, done: !t.done } : t)),
+      }));
     }
   }
 
@@ -413,6 +426,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             {lifeView !== "manageHabits" && lifeView !== "manageRoutines" && (
               <SubNav
                 items={[
+                  { key: "tasks", label: "Tasks" },
                   { key: "week", label: "This Week" },
                   { key: "planner", label: "Planner" },
                   { key: "routines", label: "Routines" },
@@ -430,6 +444,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 accentClass="bg-life"
               />
             )}
+            {lifeView === "tasks" && <LifeTasksView world={data.life} onChange={updateLife} />}
             {lifeView === "week" && (
               <WeekView
                 lifeWeekly={data.lifeWeekly}
