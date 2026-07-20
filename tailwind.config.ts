@@ -6,49 +6,58 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Rich olive - the one signature accent shared by Work and Life,
-        // used boldly for headers, active states, and progress indicators.
+        // Rich burgundy-plum - the one signature accent shared by Work and
+        // Life, used boldly for headers, active states, and progress
+        // indicators.
         work: {
-          DEFAULT: "#4B5A24",
-          soft: "#E6E9D3",
-          dark: "#333D19",
+          DEFAULT: "#5B2333",
+          light: "#7A3B4D",
+          soft: "#EEE0E3",
+          dark: "#3D1622",
         },
         life: {
-          DEFAULT: "#4B5A24",
-          soft: "#E6E9D3",
-          dark: "#333D19",
+          DEFAULT: "#5B2333",
+          light: "#7A3B4D",
+          soft: "#EEE0E3",
+          dark: "#3D1622",
         },
-        // A very light touch of gold, reserved for small celebratory
-        // accents (completed-item pops) rather than large surfaces.
+        // Warm gold, reserved for small-caps labels and celebratory
+        // accents rather than large surfaces.
         gold: {
-          DEFAULT: "#C9A227",
-          soft: "#F5ECC9",
+          DEFAULT: "#B08B4F",
+          soft: "#E4D3B4",
         },
-        // A dusty rose accent, reserved for Glow Up - feminine but still
-        // muted enough to sit inside the same paper/olive system.
+        // Glow Up's own accent - kept distinct so that whole tab still
+        // reads as its own place, but pulled from the same plum/gold
+        // family instead of a separate hue.
         glow: {
-          DEFAULT: "#B97C87",
-          soft: "#F3E3E5",
-          dark: "#7D4750",
+          DEFAULT: "#5B2333",
+          soft: "#EEE0E3",
+          dark: "#3D1622",
+        },
+        // Sage green, reserved for completed/done states.
+        sage: {
+          DEFAULT: "#8A9B7C",
+          soft: "#E7EBE2",
         },
         // Luxury paper-planner neutrals
         paper: {
-          bg: "#F6F1E9",
-          surface: "#FFFCF6",
-          surface2: "#FBF5EA",
-          border: "#E7DFCF",
-          ink: "#2B2620",
-          muted: "#948A79",
-          faint: "#C9BEA9",
+          bg: "#F7F2EA",
+          surface: "#FFFDF8",
+          surface2: "#F2EBDD",
+          border: "#E8DFD0",
+          ink: "#2B1B22",
+          muted: "#9C8F94",
+          faint: "#C7B9BC",
         },
       },
       borderRadius: {
-        xl2: "1.5rem",
-        xl3: "2rem",
+        xl2: "1rem",
+        xl3: "1.5rem",
       },
       boxShadow: {
-        paper: "0 1px 2px rgba(43, 38, 32, 0.04), 0 8px 24px -12px rgba(43, 38, 32, 0.12)",
-        "paper-lg": "0 2px 4px rgba(43, 38, 32, 0.05), 0 16px 40px -16px rgba(43, 38, 32, 0.16)",
+        paper: "0 1px 2px rgba(43, 27, 34, 0.03), 0 6px 16px -10px rgba(43, 27, 34, 0.08)",
+        "paper-lg": "0 2px 4px rgba(43, 27, 34, 0.04), 0 14px 32px -14px rgba(43, 27, 34, 0.14)",
       },
       fontFamily: {
         sans: [
@@ -59,7 +68,7 @@ const config: Config = {
           "Roboto",
           "sans-serif",
         ],
-        serif: ["var(--font-editorial)", "Georgia", "serif"],
+        serif: ["Georgia", "Lora", "Times New Roman", "serif"],
       },
       keyframes: {
         "pop-in": {

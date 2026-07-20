@@ -19,8 +19,8 @@ export default function OneThing({
   }, [value]);
 
   return (
-    <div className="rounded-xl2 border border-paper-border bg-paper-surface p-3.5 shadow-paper">
-      <p className="mb-1 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+    <div className="rounded-xl2 bg-work p-3.5 shadow-paper-lg">
+      <p className="mb-1 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-gold-soft">
         My One Thing Today
       </p>
       <textarea
@@ -29,7 +29,7 @@ export default function OneThing({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="What matters most today?"
-        className="w-full resize-none overflow-hidden bg-transparent font-serif text-[1.15rem] leading-snug text-paper-ink outline-none placeholder:text-paper-faint placeholder:italic"
+        className="w-full resize-none overflow-hidden bg-transparent font-serif text-[1.15rem] leading-snug text-paper-surface outline-none placeholder:text-paper-surface/50 placeholder:italic"
       />
     </div>
   );

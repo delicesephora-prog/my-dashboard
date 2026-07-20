@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "A glanceable personal dashboard for work and life.",
     start_url: "/",
     display: "standalone",
-    background_color: "#F6F1E9",
-    theme_color: "#F6F1E9",
+    background_color: "#F7F2EA",
+    theme_color: "#F7F2EA",
     icons: [
       { src: "/icon", sizes: "512x512", type: "image/png" },
       { src: "/apple-icon", sizes: "180x180", type: "image/png" },

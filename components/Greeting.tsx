@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { greetingForHour, formatElegantDate } from "@/lib/date";
+import { DAY_TYPE_LABELS, dayTypeForDate } from "@/lib/routines";
 
 const NAME = "Sephora";
 const NBSP = "\u00A0";
@@ -26,9 +27,16 @@ export default function Greeting() {
           NBSP
         )}
       </h1>
-      <p className="mt-0.5 font-serif text-[0.85rem] italic text-paper-muted">
-        {now ? formatElegantDate(now) : NBSP}
-      </p>
+      <div className="mt-0.5 flex items-center gap-2">
+        <p className="font-serif text-[0.85rem] italic text-paper-muted">
+          {now ? formatElegantDate(now) : NBSP}
+        </p>
+        {now && (
+          <span className="shrink-0 rounded-full border border-paper-border bg-paper-surface2 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-paper-muted">
+            {DAY_TYPE_LABELS[dayTypeForDate(now)]}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
