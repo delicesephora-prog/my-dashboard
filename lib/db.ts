@@ -57,10 +57,12 @@ export async function getDashboardData(): Promise<DashboardData> {
 
 export type SaveDebugInfo = {
   dbHost: string;
+  dbPath: string;
   brainDumpReceived: string;
   brainDumpConfirmedByDb: string;
   dumpItemCountReceived: number;
   dumpLatestItemReceived: string;
+  rowsWrittenByInsert: number;
 };
 
 function latestDumpText(data: Partial<DashboardData> | null | undefined): { count: number; latest: string } {
@@ -76,29 +78,48 @@ function latestDumpText(data: Partial<DashboardData> | null | undefined): { coun
 // green "Dump" quick-capture button) since they're easy to mix up.
 export async function getDebugSnapshot(): Promise<{
   dbHost: string;
+  dbPath: string;
   brainDumpNow: string;
   dumpItemCount: number;
   dumpLatestItem: string;
   updatedAt: string | null;
+  allRows: { id: string; updatedAt: string }[];
 }> {
   const url = process.env.DATABASE_URL ?? "";
   let dbHost = "(not set)";
+  let dbPath = "(not set)";
   try {
-    dbHost = new URL(url).host;
+    const parsed = new URL(url);
+    dbHost = parsed.host;
+    dbPath = parsed.pathname;
   } catch {
     dbHost = "(unparseable)";
   }
   const db = sql();
   await ensureTable();
+
+  // Every row in the table, not just "main" - reveals whether writes are
+  // silently landing under a different id than the app reads from.
+  const allRowsRaw = await db`SELECT id, updated_at FROM dashboard_state ORDER BY updated_at DESC`;
+  const allRows = allRowsRaw.map((r) => ({ id: String(r.id), updatedAt: String(r.updated_at) }));
+
   const rows = await db`SELECT data, updated_at FROM dashboard_state WHERE id = ${ROW_ID}`;
   if (rows.length === 0) {
-    return { dbHost, brainDumpNow: "(no row yet)", dumpItemCount: 0, dumpLatestItem: "(no row yet)", updatedAt: null };
+    return {
+      dbHost,
+      dbPath,
+      brainDumpNow: "(no row yet)",
+      dumpItemCount: 0,
+      dumpLatestItem: "(no row yet)",
+      updatedAt: null,
+      allRows,
+    };
   }
   const rowData = rows[0].data as Partial<DashboardData>;
   const brainDumpNow = String(rowData?.brainDump ?? "");
   const { count, latest } = latestDumpText(rowData);
   const updatedAt = String(rows[0].updated_at);
-  return { dbHost, brainDumpNow, dumpItemCount: count, dumpLatestItem: latest, updatedAt };
+  return { dbHost, dbPath, brainDumpNow, dumpItemCount: count, dumpLatestItem: latest, updatedAt, allRows };
 }
 
 export async function saveDashboardData(data: DashboardData): Promise<SaveDebugInfo> {
@@ -132,8 +153,11 @@ export async function saveDashboardData(data: DashboardData): Promise<SaveDebugI
 
   const url = process.env.DATABASE_URL ?? "";
   let dbHost = "(not set)";
+  let dbPath = "(not set)";
   try {
-    dbHost = new URL(url).host;
+    const parsedUrl = new URL(url);
+    dbHost = parsedUrl.host;
+    dbPath = parsedUrl.pathname;
   } catch {
     dbHost = "(unparseable)";
   }
@@ -149,9 +173,11 @@ export async function saveDashboardData(data: DashboardData): Promise<SaveDebugI
 
   return {
     dbHost,
+    dbPath,
     brainDumpReceived: toSave.brainDump,
     brainDumpConfirmedByDb: String(result[0]?.brain_dump_after_write ?? ""),
     dumpItemCountReceived: count,
     dumpLatestItemReceived: latest,
+    rowsWrittenByInsert: result.length,
   };
 }

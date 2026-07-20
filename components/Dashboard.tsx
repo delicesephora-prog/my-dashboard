@@ -78,21 +78,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   const [lifeView, setLifeView] = useState<LifeView>("week");
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Temporary diagnostic state - loosely typed since the exact shape of
+  // what's being traced keeps growing as the investigation narrows down.
   const [debugPanel, setDebugPanel] = useState<{
-    lastSave?: {
-      dbHost: string;
-      brainDumpReceived: string;
-      brainDumpConfirmedByDb: string;
-      dumpItemCountReceived: number;
-      dumpLatestItemReceived: string;
-    };
-    dbCheck?: {
-      dbHost: string;
-      brainDumpNow: string;
-      dumpItemCount: number;
-      dumpLatestItem: string;
-      updatedAt: string | null;
-    };
+    lastSave?: Record<string, unknown>;
+    dbCheck?: Record<string, unknown>;
     dbCheckLoading?: boolean;
   } | null>(null);
   const [dailyReviewOpen, setDailyReviewOpen] = useState(false);
@@ -150,26 +140,14 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
       } else {
         setDebugPanel((prev) => ({
           ...prev,
-          dbCheck: {
-            dbHost: "(error)",
-            brainDumpNow: body?.error ?? "unknown error",
-            dumpItemCount: 0,
-            dumpLatestItem: "(error)",
-            updatedAt: null,
-          },
+          dbCheck: { error: body?.error ?? "unknown error" },
           dbCheckLoading: false,
         }));
       }
     } catch (err) {
       setDebugPanel((prev) => ({
         ...prev,
-        dbCheck: {
-          dbHost: "(error)",
-          brainDumpNow: err instanceof Error ? err.message : String(err),
-          dumpItemCount: 0,
-          dumpLatestItem: "(error)",
-          updatedAt: null,
-        },
+        dbCheck: { error: err instanceof Error ? err.message : String(err) },
         dbCheckLoading: false,
       }));
     }
