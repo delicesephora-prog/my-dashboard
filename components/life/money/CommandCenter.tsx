@@ -12,10 +12,12 @@ import {
   SpendingTarget,
   actualAmount,
   buildingUpSummary,
+  dateForMonthKey,
   dueNextItems,
   emptyLineItemState,
   expectedMonthlyIncome,
   extraIncomeForMonth,
+  formatMonthLabel,
   isDone,
   isSpendMonth,
   leftToBreathe,
@@ -25,6 +27,7 @@ import {
   moneyInSummary,
   moneyOutSummary,
   plannedAmount,
+  shiftMonthKey,
   slotsFor,
   spendingStatus,
   totalMonthlyBills,
@@ -35,6 +38,13 @@ import {
 } from "@/lib/budget";
 import BudgetItemRow, { Slot } from "./BudgetItemRow";
 import CheckCircle from "../../CheckCircle";
+import { PaymentSchedule } from "@/lib/budget";
+
+function convertSchedule(kind: PaymentSchedule["kind"], monthlyAmount: number): PaymentSchedule {
+  if (kind === "dueDay") return { kind: "dueDay", day: 1 };
+  if (kind === "paydaySplit") return { kind: "paydaySplit", firstAmount: monthlyAmount / 2, secondAmount: monthlyAmount / 2 };
+  return { kind: "varies" };
+}
 
 export default function CommandCenter({
   budget,
@@ -49,8 +59,15 @@ export default function CommandCenter({
   onChangeMoney: (updater: (m: MoneyData) => MoneyData) => void;
   onCelebrate: (tier: CelebrationTier, message: string) => void;
 }) {
-  const now = new Date();
-  const key = monthKey(now);
+  const realNow = new Date();
+  const realKey = monthKey(realNow);
+  const [viewKey, setViewKey] = useState(realKey);
+  const isCurrentMonth = viewKey === realKey;
+  // Only "now" for due-day proximity math when actually viewing the real
+  // current month - viewing a past/future month, that comparison is
+  // meaningless, so the Due Next strip is hidden instead (see below).
+  const now = isCurrentMonth ? realNow : dateForMonthKey(viewKey);
+  const key = viewKey;
   const state = monthStateFor(budget, key, money);
   const config = budget.config;
 
@@ -213,12 +230,52 @@ export default function CommandCenter({
 
   return (
     <div className="flex flex-col gap-3">
+      {/* MONTH NAVIGATION */}
+      <div className="flex items-center justify-between rounded-xl2 border border-paper-border bg-paper-surface px-3 py-2 shadow-paper">
+        <button
+          type="button"
+          onClick={() => setViewKey((k) => shiftMonthKey(k, -1))}
+          aria-label="Previous month"
+          className="px-2 text-paper-muted"
+        >
+          ‹
+        </button>
+        <span className="text-[13px] font-medium text-paper-ink">
+          {formatMonthLabel(viewKey)}
+          {isCurrentMonth && <span className="ml-1.5 text-[10px] text-gold">this month</span>}
+        </span>
+        <button
+          type="button"
+          onClick={() => setViewKey((k) => shiftMonthKey(k, 1))}
+          aria-label="Next month"
+          className="px-2 text-paper-muted"
+        >
+          ›
+        </button>
+      </div>
+
       {/* MONEY IN + LEFT TO BREATHE */}
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-xl2 border border-paper-border bg-paper-surface p-3.5 shadow-paper">
           <p className="text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">Money In</p>
           <p className="mt-0.5 font-serif text-xl text-sage">{formatMoney(moneyIn.received)}</p>
-          <p className="text-[11px] text-paper-muted">of {formatMoney(moneyIn.expected)} expected</p>
+          <div className="mt-0.5 flex items-center gap-1 text-[11px] text-paper-muted">
+            <span>of</span>
+            <input
+              type="number"
+              step="0.01"
+              value={config.perPaycheckIncome}
+              onChange={(e) =>
+                onChangeBudget((b) => ({
+                  ...b,
+                  config: { ...b.config, perPaycheckIncome: Number(e.target.value) || 0 },
+                }))
+              }
+              aria-label="Per-paycheck income"
+              className="w-16 rounded-md border border-transparent bg-transparent px-0.5 text-right text-paper-ink outline-none transition-colors focus:border-paper-border focus:bg-paper-surface2"
+            />
+            <span>&times; 2 = {formatMoney(moneyIn.expected)} expected</span>
+          </div>
           <div className="mt-2 flex gap-1.5">
             <PaycheckToggle
               label="15th"
@@ -271,7 +328,7 @@ export default function CommandCenter({
           />
         </div>
 
-        {dueNext.length > 0 && (
+        {isCurrentMonth && dueNext.length > 0 && (
           <div className="mt-3">
             <p className="mb-1.5 text-[0.6rem] font-semibold uppercase tracking-[0.1em] text-paper-faint">
               Due Next
@@ -350,7 +407,7 @@ export default function CommandCenter({
       <div className="rounded-xl2 border border-paper-border bg-paper-surface p-3.5 shadow-paper">
         <div className="mb-2 flex items-center justify-between">
           <p className="text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
-            This Payday
+            This Payday — {formatMonthLabel(viewKey)}
           </p>
           <div className="flex gap-1 rounded-full bg-paper-surface2 p-1">
             <button
@@ -452,6 +509,9 @@ export default function CommandCenter({
                   : x
               )
             }
+            onChangeScheduleKind={(kind) =>
+              updateBillConfig(b.id, (x) => ({ ...x, schedule: convertSchedule(kind, x.monthlyAmount) }))
+            }
             onToggleSlot={(slot) => toggleBillSlot(b, slot)}
             onChangeSlotAmount={(slot, v) => updateBillState(b.id, (s) => setSlotAmount(slot, v, s))}
             onDelete={() => onChangeBudget((bd) => ({ ...bd, config: { ...bd.config, bills: bd.config.bills.filter((x) => x.id !== b.id) } }))}
@@ -495,6 +555,9 @@ export default function CommandCenter({
                     : x
                 )
               }
+              onChangeScheduleKind={(kind) =>
+                updateDebtConfig(d.id, (x) => ({ ...x, schedule: convertSchedule(kind, x.monthlyAmount) }))
+              }
               onToggleSlot={toggleDebtSlot(d)}
               onChangeSlotAmount={(slot, v) => updateDebtState(d.id, (s) => setSlotAmount(slot, v, s))}
               onDelete={() =>
@@ -505,6 +568,10 @@ export default function CommandCenter({
               }
               accentClass="bg-work"
               extraBadge={d.isFinalPayment ? <span className="text-sm">🏁</span> : undefined}
+              finalPaymentToggle={{
+                checked: d.isFinalPayment,
+                onChange: (v) => updateDebtConfig(d.id, (x) => ({ ...x, isFinalPayment: v })),
+              }}
             />
           );
         })}
@@ -541,6 +608,9 @@ export default function CommandCenter({
                     }
                   : x
               )
+            }
+            onChangeScheduleKind={(kind) =>
+              updateVaultConfig(v.id, (x) => ({ ...x, schedule: convertSchedule(kind, x.monthlyAmount) }))
             }
             onToggleSlot={toggleVaultSlot(v)}
             onChangeSlotAmount={(slot, val) => updateVaultState(v.id, (s) => setSlotAmount(slot, val, s))}
@@ -597,10 +667,60 @@ export default function CommandCenter({
       {/* EXTRA INCOME */}
       <div className="rounded-xl2 border border-paper-border bg-paper-surface p-3.5 shadow-paper">
         <p className="mb-2 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
-          Extra Income This Month
+          Extra Income — {formatMonthLabel(viewKey)}
         </p>
         {extraIncomeForMonth(budget, key) > 0 && (
           <p className="mb-2 text-[13px] text-sage">+{formatMoney(extraIncomeForMonth(budget, key))} so far</p>
+        )}
+        {budget.extraIncome.filter((e) => e.date.slice(0, 7) === key).length > 0 && (
+          <div className="mb-2.5 flex flex-col gap-1.5">
+            {budget.extraIncome
+              .filter((e) => e.date.slice(0, 7) === key)
+              .map((entry) => (
+                <div key={entry.id} className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={entry.amount}
+                    onChange={(e) =>
+                      onChangeBudget((b) => ({
+                        ...b,
+                        extraIncome: b.extraIncome.map((x) =>
+                          x.id === entry.id ? { ...x, amount: Number(e.target.value) || 0 } : x
+                        ),
+                      }))
+                    }
+                    className="w-20 rounded-lg border border-paper-border bg-paper-surface2 px-2 py-1 text-[12.5px] text-paper-ink outline-none"
+                  />
+                  <input
+                    value={entry.note}
+                    onChange={(e) =>
+                      onChangeBudget((b) => ({
+                        ...b,
+                        extraIncome: b.extraIncome.map((x) =>
+                          x.id === entry.id ? { ...x, note: e.target.value } : x
+                        ),
+                      }))
+                    }
+                    placeholder="Note"
+                    className="flex-1 rounded-lg border border-paper-border bg-paper-surface2 px-2 py-1 text-[12.5px] text-paper-ink outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onChangeBudget((b) => ({
+                        ...b,
+                        extraIncome: b.extraIncome.filter((x) => x.id !== entry.id),
+                      }))
+                    }
+                    aria-label="Delete extra income entry"
+                    className="shrink-0 text-paper-faint"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+          </div>
         )}
         <div className="flex gap-2">
           <input

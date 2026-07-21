@@ -36,7 +36,6 @@ export function lifePocketTiles(data: DashboardData, now: Date = new Date()): Li
   const money = moneyTotals(data.lifeQuarterly.money);
   const bucketDone = data.bucketList.items.filter((i) => i.done).length;
   const yearGoalsDone = data.year.goals.filter((g) => g.done).length;
-  const daysLoggedThisYear = Object.keys(data.lifeScore.history).length;
   const weddingDays = daysUntilWedding(data.wedding, now);
   const tripsPlanned = upcomingTrips(data.trips.trips, now).length;
   const healthUpcoming = upcomingAppointments(data.health.appointments, now).length;
@@ -62,7 +61,6 @@ export function lifePocketTiles(data: DashboardData, now: Date = new Date()): Li
     { key: "year", icon: "📖", label: "Year", stat: `${yearGoalsDone}/${data.year.goals.length} goals` },
     { key: "dec8", icon: "🎆", label: "Dec 8", stat: `${daysUntilDecember8(now)} days` },
     { key: "verses", icon: "✝️", label: "Verses", stat: "New each day" },
-    { key: "pixels", icon: "🟩", label: "Year in Pixels", stat: `${daysLoggedThisYear} days logged` },
     { key: "assistant", icon: "💬", label: "Assistant", stat: `${data.assistant.messages.length} messages` },
     { key: "memos", icon: "📝", label: "Memos", stat: `${Object.keys(data.memos.entries).length} weeks written` },
     { key: "health", icon: "➕", label: "Health", stat: `${healthUpcoming} upcoming` },

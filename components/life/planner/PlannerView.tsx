@@ -1,21 +1,44 @@
 "use client";
 
 import { useState } from "react";
-import { PlannerBlock, PlannerData, blocksForDate, routineGhostBlocksForDate } from "@/lib/planner";
+import {
+  PlannerBlock,
+  PlannerData,
+  blocksForDate,
+  blocksForWeek,
+  routineGhostBlocksForDate,
+} from "@/lib/planner";
 import { RoutinesConfig } from "@/lib/routines";
-import { formatDayLabel, shiftDateKey, todayKey } from "@/lib/date";
+import { LifeScoreData } from "@/lib/lifescore";
+import { dateKey, formatDayLabel, shiftDateKey, todayKey } from "@/lib/date";
+import { formatWeekRange, mondayOf, weekKeyFor } from "@/lib/week";
 import DayTimeline from "./DayTimeline";
+import WeekTimeline from "./WeekTimeline";
+import MonthCalendar from "./MonthCalendar";
 import BlockEditorSheet from "./BlockEditorSheet";
+import YearPixelsView from "../YearPixelsView";
+
+type ViewMode = "day" | "week" | "month" | "pixels";
+
+const VIEW_MODES: { key: ViewMode; label: string }[] = [
+  { key: "day", label: "Day" },
+  { key: "week", label: "Week" },
+  { key: "month", label: "Month" },
+  { key: "pixels", label: "Year in Pixels" },
+];
 
 export default function PlannerView({
   data,
   routinesConfig,
+  lifeScore,
   onChange,
 }: {
   data: PlannerData;
   routinesConfig: RoutinesConfig;
+  lifeScore: LifeScoreData;
   onChange: (updater: (p: PlannerData) => PlannerData) => void;
 }) {
+  const [viewMode, setViewMode] = useState<ViewMode>("day");
   const [viewingDateKey, setViewingDateKey] = useState(todayKey());
   const [editing, setEditing] = useState<{ block: PlannerBlock | null } | null>(null);
 
@@ -25,6 +48,23 @@ export default function PlannerView({
 
   const blocks = blocksForDate(data, viewingDate);
   const ghosts = routineGhostBlocksForDate(routinesConfig, viewingDate);
+  const weekDays = blocksForWeek(data, mondayOf(viewingDate));
+
+  function jumpToDay(dateKeyStr: string) {
+    setViewingDateKey(dateKeyStr);
+    setViewMode("day");
+  }
+
+  function shiftMonthAnchor(dateStr: string, deltaMonths: number): string {
+    const [ay, am] = dateStr.split("-").map(Number);
+    return dateKey(new Date(ay, am - 1 + deltaMonths, 1));
+  }
+
+  function shiftView(delta: number) {
+    if (viewMode === "week") setViewingDateKey(shiftDateKey(viewingDateKey, delta * 7));
+    else if (viewMode === "month") setViewingDateKey(shiftMonthAnchor(viewingDateKey, delta));
+    else setViewingDateKey(shiftDateKey(viewingDateKey, delta));
+  }
 
   function saveBlock(block: PlannerBlock) {
     onChange((p) => {
@@ -47,62 +87,99 @@ export default function PlannerView({
         <div>
           <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">Planner</p>
           <p className="font-serif text-[1.05rem] text-paper-ink">
-            {isToday ? "Today" : formatDayLabel(viewingDateKey)}
+            {viewMode === "day" && (isToday ? "Today" : formatDayLabel(viewingDateKey))}
+            {viewMode === "week" && formatWeekRange(weekKeyFor(viewingDate))}
+            {viewMode === "month" &&
+              viewingDate.toLocaleDateString(undefined, { month: "long", year: "numeric" })}
+            {viewMode === "pixels" && "Year in Pixels"}
           </p>
         </div>
-        <div className="flex items-center gap-1.5">
+        {viewMode !== "pixels" && (
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              aria-label="Previous"
+              onClick={() => shiftView(-1)}
+              className="rounded-full border border-paper-border px-2.5 py-1.5 text-paper-muted"
+            >
+              ←
+            </button>
+            <button
+              type="button"
+              aria-label="Next"
+              onClick={() => shiftView(1)}
+              className="rounded-full border border-paper-border px-2.5 py-1.5 text-paper-muted"
+            >
+              →
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="mb-3 flex gap-1.5 overflow-x-auto">
+        {VIEW_MODES.map((v) => (
           <button
+            key={v.key}
             type="button"
-            aria-label="Previous day"
-            onClick={() => setViewingDateKey(shiftDateKey(viewingDateKey, -1))}
-            className="rounded-full border border-paper-border px-2.5 py-1.5 text-paper-muted"
+            onClick={() => setViewMode(v.key)}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+              viewMode === v.key
+                ? "bg-life text-paper-surface"
+                : "border border-paper-border bg-paper-surface text-paper-muted"
+            }`}
           >
-            ←
+            {v.label}
           </button>
+        ))}
+      </div>
+
+      {viewMode !== "pixels" && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          {viewMode === "day" && !isToday && (
+            <button
+              type="button"
+              onClick={() => setViewingDateKey(todayKey())}
+              className="rounded-full border border-paper-border px-3 py-1.5 text-[12.5px] text-paper-muted"
+            >
+              Today
+            </button>
+          )}
+          {viewMode === "day" && (
+            <button
+              type="button"
+              onClick={() => setViewingDateKey(shiftDateKey(todayKey(), 1))}
+              className="rounded-full border border-life px-3 py-1.5 text-[12.5px] font-medium text-life"
+            >
+              Plan Tomorrow →
+            </button>
+          )}
           <button
             type="button"
-            aria-label="Next day"
-            onClick={() => setViewingDateKey(shiftDateKey(viewingDateKey, 1))}
-            className="rounded-full border border-paper-border px-2.5 py-1.5 text-paper-muted"
+            onClick={() => setEditing({ block: null })}
+            className="ml-auto rounded-full bg-life px-3.5 py-1.5 text-[12.5px] font-medium text-paper-surface"
           >
-            →
+            + Add Block
           </button>
         </div>
-      </div>
+      )}
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        {!isToday && (
-          <button
-            type="button"
-            onClick={() => setViewingDateKey(todayKey())}
-            className="rounded-full border border-paper-border px-3 py-1.5 text-[12.5px] text-paper-muted"
-          >
-            Today
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => setViewingDateKey(shiftDateKey(todayKey(), 1))}
-          className="rounded-full border border-life px-3 py-1.5 text-[12.5px] font-medium text-life"
-        >
-          Plan Tomorrow →
-        </button>
-        <button
-          type="button"
-          onClick={() => setEditing({ block: null })}
-          className="ml-auto rounded-full bg-life px-3.5 py-1.5 text-[12.5px] font-medium text-paper-surface"
-        >
-          + Add Block
-        </button>
-      </div>
+      {viewMode === "day" && (
+        <DayTimeline
+          dateKeyStr={viewingDateKey}
+          isToday={isToday}
+          blocks={blocks}
+          ghosts={ghosts}
+          onEditBlock={(block) => setEditing({ block })}
+        />
+      )}
 
-      <DayTimeline
-        dateKeyStr={viewingDateKey}
-        isToday={isToday}
-        blocks={blocks}
-        ghosts={ghosts}
-        onEditBlock={(block) => setEditing({ block })}
-      />
+      {viewMode === "week" && <WeekTimeline days={weekDays} onEditBlock={(block) => setEditing({ block })} onJumpToDay={jumpToDay} />}
+
+      {viewMode === "month" && (
+        <MonthCalendar data={data} year={viewingDate.getFullYear()} month={viewingDate.getMonth()} onJumpToDay={jumpToDay} />
+      )}
+
+      {viewMode === "pixels" && <YearPixelsView lifeScore={lifeScore} />}
 
       {editing && (
         <BlockEditorSheet

@@ -97,7 +97,6 @@ import BooksView from "./life/BooksView";
 import BucketListView from "./life/BucketListView";
 import YearView from "./life/year/YearView";
 import VersesView from "./life/VersesView";
-import YearPixelsView from "./life/YearPixelsView";
 import MemosView from "./life/MemosView";
 import HealthView from "./life/HealthView";
 import WeddingView from "./life/WeddingView";
@@ -141,7 +140,6 @@ type LifeView =
   | "year"
   | "dec8"
   | "verses"
-  | "pixels"
   | "assistant"
   | "memos"
   | "health"
@@ -783,7 +781,6 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                   { key: "year", label: "Year" },
                   { key: "dec8", label: "Dec 8" },
                   { key: "verses", label: "Verses" },
-                  { key: "pixels", label: "Year in Pixels" },
                   { key: "assistant", label: "Assistant" },
                   { key: "memos", label: "Memos" },
                   { key: "health", label: "Health" },
@@ -810,6 +807,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
               <PlannerView
                 data={data.planner}
                 routinesConfig={data.routines.config}
+                lifeScore={data.lifeScore}
                 onChange={updatePlanner}
               />
             )}
@@ -899,7 +897,6 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
               />
             )}
             {lifeView === "verses" && <VersesView />}
-            {lifeView === "pixels" && <YearPixelsView lifeScore={data.lifeScore} />}
             {lifeView === "memos" && <MemosView data={data.memos} onChange={updateMemos} />}
             {lifeView === "health" && <HealthView health={data.health} onChange={updateHealth} />}
             {lifeView === "wedding" && <WeddingView wedding={data.wedding} onChange={updateWedding} />}

@@ -1,5 +1,5 @@
 import { Debt, MoneyData, Vault } from "./types";
-import { monthKey, formatMoney } from "./finance";
+import { monthKey, formatMoney, shiftMonthKey, formatMonthLabel } from "./finance";
 
 // ---------------------------------------------------------------------------
 // A recurring monthly obligation is either due on one fixed day of the
@@ -220,7 +220,15 @@ export function ensureLinkedMoneyEntities(
   };
 }
 
-export { monthKey, formatMoney };
+export { monthKey, formatMoney, shiftMonthKey, formatMonthLabel };
+
+// The first-of-month Date for a "YYYY-MM" key - used wherever a function
+// needs a real Date (e.g. isSpendMonth's cycle math) but only the month
+// being viewed matters, not a specific day within it.
+export function dateForMonthKey(key: string): Date {
+  const [y, m] = key.split("-").map(Number);
+  return new Date(y, m - 1, 1);
+}
 
 export function monthStateFor(data: BudgetData, key: string, money: MoneyData): MonthlyBudgetState {
   const existing = data.months[key];

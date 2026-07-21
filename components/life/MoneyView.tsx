@@ -13,8 +13,9 @@ import TransactionsTab from "./finance/TransactionsTab";
 import BudgetsTab from "./finance/BudgetsTab";
 import TrendsTab from "./finance/TrendsTab";
 import CommandCenter from "./money/CommandCenter";
+import CalendarTab from "./money/CalendarTab";
 
-type Tab = "command" | "overview" | "accounts" | "transactions" | "budgets" | "trends";
+type Tab = "command" | "overview" | "accounts" | "transactions" | "budgets" | "trends" | "calendar";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "command", label: "Command Center" },
@@ -23,6 +24,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "transactions", label: "Transactions" },
   { key: "budgets", label: "Budgets" },
   { key: "trends", label: "Trends" },
+  { key: "calendar", label: "Calendar" },
 ];
 
 export default function MoneyView({
@@ -160,6 +162,8 @@ export default function MoneyView({
       )}
 
       {tab === "trends" && <TrendsTab transactions={finance.transactions} />}
+
+      {tab === "calendar" && <CalendarTab budget={budget} money={lifeQuarterly.money} />}
     </div>
   );
 }

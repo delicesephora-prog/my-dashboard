@@ -27,11 +27,13 @@ export default function BudgetItemRow({
   onChangeMonthlyAmount,
   onChangeDueDay,
   onChangeSplitAmount,
+  onChangeScheduleKind,
   onToggleSlot,
   onChangeSlotAmount,
   onDelete,
   accentClass,
   extraBadge,
+  finalPaymentToggle,
 }: {
   name: string;
   monthlyAmount: number;
@@ -43,11 +45,13 @@ export default function BudgetItemRow({
   onChangeMonthlyAmount: (v: number) => void;
   onChangeDueDay: (day: number) => void;
   onChangeSplitAmount: (slot: Slot, v: number) => void;
+  onChangeScheduleKind: (kind: PaymentSchedule["kind"]) => void;
   onToggleSlot: (slot: Slot) => void;
   onChangeSlotAmount: (slot: Slot, v: number) => void;
   onDelete: () => void;
   accentClass: string;
   extraBadge?: React.ReactNode;
+  finalPaymentToggle?: { checked: boolean; onChange: (v: boolean) => void };
 }) {
   const [expanded, setExpanded] = useState(false);
   const allDone = slots.every((s) => slotDone(s));
@@ -126,6 +130,23 @@ export default function BudgetItemRow({
                 className="w-full rounded-lg border border-paper-border bg-paper-surface2 px-2 py-1.5 text-[13px] text-paper-ink outline-none"
               />
             </div>
+            <div className="flex-1">
+              <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-paper-muted">
+                Timing
+              </p>
+              <select
+                value={schedule.kind}
+                onChange={(e) => onChangeScheduleKind(e.target.value as PaymentSchedule["kind"])}
+                className="w-full rounded-lg border border-paper-border bg-paper-surface2 px-2 py-1.5 text-[13px] text-paper-ink outline-none"
+              >
+                <option value="dueDay">Due day</option>
+                <option value="paydaySplit">Split across paydays</option>
+                <option value="varies">Varies</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex gap-2.5">
             {schedule.kind === "dueDay" && (
               <div className="flex-1">
                 <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-paper-muted">
@@ -188,6 +209,18 @@ export default function BudgetItemRow({
               </div>
             ))}
           </div>
+
+          {finalPaymentToggle && (
+            <label className="flex items-center gap-2 text-[13px] text-paper-ink">
+              <input
+                type="checkbox"
+                checked={finalPaymentToggle.checked}
+                onChange={(e) => finalPaymentToggle.onChange(e.target.checked)}
+                className="h-4 w-4 accent-work"
+              />
+              Final payment - celebrate and remove once paid off
+            </label>
+          )}
 
           <button
             type="button"

@@ -153,3 +153,44 @@ export function layoutByTime<T extends { startMin: number; endMin: number }>(
   const maxCol = laid.reduce((m, b) => Math.max(m, b.column + 1), 1);
   return laid.map((b) => ({ ...b, columns: maxCol }));
 }
+
+export type PlannerDayEntry = {
+  date: Date;
+  dateKeyStr: string;
+  blocks: PlannerBlock[];
+};
+
+// The 7 days (Monday-first) of the week containing `weekMonday`, each with
+// its own blocks - `weekMonday` should already be a Monday (see mondayOf
+// in lib/week.ts) but this doesn't require it, it just walks 7 days from
+// whatever date is passed.
+export function blocksForWeek(data: PlannerData, weekMonday: Date): PlannerDayEntry[] {
+  const days: PlannerDayEntry[] = [];
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(weekMonday.getFullYear(), weekMonday.getMonth(), weekMonday.getDate() + i);
+    days.push({ date, dateKeyStr: dateKey(date), blocks: blocksForDate(data, date) });
+  }
+  return days;
+}
+
+// A Monday-first calendar grid for the given month - includes the leading
+// and trailing days from adjacent months needed to fill complete weeks,
+// each with its own blocks and a flag for whether it's actually in `month`.
+export function blocksForMonthGrid(
+  data: PlannerData,
+  year: number,
+  month: number // 0-11
+): (PlannerDayEntry & { inMonth: boolean })[] {
+  const firstOfMonth = new Date(year, month, 1);
+  const firstWeekday = firstOfMonth.getDay(); // 0 = Sunday
+  const leadingDays = firstWeekday === 0 ? 6 : firstWeekday - 1;
+  const gridStart = new Date(year, month, 1 - leadingDays);
+
+  const days: (PlannerDayEntry & { inMonth: boolean })[] = [];
+  for (let i = 0; i < 42; i++) {
+    const date = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
+    if (i >= 35 && date.getMonth() !== month) break; // stop after 5 full weeks unless month needs a 6th
+    days.push({ date, dateKeyStr: dateKey(date), blocks: blocksForDate(data, date), inMonth: date.getMonth() === month });
+  }
+  return days;
+}
