@@ -204,7 +204,18 @@ export default function MoneySection({
                             }))
                           }
                         />
-                        <span>of {formatMoney(debt.startingBalance)}</span>
+                        <span>of</span>
+                        <InlineAmount
+                          value={debt.startingBalance}
+                          onChange={(n) =>
+                            onChange((m) => ({
+                              ...m,
+                              debts: m.debts.map((d) =>
+                                d.id === debt.id ? { ...d, startingBalance: n } : d
+                              ),
+                            }))
+                          }
+                        />
                         <button
                           type="button"
                           aria-label="Delete debt"
