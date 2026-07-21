@@ -56,6 +56,10 @@ import FocusModeView from "./FocusModeView";
 import { AssistantData } from "@/lib/assistant";
 import AssistantView from "./AssistantView";
 import { BecomingData } from "@/lib/becoming";
+import { Celebration, CelebrationTier } from "@/lib/celebration";
+import { QuestData } from "@/lib/quest";
+import { MemosData } from "@/lib/memos";
+import CelebrationOverlay from "./CelebrationOverlay";
 import BoardMeeting from "./BoardMeeting";
 import QuickDump from "./QuickDump";
 import { todayKey } from "@/lib/date";
@@ -89,6 +93,7 @@ import BucketListView from "./life/BucketListView";
 import YearView from "./life/year/YearView";
 import VersesView from "./life/VersesView";
 import YearPixelsView from "./life/YearPixelsView";
+import MemosView from "./life/MemosView";
 import WarRoomSection from "./life/year/WarRoomSection";
 import SaveIndicator, { SaveStatus } from "./SaveIndicator";
 import TabErrorBoundary from "./TabErrorBoundary";
@@ -129,7 +134,8 @@ type LifeView =
   | "dec8"
   | "verses"
   | "pixels"
-  | "assistant";
+  | "assistant"
+  | "memos";
 
 const SAVE_DELAY_MS = 700;
 
@@ -147,6 +153,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   const [boardMeetingOpen, setBoardMeetingOpen] = useState(false);
   const [quickDumpOpen, setQuickDumpOpen] = useState(false);
   const [focusOpen, setFocusOpen] = useState(false);
+  const [celebration, setCelebration] = useState<Celebration | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -326,6 +333,16 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     scheduleSave();
   }
 
+  function updateQuest(updater: (q: QuestData) => QuestData) {
+    setData((prev) => ({ ...prev, quest: updater(prev.quest) }));
+    scheduleSave();
+  }
+
+  function updateMemos(updater: (m: MemosData) => MemosData) {
+    setData((prev) => ({ ...prev, memos: updater(prev.memos) }));
+    scheduleSave();
+  }
+
   function updateWelcome(updater: (w: WelcomeData) => WelcomeData) {
     setData((prev) => ({ ...prev, welcome: updater(prev.welcome) }));
     scheduleSave();
@@ -451,6 +468,10 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   function updateBecoming(updater: (b: BecomingData) => BecomingData) {
     setData((prev) => ({ ...prev, becoming: updater(prev.becoming) }));
     scheduleSave();
+  }
+
+  function triggerCelebration(tier: CelebrationTier, message: string) {
+    setCelebration({ tier, message });
   }
 
   function sendDumpItemToWork(text: string) {
@@ -581,6 +602,8 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             onOpenFocus={() => setFocusOpen(true)}
             onToggleFocusTask={toggleTodayFocusTask}
             onChangeHomeZones={updateHomeZones}
+            onChangeQuest={updateQuest}
+            onCelebrate={triggerCelebration}
           />
         ) : world === "work" ? (
           <>
@@ -619,6 +642,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 workShutdown={data.workShutdown}
                 onChange={updateWorkShutdown}
                 onBack={() => setOpsView("hub")}
+                onCelebrate={triggerCelebration}
               />
             )}
             {workView === "ops" && opsView === "vendors" && (
@@ -714,6 +738,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                   { key: "verses", label: "Verses" },
                   { key: "pixels", label: "Year in Pixels" },
                   { key: "assistant", label: "Assistant" },
+                  { key: "memos", label: "Memos" },
                 ]}
                 active={lifeView}
                 onChange={setLifeView}
@@ -740,6 +765,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 routinesData={data.routines}
                 onChange={updateRoutines}
                 onManage={() => setLifeView("manageRoutines")}
+                onCelebrate={triggerCelebration}
               />
             )}
             {lifeView === "manageRoutines" && (
@@ -754,6 +780,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 habitsData={data.habits}
                 onChange={updateHabits}
                 onManage={() => setLifeView("manageHabits")}
+                onCelebrate={triggerCelebration}
               />
             )}
             {lifeView === "manageHabits" && (
@@ -817,6 +844,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             )}
             {lifeView === "verses" && <VersesView />}
             {lifeView === "pixels" && <YearPixelsView lifeScore={data.lifeScore} />}
+            {lifeView === "memos" && <MemosView data={data.memos} onChange={updateMemos} />}
             {lifeView === "assistant" && (
               <AssistantView data={data} assistant={data.assistant} onChange={updateAssistant} />
             )}
@@ -875,6 +903,8 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           onClose={() => setFocusOpen(false)}
         />
       )}
+
+      <CelebrationOverlay celebration={celebration} onDismiss={() => setCelebration(null)} />
     </div>
   );
 }

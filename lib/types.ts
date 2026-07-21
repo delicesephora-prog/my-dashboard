@@ -24,6 +24,8 @@ import { EventsData, emptyEventsData, normalizeEventsData } from "./events";
 import { FocusData, emptyFocusData, normalizeFocusData } from "./focus";
 import { AssistantData, emptyAssistantData, normalizeAssistantData } from "./assistant";
 import { BecomingData, emptyBecomingData, normalizeBecomingData } from "./becoming";
+import { QuestData, emptyQuestData, normalizeQuestData } from "./quest";
+import { MemosData, emptyMemosData, normalizeMemosData } from "./memos";
 
 export type TaskItem = {
   id: string;
@@ -835,6 +837,8 @@ export type DashboardData = {
   focus: FocusData;
   assistant: AssistantData;
   becoming: BecomingData;
+  quest: QuestData;
+  memos: MemosData;
 };
 
 export function emptyWorld(): WorldData {
@@ -887,6 +891,8 @@ export function defaultDashboardData(): DashboardData {
     focus: emptyFocusData(),
     assistant: emptyAssistantData(),
     becoming: emptyBecomingData(),
+    quest: emptyQuestData(),
+    memos: emptyMemosData(),
   };
 }
 
@@ -1018,6 +1024,8 @@ export function normalizeDashboardData(
     focus: normalizeFocusData(data.focus),
     assistant: normalizeAssistantData(data.assistant),
     becoming: normalizeBecomingData(data.becoming),
+    quest: normalizeQuestData(data.quest),
+    memos: normalizeMemosData(data.memos),
   };
 }
 

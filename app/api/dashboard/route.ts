@@ -902,6 +902,14 @@ const becomingDataSchema = z.object({
   reflections: z.array(reflectionSchema).max(1000),
 });
 
+const questDataSchema = z.object({
+  completedDates: z.record(z.string()),
+});
+
+const memosDataSchema = z.object({
+  entries: z.record(z.string().max(20000)),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -943,6 +951,8 @@ const dashboardSchema = z.object({
   focus: focusDataSchema,
   assistant: assistantDataSchema,
   becoming: becomingDataSchema,
+  quest: questDataSchema,
+  memos: memosDataSchema,
 });
 
 export async function GET() {

@@ -16,6 +16,7 @@ import {
   toggleStepDone,
 } from "@/lib/routines";
 import { dateKey } from "@/lib/date";
+import { CelebrationTier } from "@/lib/celebration";
 import ProgressRing from "../../ProgressRing";
 import CheckCircle from "../../CheckCircle";
 import GuidedRoutine from "./GuidedRoutine";
@@ -25,10 +26,12 @@ export default function RoutinesView({
   routinesData,
   onChange,
   onManage,
+  onCelebrate,
 }: {
   routinesData: RoutinesData;
   onChange: (updater: (r: RoutinesData) => RoutinesData) => void;
   onManage: () => void;
+  onCelebrate: (tier: CelebrationTier, message: string) => void;
 }) {
   const [guided, setGuided] = useState<RoutineKey | null>(null);
   const [expanded, setExpanded] = useState<RoutineKey | null>(null);
@@ -36,8 +39,17 @@ export default function RoutinesView({
   const dayType = dayTypeForDate(now);
   const today = dateKey(now);
 
-  function toggleStep(routineKey: RoutineKey, stepId: string) {
+  function toggleStep(
+    routineKey: RoutineKey,
+    stepId: string,
+    wasDone: boolean,
+    done: number,
+    total: number
+  ) {
     onChange((r) => toggleStepDone(r, routineKey, stepId, now));
+    if (!wasDone && total > 0 && done + 1 === total) {
+      onCelebrate("medium", `${ROUTINE_LABELS[routineKey]} routine complete.`);
+    }
   }
 
   return (
@@ -118,7 +130,9 @@ export default function RoutinesView({
                     >
                       <CheckCircle
                         done={doneIds.includes(step.id)}
-                        onToggle={() => toggleStep(key, step.id)}
+                        onToggle={() =>
+                          toggleStep(key, step.id, doneIds.includes(step.id), done, total)
+                        }
                         accentClass="bg-life"
                         size="sm"
                         ariaLabel={doneIds.includes(step.id) ? "Mark not done" : "Mark done"}
@@ -146,15 +160,27 @@ export default function RoutinesView({
         <ConsistencyChart config={routinesData.config} data={routinesData} now={now} />
       </div>
 
-      {guided && (
-        <GuidedRoutine
-          routineKey={guided}
-          steps={stepsForDate(routinesData.config, guided, now)}
-          doneIds={logFor(routinesData, today).completedStepIds[guided] ?? []}
-          onToggleStep={(stepId) => toggleStep(guided, stepId)}
-          onClose={() => setGuided(null)}
-        />
-      )}
+      {guided &&
+        (() => {
+          const guidedDoneIds = logFor(routinesData, today).completedStepIds[guided] ?? [];
+          const { done: guidedDone, total: guidedTotal } = completionForDate(
+            routinesData.config,
+            routinesData,
+            guided,
+            now
+          );
+          return (
+            <GuidedRoutine
+              routineKey={guided}
+              steps={stepsForDate(routinesData.config, guided, now)}
+              doneIds={guidedDoneIds}
+              onToggleStep={(stepId) =>
+                toggleStep(guided, stepId, guidedDoneIds.includes(stepId), guidedDone, guidedTotal)
+              }
+              onClose={() => setGuided(null)}
+            />
+          );
+        })()}
     </div>
   );
 }

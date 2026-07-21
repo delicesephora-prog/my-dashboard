@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DashboardData } from "@/lib/types";
 import { quoteForToday } from "@/lib/quotes";
 import {
@@ -23,6 +23,9 @@ import { completionForDate } from "@/lib/routines";
 import { daysUntilDecember8 } from "@/lib/warroom";
 import { dateKey } from "@/lib/date";
 import { vocabForDate, factForDate } from "@/lib/welcome";
+import { QuestData, isQuestDone, markQuestDone, questForDate } from "@/lib/quest";
+import { CelebrationTier } from "@/lib/celebration";
+import { burstConfettiMedium } from "@/lib/confetti";
 import Greeting from "./Greeting";
 import OneThing from "./OneThing";
 import LifeScoreRing from "./LifeScoreRing";
@@ -49,6 +52,8 @@ export default function FrontPage({
   onOpenFocus,
   onToggleFocusTask,
   onChangeHomeZones,
+  onChangeQuest,
+  onCelebrate,
 }: {
   data: DashboardData;
   oneThingText: string;
@@ -60,6 +65,8 @@ export default function FrontPage({
   onOpenFocus: () => void;
   onToggleFocusTask: (item: TodayFocusItem) => void;
   onChangeHomeZones: (updater: (h: HomeZonesData) => HomeZonesData) => void;
+  onChangeQuest: (updater: (q: QuestData) => QuestData) => void;
+  onCelebrate: (tier: CelebrationTier, message: string) => void;
 }) {
   // Deferred to the client, same as Greeting - the recommendation, "today"
   // habit progress, and week recap are all timezone-sensitive, so they
@@ -107,6 +114,8 @@ export default function FrontPage({
             onChangeRhythm={onChangeRhythm}
             onToggleFocusTask={onToggleFocusTask}
             onChangeHomeZones={onChangeHomeZones}
+            onChangeQuest={onChangeQuest}
+            onCelebrate={onCelebrate}
           />
         )}
       </div>
@@ -157,6 +166,8 @@ function FrontPageBody({
   onChangeRhythm,
   onToggleFocusTask,
   onChangeHomeZones,
+  onChangeQuest,
+  onCelebrate,
 }: {
   data: DashboardData;
   now: Date;
@@ -166,6 +177,8 @@ function FrontPageBody({
   onChangeRhythm: (updater: (r: RhythmData) => RhythmData) => void;
   onToggleFocusTask: (item: TodayFocusItem) => void;
   onChangeHomeZones: (updater: (h: HomeZonesData) => HomeZonesData) => void;
+  onChangeQuest: (updater: (q: QuestData) => QuestData) => void;
+  onCelebrate: (tier: CelebrationTier, message: string) => void;
 }) {
   const atRisk = habitsAtRisk(data.habits, now);
   const recommendation = computeRecommendation(data, now);
@@ -190,6 +203,17 @@ function FrontPageBody({
 
   const vocab = vocabForDate(now);
   const fact = factForDate(now);
+
+  const quest = questForDate(now);
+  const questDone = isQuestDone(data.quest, now);
+  const questCardRef = useRef<HTMLDivElement>(null);
+
+  function completeQuest() {
+    if (questDone) return;
+    onChangeQuest((q) => markQuestDone(q, now));
+    if (questCardRef.current) burstConfettiMedium(questCardRef.current);
+    onCelebrate("medium", `Quest complete: ${quest.title}`);
+  }
 
   return (
     <>
@@ -222,15 +246,32 @@ function FrontPageBody({
         </div>
       </div>
 
-      <div className="flex items-center gap-3 rounded-xl2 border border-dashed border-paper-border bg-paper-surface2 p-3">
+      <div
+        ref={questCardRef}
+        className={`flex items-center gap-3 rounded-xl2 border p-3 transition ${
+          questDone
+            ? "border-sage/40 bg-sage/10"
+            : "border-dashed border-paper-border bg-paper-surface2"
+        }`}
+      >
         <span className="shrink-0 text-xl">🗺️</span>
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-medium text-paper-ink">Today&apos;s Quest</p>
-          <p className="text-[11px] text-paper-muted">Coming in a later stage</p>
+          <p className="text-[13px] font-medium text-paper-ink">{quest.title}</p>
+          <p className="text-[11px] leading-snug text-paper-muted">{quest.description}</p>
         </div>
-        <span className="shrink-0 rounded-full border border-paper-border px-2 py-0.5 text-[10px] uppercase tracking-wide text-paper-faint">
-          Soon
-        </span>
+        <button
+          type="button"
+          onClick={completeQuest}
+          disabled={questDone}
+          aria-label={questDone ? "Quest complete" : "Complete quest"}
+          className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide ${
+            questDone
+              ? "border-sage/40 text-sage"
+              : "border-paper-border text-paper-muted active:scale-95"
+          }`}
+        >
+          {questDone ? "Done" : "Complete"}
+        </button>
       </div>
 
       <div>

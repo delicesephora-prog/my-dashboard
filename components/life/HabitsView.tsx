@@ -2,6 +2,7 @@
 
 import { Habit, HabitsData, habitCompletionsFor } from "@/lib/types";
 import { weekKeyFor } from "@/lib/week";
+import { CelebrationTier } from "@/lib/celebration";
 import HabitCell from "./HabitCell";
 import ProgressRing from "../ProgressRing";
 
@@ -21,17 +22,24 @@ export default function HabitsView({
   habitsData,
   onChange,
   onManage,
+  onCelebrate,
 }: {
   habitsData: HabitsData;
   onChange: (updater: (h: HabitsData) => HabitsData) => void;
   onManage: () => void;
+  onCelebrate: (tier: CelebrationTier, message: string) => void;
 }) {
   const weekKey = weekKeyFor(new Date());
   const faith = habitsData.habits.filter((h) => h.section === "faith").sort((a, b) => a.order - b.order);
   const daily = habitsData.habits.filter((h) => h.section === "daily").sort((a, b) => a.order - b.order);
   const todayCol = todayDisplayIndex();
+  const todayStorageIndex = DISPLAY_TO_STORAGE[todayCol];
 
   function toggleDay(habitId: string, storageIndex: number) {
+    const turningOn = !(
+      habitCompletionsFor(habitsData, weekKey, habitId)[storageIndex] ?? false
+    );
+
     onChange((h) => {
       const week = h.weeks[weekKey] ?? { completions: {} };
       const current = week.completions[habitId] ?? [false, false, false, false, false, false, false];
@@ -45,6 +53,28 @@ export default function HabitsView({
         },
       };
     });
+
+    if (!turningOn || habitsData.habits.length === 0) return;
+
+    if (storageIndex === todayStorageIndex) {
+      const allDoneToday = habitsData.habits.every((habit) =>
+        habit.id === habitId
+          ? true
+          : (habitCompletionsFor(habitsData, weekKey, habit.id)[todayStorageIndex] ?? false)
+      );
+      if (allDoneToday) {
+        onCelebrate("medium", "All of today's habits done.");
+      }
+    }
+
+    const habit = habitsData.habits.find((h) => h.id === habitId);
+    if (habit) {
+      const cells = habitCompletionsFor(habitsData, weekKey, habitId);
+      const countAfter = cells.filter(Boolean).length + 1;
+      if (countAfter === 7) {
+        onCelebrate("big", `${habit.label}: a perfect 7-day week.`);
+      }
+    }
   }
 
   let achieved = 0;

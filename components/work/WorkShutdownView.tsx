@@ -10,16 +10,19 @@ import {
 } from "@/lib/workshutdown";
 import { dateKey } from "@/lib/date";
 import { opsTipForDate, careerLessonForDate } from "@/lib/opswisdom";
+import { CelebrationTier } from "@/lib/celebration";
 import CheckCircle from "../CheckCircle";
 
 export default function WorkShutdownView({
   workShutdown,
   onChange,
   onBack,
+  onCelebrate,
 }: {
   workShutdown: WorkShutdownData;
   onChange: (updater: (w: WorkShutdownData) => WorkShutdownData) => void;
   onBack: () => void;
+  onCelebrate: (tier: CelebrationTier, message: string) => void;
 }) {
   const now = new Date();
   const today = dateKey(now);
@@ -28,6 +31,13 @@ export default function WorkShutdownView({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const tip = opsTipForDate(now);
   const lesson = careerLessonForDate(now);
+
+  function toggleLeaf(id: string, currentlyDone: boolean) {
+    onChange((w) => toggleStepDone(w, id, now));
+    if (!currentlyDone && total > 0 && done + 1 === total) {
+      onCelebrate("medium", "Work Shutdown complete. Well done.");
+    }
+  }
 
   return (
     <div className="scroll-quiet flex flex-1 flex-col gap-3 overflow-y-auto pb-6">
@@ -70,7 +80,7 @@ export default function WorkShutdownView({
                     <li key={step.id} className="flex items-center gap-2.5 py-1.5">
                       <CheckCircle
                         done={isDone}
-                        onToggle={() => onChange((w) => toggleStepDone(w, step.id, now))}
+                        onToggle={() => toggleLeaf(step.id, isDone)}
                         accentClass="bg-work"
                         size="sm"
                         ariaLabel={isDone ? "Mark not done" : "Mark done"}
@@ -127,7 +137,7 @@ export default function WorkShutdownView({
                               <li key={sub.id} className="flex items-center gap-2.5">
                                 <CheckCircle
                                   done={subDone}
-                                  onToggle={() => onChange((w) => toggleStepDone(w, sub.id, now))}
+                                  onToggle={() => toggleLeaf(sub.id, subDone)}
                                   accentClass="bg-work"
                                   size="sm"
                                   ariaLabel={subDone ? "Mark not done" : "Mark done"}
