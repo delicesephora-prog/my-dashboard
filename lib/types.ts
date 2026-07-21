@@ -27,6 +27,7 @@ import { BecomingData, emptyBecomingData, normalizeBecomingData } from "./becomi
 import { QuestData, emptyQuestData, normalizeQuestData } from "./quest";
 import { MemosData, emptyMemosData, normalizeMemosData } from "./memos";
 import { HealthData, emptyHealthData, normalizeHealthData } from "./health";
+import { FinanceData, emptyFinanceData, normalizeFinanceData } from "./finance";
 
 export type TaskItem = {
   id: string;
@@ -841,6 +842,7 @@ export type DashboardData = {
   quest: QuestData;
   memos: MemosData;
   health: HealthData;
+  finance: FinanceData;
 };
 
 export function emptyWorld(): WorldData {
@@ -896,6 +898,7 @@ export function defaultDashboardData(): DashboardData {
     quest: emptyQuestData(),
     memos: emptyMemosData(),
     health: emptyHealthData(),
+    finance: emptyFinanceData(),
   };
 }
 
@@ -1030,6 +1033,7 @@ export function normalizeDashboardData(
     quest: normalizeQuestData(data.quest),
     memos: normalizeMemosData(data.memos),
     health: normalizeHealthData(data.health),
+    finance: normalizeFinanceData(data.finance),
   };
 }
 

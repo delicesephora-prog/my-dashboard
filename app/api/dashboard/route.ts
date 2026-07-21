@@ -941,6 +941,50 @@ const healthDataSchema = z.object({
   notes: z.array(healthNoteSchema),
 });
 
+const transactionCategorySchema = z.enum([
+  "Income",
+  "Housing",
+  "Utilities",
+  "Groceries",
+  "Dining",
+  "Transport",
+  "Subscriptions",
+  "Health",
+  "Shopping",
+  "Entertainment",
+  "Debt Payment",
+  "Savings Transfer",
+  "Other",
+]);
+
+const accountSchema = z.object({
+  id: z.string(),
+  name: z.string().max(200),
+  type: z.enum(["checking", "savings", "credit", "cash", "other"]),
+  balance: z.number(),
+});
+
+const transactionSchema = z.object({
+  id: z.string(),
+  accountId: z.string(),
+  date: z.string(),
+  amount: z.number(),
+  category: transactionCategorySchema,
+  description: z.string().max(500),
+});
+
+const budgetSchema = z.object({
+  id: z.string(),
+  category: transactionCategorySchema,
+  monthlyLimit: z.number(),
+});
+
+const financeDataSchema = z.object({
+  accounts: z.array(accountSchema),
+  transactions: z.array(transactionSchema),
+  budgets: z.array(budgetSchema),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -985,6 +1029,7 @@ const dashboardSchema = z.object({
   quest: questDataSchema,
   memos: memosDataSchema,
   health: healthDataSchema,
+  finance: financeDataSchema,
 });
 
 export async function GET() {
