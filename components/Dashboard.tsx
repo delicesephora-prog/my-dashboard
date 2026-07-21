@@ -34,6 +34,10 @@ import { MeetingOpsData } from "@/lib/meetingops";
 import { PrincipalsData } from "@/lib/principals";
 import { QuestionBankData } from "@/lib/questionbank";
 import { TemplatesData } from "@/lib/templates";
+import { PreMortemData } from "@/lib/premortem";
+import { FireDrillLogData } from "@/lib/firedrill";
+import { FridayLedgerData } from "@/lib/fridayledger";
+import { EventsData } from "@/lib/events";
 import OpsHub, { OpsTool } from "./work/OpsHub";
 import WaitingOnView from "./work/WaitingOnView";
 import WorkShutdownView from "./work/WorkShutdownView";
@@ -42,6 +46,11 @@ import MeetingOpsView from "./work/MeetingOpsView";
 import PrincipalsView from "./work/PrincipalsView";
 import QuestionBankView from "./work/QuestionBankView";
 import TemplatesView from "./work/TemplatesView";
+import MyNumbersView from "./work/MyNumbersView";
+import PreMortemView from "./work/PreMortemView";
+import FireDrillLogView from "./work/FireDrillLogView";
+import FridayLedgerView from "./work/FridayLedgerView";
+import EventsView from "./work/EventsView";
 import BoardMeeting from "./BoardMeeting";
 import QuickDump from "./QuickDump";
 import { todayKey } from "@/lib/date";
@@ -88,7 +97,12 @@ type OpsSubView =
   | "meetingOps"
   | "principals"
   | "questionBank"
-  | "templates";
+  | "templates"
+  | "myNumbers"
+  | "preMortem"
+  | "fireDrillLog"
+  | "fridayLedger"
+  | "events";
 type LifeView =
   | "tasks"
   | "week"
@@ -348,6 +362,26 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     scheduleSave();
   }
 
+  function updatePreMortem(updater: (p: PreMortemData) => PreMortemData) {
+    setData((prev) => ({ ...prev, preMortem: updater(prev.preMortem) }));
+    scheduleSave();
+  }
+
+  function updateFireDrillLog(updater: (f: FireDrillLogData) => FireDrillLogData) {
+    setData((prev) => ({ ...prev, fireDrillLog: updater(prev.fireDrillLog) }));
+    scheduleSave();
+  }
+
+  function updateFridayLedger(updater: (f: FridayLedgerData) => FridayLedgerData) {
+    setData((prev) => ({ ...prev, fridayLedger: updater(prev.fridayLedger) }));
+    scheduleSave();
+  }
+
+  function updateEvents(updater: (e: EventsData) => EventsData) {
+    setData((prev) => ({ ...prev, events: updater(prev.events) }));
+    scheduleSave();
+  }
+
   function handleOpenOpsTool(tool: OpsTool) {
     setOpsView(tool);
   }
@@ -594,6 +628,37 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
               <TemplatesView
                 templates={data.templates}
                 onChange={updateTemplates}
+                onBack={() => setOpsView("hub")}
+              />
+            )}
+            {workView === "ops" && opsView === "myNumbers" && (
+              <MyNumbersView data={data} onBack={() => setOpsView("hub")} />
+            )}
+            {workView === "ops" && opsView === "preMortem" && (
+              <PreMortemView
+                preMortem={data.preMortem}
+                onChange={updatePreMortem}
+                onBack={() => setOpsView("hub")}
+              />
+            )}
+            {workView === "ops" && opsView === "fireDrillLog" && (
+              <FireDrillLogView
+                fireDrillLog={data.fireDrillLog}
+                onChange={updateFireDrillLog}
+                onBack={() => setOpsView("hub")}
+              />
+            )}
+            {workView === "ops" && opsView === "fridayLedger" && (
+              <FridayLedgerView
+                data={data}
+                onChange={updateFridayLedger}
+                onBack={() => setOpsView("hub")}
+              />
+            )}
+            {workView === "ops" && opsView === "events" && (
+              <EventsView
+                events={data.events}
+                onChange={updateEvents}
                 onBack={() => setOpsView("hub")}
               />
             )}

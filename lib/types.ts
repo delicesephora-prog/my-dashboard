@@ -17,6 +17,10 @@ import { MeetingOpsData, emptyMeetingOpsData, normalizeMeetingOpsData } from "./
 import { PrincipalsData, emptyPrincipalsData, normalizePrincipalsData } from "./principals";
 import { QuestionBankData, emptyQuestionBankData, normalizeQuestionBankData } from "./questionbank";
 import { TemplatesData, emptyTemplatesData, normalizeTemplatesData } from "./templates";
+import { PreMortemData, emptyPreMortemData, normalizePreMortemData } from "./premortem";
+import { FireDrillLogData, emptyFireDrillLogData, normalizeFireDrillLogData } from "./firedrill";
+import { FridayLedgerData, emptyFridayLedgerData, normalizeFridayLedgerData } from "./fridayledger";
+import { EventsData, emptyEventsData, normalizeEventsData } from "./events";
 
 export type TaskItem = {
   id: string;
@@ -821,6 +825,10 @@ export type DashboardData = {
   principals: PrincipalsData;
   questionBank: QuestionBankData;
   templates: TemplatesData;
+  preMortem: PreMortemData;
+  fireDrillLog: FireDrillLogData;
+  fridayLedger: FridayLedgerData;
+  events: EventsData;
 };
 
 export function emptyWorld(): WorldData {
@@ -866,6 +874,10 @@ export function defaultDashboardData(): DashboardData {
     principals: emptyPrincipalsData(),
     questionBank: emptyQuestionBankData(),
     templates: emptyTemplatesData(),
+    preMortem: emptyPreMortemData(),
+    fireDrillLog: emptyFireDrillLogData(),
+    fridayLedger: emptyFridayLedgerData(),
+    events: emptyEventsData(),
   };
 }
 
@@ -990,6 +1002,10 @@ export function normalizeDashboardData(
     principals: normalizePrincipalsData(data.principals),
     questionBank: normalizeQuestionBankData(data.questionBank),
     templates: normalizeTemplatesData(data.templates),
+    preMortem: normalizePreMortemData(data.preMortem),
+    fireDrillLog: normalizeFireDrillLogData(data.fireDrillLog),
+    fridayLedger: normalizeFridayLedgerData(data.fridayLedger),
+    events: normalizeEventsData(data.events),
   };
 }
 

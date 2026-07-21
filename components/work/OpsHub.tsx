@@ -8,6 +8,9 @@ import { nextMeeting } from "@/lib/meetingops";
 import { activePrincipals } from "@/lib/principals";
 import { sortedQuestions } from "@/lib/questionbank";
 import { activeTemplates } from "@/lib/templates";
+import { activePreMortems } from "@/lib/premortem";
+import { entriesThisMonth } from "@/lib/firedrill";
+import { upcomingEvents } from "@/lib/events";
 import { isDateInWeek, weekKeyFor } from "@/lib/week";
 
 export type OpsTool =
@@ -17,7 +20,12 @@ export type OpsTool =
   | "meetingOps"
   | "principals"
   | "questionBank"
-  | "templates";
+  | "templates"
+  | "myNumbers"
+  | "preMortem"
+  | "fireDrillLog"
+  | "fridayLedger"
+  | "events";
 
 type Tile = {
   tool: OpsTool | null;
@@ -34,11 +42,11 @@ const TILES: Tile[] = [
   { tool: "principals", icon: "👤", title: "Principals", wave: 2 },
   { tool: "questionBank", icon: "❓", title: "Question Bank", wave: 2 },
   { tool: "templates", icon: "📑", title: "Templates", wave: 2 },
-  { tool: null, icon: "⏱️", title: "My Numbers", wave: 3 },
-  { tool: null, icon: "🎯", title: "Pre-Mortem", wave: 3 },
-  { tool: null, icon: "🔥", title: "Fire Drill Log", wave: 3 },
-  { tool: null, icon: "🧾", title: "Friday Ledger", wave: 3 },
-  { tool: null, icon: "📅", title: "Events", wave: 3 },
+  { tool: "myNumbers", icon: "⏱️", title: "My Numbers", wave: 3 },
+  { tool: "preMortem", icon: "🎯", title: "Pre-Mortem", wave: 3 },
+  { tool: "fireDrillLog", icon: "🔥", title: "Fire Drill Log", wave: 3 },
+  { tool: "fridayLedger", icon: "🧾", title: "Friday Ledger", wave: 3 },
+  { tool: "events", icon: "📅", title: "Events", wave: 3 },
 ];
 
 const WAVE_TAG_CLASS: Record<1 | 2 | 3, string> = {
@@ -70,6 +78,9 @@ export default function OpsHub({
   const principalCount = activePrincipals(data.principals).length;
   const questionCount = sortedQuestions(data.questionBank).length;
   const templateCount = activeTemplates(data.templates).length;
+  const preMortemCount = activePreMortems(data.preMortem).length;
+  const firesThisMonth = entriesThisMonth(data.fireDrillLog, now).length;
+  const nextEvent = upcomingEvents(data.events, now)[0] ?? null;
 
   function statFor(tile: Tile): { text: string; className: string } {
     if (tile.tool === "waitingOn") {
@@ -107,7 +118,28 @@ export default function OpsHub({
         ? { text: "none saved yet", className: "text-paper-muted" }
         : { text: `${templateCount} saved`, className: "text-paper-muted" };
     }
-    return { text: "coming soon", className: "text-paper-faint" };
+    if (tile.tool === "myNumbers") {
+      return { text: "see your numbers", className: "text-paper-muted" };
+    }
+    if (tile.tool === "preMortem") {
+      return preMortemCount === 0
+        ? { text: "none run yet", className: "text-paper-muted" }
+        : { text: `${preMortemCount} run`, className: "text-paper-muted" };
+    }
+    if (tile.tool === "fireDrillLog") {
+      return firesThisMonth === 0
+        ? { text: "none this month", className: "text-sage font-semibold" }
+        : { text: `${firesThisMonth} this month`, className: "text-work font-semibold" };
+    }
+    if (tile.tool === "fridayLedger") {
+      return { text: "review the week", className: "text-paper-muted" };
+    }
+    if (tile.tool === "events") {
+      return nextEvent
+        ? { text: `next: ${nextEvent.date}`, className: "text-gold font-semibold" }
+        : { text: "nothing upcoming", className: "text-paper-muted" };
+    }
+    return { text: "", className: "text-paper-faint" };
   }
 
   return (
@@ -165,7 +197,7 @@ export default function OpsHub({
                 <span
                   className={`mt-1.5 inline-block rounded px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-wide ${WAVE_TAG_CLASS[tile.wave]}`}
                 >
-                  {tile.wave === 1 ? "Wave 1" : tile.wave === 2 ? "Wave 2" : "Wave 3 — soon"}
+                  Wave {tile.wave}
                 </span>
               </button>
             );

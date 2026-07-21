@@ -802,6 +802,55 @@ const templatesDataSchema = z.object({
   templates: z.array(templateSchema).max(500),
 });
 
+const preMortemRiskSchema = z.object({
+  id: z.string(),
+  risk: z.string().max(2000),
+  mitigation: z.string().max(2000),
+});
+
+const preMortemSchema = z.object({
+  id: z.string(),
+  projectName: z.string().max(300),
+  date: z.string(),
+  risks: z.array(preMortemRiskSchema).max(100),
+  notes: z.string().max(20000),
+  archived: z.boolean(),
+});
+
+const preMortemDataSchema = z.object({
+  premortems: z.array(preMortemSchema).max(500),
+});
+
+const fireDrillEntrySchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  title: z.string().max(300),
+  whatHappened: z.string().max(20000),
+  howResolved: z.string().max(20000),
+  lessonLearned: z.string().max(20000),
+});
+
+const fireDrillLogDataSchema = z.object({
+  entries: z.array(fireDrillEntrySchema).max(1000),
+});
+
+const fridayLedgerDataSchema = z.object({
+  reflections: z.record(z.string().max(20000)),
+});
+
+const workEventSchema = z.object({
+  id: z.string(),
+  title: z.string().max(300),
+  date: z.string(),
+  time: z.string(),
+  notes: z.string().max(5000),
+  archived: z.boolean(),
+});
+
+const eventsDataSchema = z.object({
+  events: z.array(workEventSchema).max(1000),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -836,6 +885,10 @@ const dashboardSchema = z.object({
   principals: principalsDataSchema,
   questionBank: questionBankDataSchema,
   templates: templatesDataSchema,
+  preMortem: preMortemDataSchema,
+  fireDrillLog: fireDrillLogDataSchema,
+  fridayLedger: fridayLedgerDataSchema,
+  events: eventsDataSchema,
 });
 
 export async function GET() {
