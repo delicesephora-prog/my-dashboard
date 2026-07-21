@@ -81,6 +81,7 @@ import { FrontPageNavTarget } from "@/lib/frontpage";
 import OperationsDashboard from "./work/OperationsDashboard";
 import BackBeat from "./work/BackBeat";
 import Reference from "./work/Reference";
+import LifeHomeView from "./life/LifeHomeView";
 import RitualsView from "./life/RitualsView";
 import ManageHabits from "./life/ManageHabits";
 import ManageRoutines from "./life/routines/ManageRoutines";
@@ -121,6 +122,7 @@ type OpsSubView =
   | "fridayLedger"
   | "events";
 type LifeView =
+  | "hub"
   | "tasks"
   | "week"
   | "planner"
@@ -152,7 +154,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   const [world, setWorld] = useState<World>("front");
   const [workView, setWorkView] = useState<WorkView>("dashboard");
   const [opsView, setOpsView] = useState<OpsSubView>("hub");
-  const [lifeView, setLifeView] = useState<LifeView>("week");
+  const [lifeView, setLifeView] = useState<LifeView>("hub");
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
@@ -614,7 +616,19 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
         </div>
       )}
 
-      <WorldToggle world={world} onChange={setWorld} counts={counts} />
+      <WorldToggle
+        world={world}
+        onChange={(w) => {
+          // Tapping "Life" again while already there returns to the tile-
+          // grid map, since the SubNav itself has no dedicated entry for it.
+          if (w === "life" && world === "life") {
+            setLifeView("hub");
+          } else {
+            setWorld(w);
+          }
+        }}
+        counts={counts}
+      />
 
       <main className="flex min-h-0 flex-1 flex-col px-5 pt-3">
        <TabErrorBoundary key={`${world}-${workView}-${opsView}-${lifeView}`}>
@@ -774,6 +788,9 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 onChange={setLifeView}
                 accentClass="bg-life"
               />
+            )}
+            {lifeView === "hub" && (
+              <LifeHomeView data={data} onNavigate={(key) => setLifeView(key as LifeView)} />
             )}
             {lifeView === "tasks" && <LifeTasksView world={data.life} onChange={updateLife} />}
             {lifeView === "week" && (
