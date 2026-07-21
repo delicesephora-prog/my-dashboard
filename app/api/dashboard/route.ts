@@ -851,6 +851,18 @@ const eventsDataSchema = z.object({
   events: z.array(workEventSchema).max(1000),
 });
 
+const focusSessionSchema = z.object({
+  id: z.string(),
+  taskText: z.string().max(500),
+  durationMinutes: z.number(),
+  startedAt: z.string(),
+  completedAt: z.string(),
+});
+
+const focusDataSchema = z.object({
+  sessions: z.array(focusSessionSchema).max(2000),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -889,6 +901,7 @@ const dashboardSchema = z.object({
   fireDrillLog: fireDrillLogDataSchema,
   fridayLedger: fridayLedgerDataSchema,
   events: eventsDataSchema,
+  focus: focusDataSchema,
 });
 
 export async function GET() {

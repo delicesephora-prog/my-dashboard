@@ -21,6 +21,7 @@ import { PreMortemData, emptyPreMortemData, normalizePreMortemData } from "./pre
 import { FireDrillLogData, emptyFireDrillLogData, normalizeFireDrillLogData } from "./firedrill";
 import { FridayLedgerData, emptyFridayLedgerData, normalizeFridayLedgerData } from "./fridayledger";
 import { EventsData, emptyEventsData, normalizeEventsData } from "./events";
+import { FocusData, emptyFocusData, normalizeFocusData } from "./focus";
 
 export type TaskItem = {
   id: string;
@@ -829,6 +830,7 @@ export type DashboardData = {
   fireDrillLog: FireDrillLogData;
   fridayLedger: FridayLedgerData;
   events: EventsData;
+  focus: FocusData;
 };
 
 export function emptyWorld(): WorldData {
@@ -878,6 +880,7 @@ export function defaultDashboardData(): DashboardData {
     fireDrillLog: emptyFireDrillLogData(),
     fridayLedger: emptyFridayLedgerData(),
     events: emptyEventsData(),
+    focus: emptyFocusData(),
   };
 }
 
@@ -1006,6 +1009,7 @@ export function normalizeDashboardData(
     fireDrillLog: normalizeFireDrillLogData(data.fireDrillLog),
     fridayLedger: normalizeFridayLedgerData(data.fridayLedger),
     events: normalizeEventsData(data.events),
+    focus: normalizeFocusData(data.focus),
   };
 }
 

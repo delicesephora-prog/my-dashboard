@@ -46,6 +46,7 @@ export default function FrontPage({
   onChangeLifeScore,
   onChangeRhythm,
   onOpenQuickDump,
+  onOpenFocus,
   onToggleFocusTask,
   onChangeHomeZones,
 }: {
@@ -56,6 +57,7 @@ export default function FrontPage({
   onChangeLifeScore: (updater: (l: LifeScoreData) => LifeScoreData) => void;
   onChangeRhythm: (updater: (r: RhythmData) => RhythmData) => void;
   onOpenQuickDump: () => void;
+  onOpenFocus: () => void;
   onToggleFocusTask: (item: TodayFocusItem) => void;
   onChangeHomeZones: (updater: (h: HomeZonesData) => HomeZonesData) => void;
 }) {
@@ -113,6 +115,7 @@ export default function FrontPage({
           DailyReviewBar, so it never covers content underneath. */}
       <div className="flex shrink-0 gap-1.5 rounded-full border border-paper-border bg-paper-surface p-1.5 shadow-paper">
         <DockButton icon="🧠" label="Dump" onClick={onOpenQuickDump} />
+        <DockButton icon="🕯️" label="Focus" onClick={onOpenFocus} />
         <DockButton
           icon="🛒"
           label="Grocery"
@@ -136,6 +139,7 @@ function DockButton({
     <button
       type="button"
       onClick={onClick}
+      aria-label={label}
       className="flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[12px] font-medium text-paper-ink active:scale-95"
     >
       <span>{icon}</span>

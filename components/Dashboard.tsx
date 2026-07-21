@@ -51,6 +51,8 @@ import PreMortemView from "./work/PreMortemView";
 import FireDrillLogView from "./work/FireDrillLogView";
 import FridayLedgerView from "./work/FridayLedgerView";
 import EventsView from "./work/EventsView";
+import { FocusData } from "@/lib/focus";
+import FocusModeView from "./FocusModeView";
 import BoardMeeting from "./BoardMeeting";
 import QuickDump from "./QuickDump";
 import { todayKey } from "@/lib/date";
@@ -83,6 +85,7 @@ import BooksView from "./life/BooksView";
 import BucketListView from "./life/BucketListView";
 import YearView from "./life/year/YearView";
 import VersesView from "./life/VersesView";
+import YearPixelsView from "./life/YearPixelsView";
 import WarRoomSection from "./life/year/WarRoomSection";
 import SaveIndicator, { SaveStatus } from "./SaveIndicator";
 import TabErrorBoundary from "./TabErrorBoundary";
@@ -121,7 +124,8 @@ type LifeView =
   | "bucketList"
   | "year"
   | "dec8"
-  | "verses";
+  | "verses"
+  | "pixels";
 
 const SAVE_DELAY_MS = 700;
 
@@ -138,6 +142,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [boardMeetingOpen, setBoardMeetingOpen] = useState(false);
   const [quickDumpOpen, setQuickDumpOpen] = useState(false);
+  const [focusOpen, setFocusOpen] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -429,6 +434,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     scheduleSave();
   }
 
+  function updateFocus(updater: (f: FocusData) => FocusData) {
+    setData((prev) => ({ ...prev, focus: updater(prev.focus) }));
+    scheduleSave();
+  }
+
   function sendDumpItemToWork(text: string) {
     setData((prev) => ({
       ...prev,
@@ -554,6 +564,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             onChangeLifeScore={updateLifeScore}
             onChangeRhythm={updateRhythm}
             onOpenQuickDump={() => setQuickDumpOpen(true)}
+            onOpenFocus={() => setFocusOpen(true)}
             onToggleFocusTask={toggleTodayFocusTask}
             onChangeHomeZones={updateHomeZones}
           />
@@ -687,6 +698,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                   { key: "year", label: "Year" },
                   { key: "dec8", label: "Dec 8" },
                   { key: "verses", label: "Verses" },
+                  { key: "pixels", label: "Year in Pixels" },
                 ]}
                 active={lifeView}
                 onChange={setLifeView}
@@ -784,6 +796,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
               />
             )}
             {lifeView === "verses" && <VersesView />}
+            {lifeView === "pixels" && <YearPixelsView lifeScore={data.lifeScore} />}
           </>
         )}
        </TabErrorBoundary>
@@ -829,6 +842,15 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
 
       {quickDumpOpen && (
         <QuickDump onChange={updateDump} onClose={() => setQuickDumpOpen(false)} />
+      )}
+
+      {focusOpen && (
+        <FocusModeView
+          oneThingText={oneThingText}
+          focus={data.focus}
+          onChange={updateFocus}
+          onClose={() => setFocusOpen(false)}
+        />
       )}
     </div>
   );
