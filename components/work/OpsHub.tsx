@@ -4,10 +4,20 @@ import { DashboardData } from "@/lib/types";
 import { openItems, overdueItems } from "@/lib/waitingon";
 import { activeVendors } from "@/lib/vendors";
 import { completionForDate } from "@/lib/workshutdown";
-import { isDateInWeek } from "@/lib/week";
-import { weekKeyFor } from "@/lib/week";
+import { nextMeeting } from "@/lib/meetingops";
+import { activePrincipals } from "@/lib/principals";
+import { sortedQuestions } from "@/lib/questionbank";
+import { activeTemplates } from "@/lib/templates";
+import { isDateInWeek, weekKeyFor } from "@/lib/week";
 
-export type OpsTool = "waitingOn" | "workShutdown" | "vendors";
+export type OpsTool =
+  | "waitingOn"
+  | "workShutdown"
+  | "vendors"
+  | "meetingOps"
+  | "principals"
+  | "questionBank"
+  | "templates";
 
 type Tile = {
   tool: OpsTool | null;
@@ -20,10 +30,10 @@ const TILES: Tile[] = [
   { tool: "waitingOn", icon: "🕓", title: "Waiting On", wave: 1 },
   { tool: "workShutdown", icon: "🌙", title: "Work Shutdown", wave: 1 },
   { tool: "vendors", icon: "🤝", title: "Vendors", wave: 1 },
-  { tool: null, icon: "📋", title: "Meeting Ops", wave: 2 },
-  { tool: null, icon: "👤", title: "Principals", wave: 2 },
-  { tool: null, icon: "❓", title: "Question Bank", wave: 2 },
-  { tool: null, icon: "📑", title: "Templates", wave: 2 },
+  { tool: "meetingOps", icon: "📋", title: "Meeting Ops", wave: 2 },
+  { tool: "principals", icon: "👤", title: "Principals", wave: 2 },
+  { tool: "questionBank", icon: "❓", title: "Question Bank", wave: 2 },
+  { tool: "templates", icon: "📑", title: "Templates", wave: 2 },
   { tool: null, icon: "⏱️", title: "My Numbers", wave: 3 },
   { tool: null, icon: "🎯", title: "Pre-Mortem", wave: 3 },
   { tool: null, icon: "🔥", title: "Fire Drill Log", wave: 3 },
@@ -51,8 +61,15 @@ export default function OpsHub({
   const deadlinesThisWeek = data.workOps.tasks.filter(
     (t) => t.status !== "completed" && t.dueDate && isDateInWeek(t.dueDate, weekKey)
   ).length;
+  const meetingsThisWeek = data.meetingOps.meetings.filter(
+    (m) => !m.archived && isDateInWeek(m.date, weekKey)
+  ).length;
   const shutdown = completionForDate(data.workShutdown, now);
   const vendorCount = activeVendors(data.vendors).length;
+  const next = nextMeeting(data.meetingOps, now);
+  const principalCount = activePrincipals(data.principals).length;
+  const questionCount = sortedQuestions(data.questionBank).length;
+  const templateCount = activeTemplates(data.templates).length;
 
   function statFor(tile: Tile): { text: string; className: string } {
     if (tile.tool === "waitingOn") {
@@ -70,6 +87,26 @@ export default function OpsHub({
         ? { text: "none saved yet", className: "text-paper-muted" }
         : { text: `${vendorCount} saved`, className: "text-paper-muted" };
     }
+    if (tile.tool === "meetingOps") {
+      return next
+        ? { text: `next: ${next.date}${next.time ? ` ${next.time}` : ""}`, className: "text-gold font-semibold" }
+        : { text: "nothing scheduled", className: "text-paper-muted" };
+    }
+    if (tile.tool === "principals") {
+      return principalCount === 0
+        ? { text: "none saved yet", className: "text-paper-muted" }
+        : { text: `${principalCount} saved`, className: "text-paper-muted" };
+    }
+    if (tile.tool === "questionBank") {
+      return questionCount === 0
+        ? { text: "none saved yet", className: "text-paper-muted" }
+        : { text: `${questionCount} saved`, className: "text-paper-muted" };
+    }
+    if (tile.tool === "templates") {
+      return templateCount === 0
+        ? { text: "none saved yet", className: "text-paper-muted" }
+        : { text: `${templateCount} saved`, className: "text-paper-muted" };
+    }
     return { text: "coming soon", className: "text-paper-faint" };
   }
 
@@ -79,16 +116,18 @@ export default function OpsHub({
         <p className="mb-3 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#E6B98A]">
           This Week Radar
         </p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-2">
+          <div className="text-center">
+            <div className="font-serif text-2xl leading-none text-paper-surface">{meetingsThisWeek}</div>
+            <div className="mt-1 text-[9px] uppercase tracking-wide text-work-soft">Meetings</div>
+          </div>
           <div className="text-center">
             <div className="font-serif text-2xl leading-none text-paper-surface">{open.length}</div>
-            <div className="mt-1 text-[9.5px] uppercase tracking-wide text-work-soft">Waiting On</div>
+            <div className="mt-1 text-[9px] uppercase tracking-wide text-work-soft">Waiting On</div>
           </div>
           <div className="text-center">
             <div className="font-serif text-2xl leading-none text-paper-surface">{deadlinesThisWeek}</div>
-            <div className="mt-1 text-[9.5px] uppercase tracking-wide text-work-soft">
-              Deadlines This Week
-            </div>
+            <div className="mt-1 text-[9px] uppercase tracking-wide text-work-soft">Deadlines</div>
           </div>
         </div>
         {overdue.length > 0 && (
@@ -122,11 +161,11 @@ export default function OpsHub({
               >
                 <span className="mb-1.5 block text-[17px]">{tile.icon}</span>
                 <div className="text-[13px] font-semibold text-paper-ink">{tile.title}</div>
-                <div className={`mt-0.5 text-[11px] ${stat.className}`}>{stat.text}</div>
+                <div className={`mt-0.5 truncate text-[11px] ${stat.className}`}>{stat.text}</div>
                 <span
                   className={`mt-1.5 inline-block rounded px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-wide ${WAVE_TAG_CLASS[tile.wave]}`}
                 >
-                  {tile.wave === 1 ? "Wave 1" : tile.wave === 2 ? "Wave 2 — soon" : "Wave 3 — soon"}
+                  {tile.wave === 1 ? "Wave 1" : tile.wave === 2 ? "Wave 2" : "Wave 3 — soon"}
                 </span>
               </button>
             );

@@ -742,6 +742,66 @@ const workShutdownDataSchema = z.object({
   seedVersion: z.number(),
 });
 
+const meetingAgendaItemSchema = z.object({
+  id: z.string(),
+  text: z.string().max(500),
+  done: z.boolean(),
+});
+
+const meetingSchema = z.object({
+  id: z.string(),
+  title: z.string().max(300),
+  date: z.string(),
+  time: z.string(),
+  attendees: z.string().max(2000),
+  agenda: z.array(meetingAgendaItemSchema).max(100),
+  notes: z.string().max(20000),
+  actionItems: z.string().max(20000),
+  archived: z.boolean(),
+});
+
+const meetingOpsDataSchema = z.object({
+  meetings: z.array(meetingSchema).max(1000),
+});
+
+const principalSchema = z.object({
+  id: z.string(),
+  name: z.string().max(200),
+  role: z.string().max(200),
+  org: z.string().max(200),
+  contactInfo: z.string().max(500),
+  notes: z.string().max(20000),
+  archived: z.boolean(),
+});
+
+const principalsDataSchema = z.object({
+  principals: z.array(principalSchema).max(500),
+});
+
+const questionSchema = z.object({
+  id: z.string(),
+  text: z.string().max(2000),
+  tag: z.string().max(100),
+  favorite: z.boolean(),
+  createdAt: z.string(),
+});
+
+const questionBankDataSchema = z.object({
+  questions: z.array(questionSchema).max(1000),
+});
+
+const templateSchema = z.object({
+  id: z.string(),
+  title: z.string().max(300),
+  body: z.string().max(20000),
+  category: z.string().max(100),
+  archived: z.boolean(),
+});
+
+const templatesDataSchema = z.object({
+  templates: z.array(templateSchema).max(500),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -772,6 +832,10 @@ const dashboardSchema = z.object({
   waitingOn: waitingOnDataSchema,
   vendors: vendorsDataSchema,
   workShutdown: workShutdownDataSchema,
+  meetingOps: meetingOpsDataSchema,
+  principals: principalsDataSchema,
+  questionBank: questionBankDataSchema,
+  templates: templatesDataSchema,
 });
 
 export async function GET() {

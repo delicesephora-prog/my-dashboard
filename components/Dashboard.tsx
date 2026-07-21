@@ -30,10 +30,18 @@ import WelcomeScreen from "./WelcomeScreen";
 import { WaitingOnData } from "@/lib/waitingon";
 import { VendorsData } from "@/lib/vendors";
 import { WorkShutdownData } from "@/lib/workshutdown";
+import { MeetingOpsData } from "@/lib/meetingops";
+import { PrincipalsData } from "@/lib/principals";
+import { QuestionBankData } from "@/lib/questionbank";
+import { TemplatesData } from "@/lib/templates";
 import OpsHub, { OpsTool } from "./work/OpsHub";
 import WaitingOnView from "./work/WaitingOnView";
 import WorkShutdownView from "./work/WorkShutdownView";
 import VendorsView from "./work/VendorsView";
+import MeetingOpsView from "./work/MeetingOpsView";
+import PrincipalsView from "./work/PrincipalsView";
+import QuestionBankView from "./work/QuestionBankView";
+import TemplatesView from "./work/TemplatesView";
 import BoardMeeting from "./BoardMeeting";
 import QuickDump from "./QuickDump";
 import { todayKey } from "@/lib/date";
@@ -72,7 +80,15 @@ import TabErrorBoundary from "./TabErrorBoundary";
 
 type World = "front" | "work" | "life";
 type WorkView = "dashboard" | "backbeat" | "ops" | "reference";
-type OpsSubView = "hub" | "waitingOn" | "workShutdown" | "vendors";
+type OpsSubView =
+  | "hub"
+  | "waitingOn"
+  | "workShutdown"
+  | "vendors"
+  | "meetingOps"
+  | "principals"
+  | "questionBank"
+  | "templates";
 type LifeView =
   | "tasks"
   | "week"
@@ -312,6 +328,26 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     scheduleSave();
   }
 
+  function updateMeetingOps(updater: (m: MeetingOpsData) => MeetingOpsData) {
+    setData((prev) => ({ ...prev, meetingOps: updater(prev.meetingOps) }));
+    scheduleSave();
+  }
+
+  function updatePrincipals(updater: (p: PrincipalsData) => PrincipalsData) {
+    setData((prev) => ({ ...prev, principals: updater(prev.principals) }));
+    scheduleSave();
+  }
+
+  function updateQuestionBank(updater: (q: QuestionBankData) => QuestionBankData) {
+    setData((prev) => ({ ...prev, questionBank: updater(prev.questionBank) }));
+    scheduleSave();
+  }
+
+  function updateTemplates(updater: (t: TemplatesData) => TemplatesData) {
+    setData((prev) => ({ ...prev, templates: updater(prev.templates) }));
+    scheduleSave();
+  }
+
   function handleOpenOpsTool(tool: OpsTool) {
     setOpsView(tool);
   }
@@ -530,6 +566,34 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
               <VendorsView
                 vendors={data.vendors}
                 onChange={updateVendors}
+                onBack={() => setOpsView("hub")}
+              />
+            )}
+            {workView === "ops" && opsView === "meetingOps" && (
+              <MeetingOpsView
+                meetingOps={data.meetingOps}
+                onChange={updateMeetingOps}
+                onBack={() => setOpsView("hub")}
+              />
+            )}
+            {workView === "ops" && opsView === "principals" && (
+              <PrincipalsView
+                principals={data.principals}
+                onChange={updatePrincipals}
+                onBack={() => setOpsView("hub")}
+              />
+            )}
+            {workView === "ops" && opsView === "questionBank" && (
+              <QuestionBankView
+                questionBank={data.questionBank}
+                onChange={updateQuestionBank}
+                onBack={() => setOpsView("hub")}
+              />
+            )}
+            {workView === "ops" && opsView === "templates" && (
+              <TemplatesView
+                templates={data.templates}
+                onChange={updateTemplates}
                 onBack={() => setOpsView("hub")}
               />
             )}

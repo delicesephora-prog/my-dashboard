@@ -13,6 +13,10 @@ import { WelcomeData, emptyWelcomeData, normalizeWelcomeData } from "./welcome";
 import { WaitingOnData, emptyWaitingOnData, normalizeWaitingOnData } from "./waitingon";
 import { VendorsData, emptyVendorsData, normalizeVendorsData } from "./vendors";
 import { WorkShutdownData, emptyWorkShutdownData, normalizeWorkShutdownData } from "./workshutdown";
+import { MeetingOpsData, emptyMeetingOpsData, normalizeMeetingOpsData } from "./meetingops";
+import { PrincipalsData, emptyPrincipalsData, normalizePrincipalsData } from "./principals";
+import { QuestionBankData, emptyQuestionBankData, normalizeQuestionBankData } from "./questionbank";
+import { TemplatesData, emptyTemplatesData, normalizeTemplatesData } from "./templates";
 
 export type TaskItem = {
   id: string;
@@ -813,6 +817,10 @@ export type DashboardData = {
   waitingOn: WaitingOnData;
   vendors: VendorsData;
   workShutdown: WorkShutdownData;
+  meetingOps: MeetingOpsData;
+  principals: PrincipalsData;
+  questionBank: QuestionBankData;
+  templates: TemplatesData;
 };
 
 export function emptyWorld(): WorldData {
@@ -854,6 +862,10 @@ export function defaultDashboardData(): DashboardData {
     waitingOn: emptyWaitingOnData(),
     vendors: emptyVendorsData(),
     workShutdown: emptyWorkShutdownData(),
+    meetingOps: emptyMeetingOpsData(),
+    principals: emptyPrincipalsData(),
+    questionBank: emptyQuestionBankData(),
+    templates: emptyTemplatesData(),
   };
 }
 
@@ -974,6 +986,10 @@ export function normalizeDashboardData(
     waitingOn: normalizeWaitingOnData(data.waitingOn),
     vendors: normalizeVendorsData(data.vendors),
     workShutdown: normalizeWorkShutdownData(data.workShutdown),
+    meetingOps: normalizeMeetingOpsData(data.meetingOps),
+    principals: normalizePrincipalsData(data.principals),
+    questionBank: normalizeQuestionBankData(data.questionBank),
+    templates: normalizeTemplatesData(data.templates),
   };
 }
 
