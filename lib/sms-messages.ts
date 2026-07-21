@@ -38,3 +38,12 @@ export function buildNightRoutineText(totalSteps: number): string {
     totalSteps === 1 ? "" : "s"
   } waiting. A few minutes now. Go.`;
 }
+
+// Sent at the configured shutdown time only if Work Shutdown hasn't been
+// started at all - same "only nudge if truly untouched" philosophy as the
+// night routine text.
+export function buildWorkShutdownText(remainingItems: number): string {
+  return `Shut down time - ${remainingItems} item${
+    remainingItems === 1 ? "" : "s"
+  } left to close out the work day. Triage, log, plan tomorrow, done.`;
+}

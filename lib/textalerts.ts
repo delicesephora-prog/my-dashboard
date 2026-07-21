@@ -9,6 +9,8 @@ export type TextAlertsSettings = {
   anchorNudgesEnabled: boolean;
   nightEnabled: boolean;
   nightTime: string;
+  workShutdownEnabled: boolean;
+  workShutdownTime: string;
 };
 
 export type TextAlertsData = {
@@ -29,6 +31,8 @@ export function defaultTextAlertsSettings(): TextAlertsSettings {
     anchorNudgesEnabled: true,
     nightEnabled: true,
     nightTime: "21:00",
+    workShutdownEnabled: true,
+    workShutdownTime: "17:30",
   };
 }
 
@@ -48,6 +52,8 @@ export function normalizeTextAlertsData(
       anchorNudgesEnabled: partial?.settings?.anchorNudgesEnabled ?? fallback.anchorNudgesEnabled,
       nightEnabled: partial?.settings?.nightEnabled ?? fallback.nightEnabled,
       nightTime: partial?.settings?.nightTime ?? fallback.nightTime,
+      workShutdownEnabled: partial?.settings?.workShutdownEnabled ?? fallback.workShutdownEnabled,
+      workShutdownTime: partial?.settings?.workShutdownTime ?? fallback.workShutdownTime,
     },
     log: partial?.log ?? {},
   };

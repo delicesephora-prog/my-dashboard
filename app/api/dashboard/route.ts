@@ -597,6 +597,8 @@ const textAlertsSettingsSchema = z.object({
   anchorNudgesEnabled: z.boolean(),
   nightEnabled: z.boolean(),
   nightTime: z.string().max(10),
+  workShutdownEnabled: z.boolean(),
+  workShutdownTime: z.string().max(10),
 });
 
 const textAlertsDataSchema = z.object({
@@ -721,10 +723,17 @@ const vendorsDataSchema = z.object({
   vendors: z.array(vendorSchema).max(500),
 });
 
+const shutdownSubStepSchema = z.object({
+  id: z.string(),
+  text: z.string().max(300),
+  order: z.number(),
+});
+
 const shutdownStepSchema = z.object({
   id: z.string(),
   text: z.string().max(300),
   order: z.number(),
+  subSteps: z.array(shutdownSubStepSchema).max(20),
 });
 
 const workShutdownDataSchema = z.object({

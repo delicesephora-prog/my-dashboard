@@ -327,6 +327,29 @@ export default function SettingsSheet({
                   </label>
                 )}
               </div>
+
+              <div className="border-t border-paper-border pt-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-[13.5px] text-paper-ink">Work Shutdown text</span>
+                  <ToggleSwitch
+                    checked={data.textAlerts.settings.workShutdownEnabled}
+                    onChange={(v) => onChangeTextAlerts((t) => ({ ...t, workShutdownEnabled: v }))}
+                  />
+                </div>
+                {data.textAlerts.settings.workShutdownEnabled && (
+                  <label className="flex items-center justify-between pl-0.5 text-[12.5px] text-paper-muted">
+                    Only if not started by
+                    <input
+                      type="time"
+                      value={data.textAlerts.settings.workShutdownTime}
+                      onChange={(e) =>
+                        onChangeTextAlerts((t) => ({ ...t, workShutdownTime: e.target.value }))
+                      }
+                      className="rounded-md border border-paper-border bg-paper-surface2 px-2 py-1 text-[12.5px] text-paper-ink outline-none"
+                    />
+                  </label>
+                )}
+              </div>
             </div>
           </div>
         </div>
