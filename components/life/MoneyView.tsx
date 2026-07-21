@@ -4,17 +4,21 @@ import { useState } from "react";
 import { LifeQuarterly, MoneyData } from "@/lib/types";
 import { PaydayChecklistData } from "@/lib/payday";
 import { Account, Budget, FinanceData, Transaction } from "@/lib/finance";
+import { BudgetData } from "@/lib/budget";
+import { CelebrationTier } from "@/lib/celebration";
 import MoneySection from "./quarter/MoneySection";
 import PaydayChecklistSection from "./quarter/PaydayChecklistSection";
 import AccountsTab from "./finance/AccountsTab";
 import TransactionsTab from "./finance/TransactionsTab";
 import BudgetsTab from "./finance/BudgetsTab";
 import TrendsTab from "./finance/TrendsTab";
+import CommandCenter from "./money/CommandCenter";
 
-type Tab = "overview" | "accounts" | "transactions" | "budgets" | "trends";
+type Tab = "command" | "overview" | "accounts" | "transactions" | "budgets" | "trends";
 
 const TABS: { key: Tab; label: string }[] = [
-  { key: "overview", label: "Overview" },
+  { key: "command", label: "Command Center" },
+  { key: "overview", label: "Vaults & Debts" },
   { key: "accounts", label: "Accounts" },
   { key: "transactions", label: "Transactions" },
   { key: "budgets", label: "Budgets" },
@@ -26,13 +30,19 @@ export default function MoneyView({
   onChange,
   finance,
   onChangeFinance,
+  budget,
+  onChangeBudget,
+  onCelebrate,
 }: {
   lifeQuarterly: LifeQuarterly;
   onChange: (updater: (lq: LifeQuarterly) => LifeQuarterly) => void;
   finance: FinanceData;
   onChangeFinance: (updater: (f: FinanceData) => FinanceData) => void;
+  budget: BudgetData;
+  onChangeBudget: (updater: (b: BudgetData) => BudgetData) => void;
+  onCelebrate: (tier: CelebrationTier, message: string) => void;
 }) {
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>("command");
 
   function updateMoney(updater: (m: MoneyData) => MoneyData) {
     onChange((lq) => ({ ...lq, money: updater(lq.money) }));
@@ -84,6 +94,16 @@ export default function MoneyView({
           </button>
         ))}
       </div>
+
+      {tab === "command" && (
+        <CommandCenter
+          budget={budget}
+          money={lifeQuarterly.money}
+          onChangeBudget={onChangeBudget}
+          onChangeMoney={updateMoney}
+          onCelebrate={onCelebrate}
+        />
+      )}
 
       {tab === "overview" && (
         <div className="flex flex-col gap-3">

@@ -1078,6 +1078,83 @@ const tripsDataSchema = z.object({
   savedIdeas: z.array(savedIdeaSchema),
 });
 
+const paymentScheduleSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("dueDay"), day: z.number() }),
+  z.object({ kind: z.literal("paydaySplit"), firstAmount: z.number(), secondAmount: z.number() }),
+  z.object({ kind: z.literal("varies") }),
+]);
+
+const budgetBillItemSchema = z.object({
+  id: z.string(),
+  name: z.string().max(200),
+  monthlyAmount: z.number(),
+  schedule: paymentScheduleSchema,
+});
+
+const budgetDebtPaymentItemSchema = z.object({
+  id: z.string(),
+  debtName: z.string().max(200),
+  monthlyAmount: z.number(),
+  schedule: paymentScheduleSchema,
+  isFinalPayment: z.boolean(),
+});
+
+const budgetVaultTransferItemSchema = z.object({
+  id: z.string(),
+  vaultName: z.string().max(200),
+  monthlyAmount: z.number(),
+  schedule: paymentScheduleSchema,
+});
+
+const budgetSpendingTargetSchema = z.object({
+  id: z.string(),
+  name: z.string().max(200),
+  monthlyAmount: z.number(),
+  cycleMonths: z.number(),
+  cycleAmount: z.number().nullable(),
+});
+
+const extraIncomeEntrySchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  amount: z.number(),
+  note: z.string().max(500),
+});
+
+const budgetConfigSchema = z.object({
+  perPaycheckIncome: z.number(),
+  bills: z.array(budgetBillItemSchema),
+  debtPayments: z.array(budgetDebtPaymentItemSchema),
+  vaultTransfers: z.array(budgetVaultTransferItemSchema),
+  spendingTargets: z.array(budgetSpendingTargetSchema),
+});
+
+const lineItemMonthStateSchema = z.object({
+  firstDone: z.boolean(),
+  secondDone: z.boolean(),
+  firstAmount: z.number().nullable(),
+  secondAmount: z.number().nullable(),
+});
+
+const monthlyBudgetStateSchema = z.object({
+  paycheckFirstReceived: z.boolean(),
+  paycheckSecondReceived: z.boolean(),
+  bills: z.record(lineItemMonthStateSchema),
+  debts: z.record(lineItemMonthStateSchema),
+  vaults: z.record(lineItemMonthStateSchema),
+  spendingLogged: z.record(z.number()),
+  startVaultTotal: z.number(),
+  startDebtPaidOff: z.number(),
+});
+
+const budgetDataSchema = z.object({
+  config: budgetConfigSchema,
+  months: z.record(monthlyBudgetStateSchema),
+  extraIncome: z.array(extraIncomeEntrySchema),
+  configSeedVersion: z.number(),
+  linkedSeedVersion: z.number(),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -1125,6 +1202,7 @@ const dashboardSchema = z.object({
   finance: financeDataSchema,
   wedding: weddingDataSchema,
   trips: tripsDataSchema,
+  budget: budgetDataSchema,
 });
 
 export async function GET() {

@@ -61,6 +61,7 @@ import { QuestData } from "@/lib/quest";
 import { MemosData } from "@/lib/memos";
 import { HealthData } from "@/lib/health";
 import { FinanceData } from "@/lib/finance";
+import { BudgetData } from "@/lib/budget";
 import { WeddingData } from "@/lib/wedding";
 import { TripsData } from "@/lib/trips";
 import CelebrationOverlay from "./CelebrationOverlay";
@@ -360,6 +361,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
 
   function updateFinance(updater: (f: FinanceData) => FinanceData) {
     setData((prev) => ({ ...prev, finance: updater(prev.finance) }));
+    scheduleSave();
+  }
+
+  function updateBudget(updater: (b: BudgetData) => BudgetData) {
+    setData((prev) => ({ ...prev, budget: updater(prev.budget) }));
     scheduleSave();
   }
 
@@ -838,6 +844,9 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 onChange={updateLifeQuarterly}
                 finance={data.finance}
                 onChangeFinance={updateFinance}
+                budget={data.budget}
+                onChangeBudget={updateBudget}
+                onCelebrate={triggerCelebration}
               />
             )}
             {lifeView === "quarter" && (

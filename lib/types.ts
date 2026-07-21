@@ -30,6 +30,7 @@ import { HealthData, emptyHealthData, normalizeHealthData } from "./health";
 import { FinanceData, emptyFinanceData, normalizeFinanceData } from "./finance";
 import { WeddingData, emptyWeddingData, normalizeWeddingData } from "./wedding";
 import { TripsData, emptyTripsData, normalizeTripsData } from "./trips";
+import { BudgetData, emptyBudgetData, normalizeBudgetData, ensureLinkedMoneyEntities } from "./budget";
 
 export type TaskItem = {
   id: string;
@@ -847,6 +848,7 @@ export type DashboardData = {
   finance: FinanceData;
   wedding: WeddingData;
   trips: TripsData;
+  budget: BudgetData;
 };
 
 export function emptyWorld(): WorldData {
@@ -905,6 +907,7 @@ export function defaultDashboardData(): DashboardData {
     finance: emptyFinanceData(),
     wedding: emptyWeddingData(),
     trips: emptyTripsData(),
+    budget: emptyBudgetData(),
   };
 }
 
@@ -915,8 +918,8 @@ export function normalizeDashboardData(
 ): DashboardData {
   const fallback = defaultDashboardData();
   if (!data) return fallback;
-  return {
-    version: 1,
+  const result = {
+    version: 1 as const,
     work: { ...fallback.work, ...data.work },
     life: { ...fallback.life, ...data.life },
     oneThing: { ...fallback.oneThing, ...data.oneThing },
@@ -1042,7 +1045,16 @@ export function normalizeDashboardData(
     finance: normalizeFinanceData(data.finance),
     wedding: normalizeWeddingData(data.wedding),
     trips: normalizeTripsData(data.trips),
+    budget: normalizeBudgetData(data.budget),
   };
+
+  // One-time additive link: makes sure the vaults/debt this feature depends
+  // on exist, without ever overwriting balances the user has already edited.
+  const linked = ensureLinkedMoneyEntities(result.lifeQuarterly.money, result.budget);
+  result.lifeQuarterly = { ...result.lifeQuarterly, money: linked.money };
+  result.budget = linked.budget;
+
+  return result;
 }
 
 // Fills in any weeks missing from the stored map (e.g. a week never
