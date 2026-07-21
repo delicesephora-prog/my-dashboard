@@ -81,9 +81,8 @@ import { FrontPageNavTarget } from "@/lib/frontpage";
 import OperationsDashboard from "./work/OperationsDashboard";
 import BackBeat from "./work/BackBeat";
 import Reference from "./work/Reference";
-import HabitsView from "./life/HabitsView";
+import RitualsView from "./life/RitualsView";
 import ManageHabits from "./life/ManageHabits";
-import RoutinesView from "./life/routines/RoutinesView";
 import ManageRoutines from "./life/routines/ManageRoutines";
 import QuarterView from "./life/quarter/QuarterView";
 import MoneyView from "./life/MoneyView";
@@ -125,9 +124,8 @@ type LifeView =
   | "tasks"
   | "week"
   | "planner"
-  | "routines"
+  | "rituals"
   | "manageRoutines"
-  | "habits"
   | "manageHabits"
   | "money"
   | "quarter"
@@ -753,8 +751,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                   { key: "tasks", label: "Tasks" },
                   { key: "week", label: "This Week" },
                   { key: "planner", label: "Planner" },
-                  { key: "routines", label: "Routines" },
-                  { key: "habits", label: "Habits" },
+                  { key: "rituals", label: "Rituals" },
                   { key: "money", label: "Money" },
                   { key: "quarter", label: "Quarter" },
                   { key: "lists", label: "Lists" },
@@ -793,11 +790,14 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 onChange={updatePlanner}
               />
             )}
-            {lifeView === "routines" && (
-              <RoutinesView
+            {lifeView === "rituals" && (
+              <RitualsView
                 routinesData={data.routines}
-                onChange={updateRoutines}
-                onManage={() => setLifeView("manageRoutines")}
+                onChangeRoutines={updateRoutines}
+                onManageRoutines={() => setLifeView("manageRoutines")}
+                habitsData={data.habits}
+                onChangeHabits={updateHabits}
+                onManageHabits={() => setLifeView("manageHabits")}
                 onCelebrate={triggerCelebration}
               />
             )}
@@ -805,22 +805,14 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
               <ManageRoutines
                 routinesData={data.routines}
                 onChange={updateRoutines}
-                onBack={() => setLifeView("routines")}
-              />
-            )}
-            {lifeView === "habits" && (
-              <HabitsView
-                habitsData={data.habits}
-                onChange={updateHabits}
-                onManage={() => setLifeView("manageHabits")}
-                onCelebrate={triggerCelebration}
+                onBack={() => setLifeView("rituals")}
               />
             )}
             {lifeView === "manageHabits" && (
               <ManageHabits
                 habitsData={data.habits}
                 onChange={updateHabits}
-                onBack={() => setLifeView("habits")}
+                onBack={() => setLifeView("rituals")}
               />
             )}
             {lifeView === "money" && (

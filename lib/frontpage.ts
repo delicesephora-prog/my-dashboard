@@ -21,8 +21,7 @@ export type FrontPageNavTarget =
       world: "life";
       lifeView?:
         | "week"
-        | "routines"
-        | "habits"
+        | "rituals"
         | "money"
         | "quarter"
         | "lists"
@@ -125,7 +124,7 @@ export function computeRecommendation(
   const night = completionForDate(data.routines.config, data.routines, "night", now);
 
   if (hour < 11 && morning.total > 0 && morning.done < morning.total) {
-    return { text: "Morning routine", target: { world: "life", lifeView: "routines" } };
+    return { text: "Morning routine", target: { world: "life", lifeView: "rituals" } };
   }
 
   if (jsDay === 0 && hour >= 11) {
@@ -136,11 +135,11 @@ export function computeRecommendation(
   }
 
   if (isWeekday && hour >= 12 && hour < 17 && dayRoutine.total > 0 && dayRoutine.done < dayRoutine.total) {
-    return { text: "Midday reset", target: { world: "life", lifeView: "routines" } };
+    return { text: "Midday reset", target: { world: "life", lifeView: "rituals" } };
   }
 
   if (hour >= 20 && night.total > 0 && night.done < night.total) {
-    return { text: "Night routine", target: { world: "life", lifeView: "routines" } };
+    return { text: "Night routine", target: { world: "life", lifeView: "rituals" } };
   }
 
   const zone = zoneForDate(data.homeZones, now);

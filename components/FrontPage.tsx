@@ -36,8 +36,7 @@ import CheckCircle from "./CheckCircle";
 
 const FOLDERS: { icon: string; label: string; target: FrontPageNavTarget }[] = [
   { icon: "📌", label: "Money", target: { world: "life", lifeView: "money" } },
-  { icon: "📌", label: "Habits", target: { world: "life", lifeView: "habits" } },
-  { icon: "🕓", label: "Routines", target: { world: "life", lifeView: "routines" } },
+  { icon: "🕯️", label: "Rituals", target: { world: "life", lifeView: "rituals" } },
   { icon: "🕓", label: "Glow Up", target: { world: "life", lifeView: "glowUp" } },
 ];
 
