@@ -10,6 +10,9 @@ import { TextAlertsData, emptyTextAlertsData, normalizeTextAlertsData } from "./
 import { PlannerData, emptyPlannerData, normalizePlannerData } from "./planner";
 import { HomeZonesData, emptyHomeZonesData, normalizeHomeZonesData } from "./home";
 import { WelcomeData, emptyWelcomeData, normalizeWelcomeData } from "./welcome";
+import { WaitingOnData, emptyWaitingOnData, normalizeWaitingOnData } from "./waitingon";
+import { VendorsData, emptyVendorsData, normalizeVendorsData } from "./vendors";
+import { WorkShutdownData, emptyWorkShutdownData, normalizeWorkShutdownData } from "./workshutdown";
 
 export type TaskItem = {
   id: string;
@@ -807,6 +810,9 @@ export type DashboardData = {
   planner: PlannerData;
   homeZones: HomeZonesData;
   welcome: WelcomeData;
+  waitingOn: WaitingOnData;
+  vendors: VendorsData;
+  workShutdown: WorkShutdownData;
 };
 
 export function emptyWorld(): WorldData {
@@ -845,6 +851,9 @@ export function defaultDashboardData(): DashboardData {
     planner: emptyPlannerData(),
     homeZones: emptyHomeZonesData(),
     welcome: emptyWelcomeData(),
+    waitingOn: emptyWaitingOnData(),
+    vendors: emptyVendorsData(),
+    workShutdown: emptyWorkShutdownData(),
   };
 }
 
@@ -962,6 +971,9 @@ export function normalizeDashboardData(
     planner: normalizePlannerData(data.planner),
     homeZones: normalizeHomeZonesData(data.homeZones),
     welcome: normalizeWelcomeData(data.welcome),
+    waitingOn: normalizeWaitingOnData(data.waitingOn),
+    vendors: normalizeVendorsData(data.vendors),
+    workShutdown: normalizeWorkShutdownData(data.workShutdown),
   };
 }
 

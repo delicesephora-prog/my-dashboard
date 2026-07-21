@@ -682,6 +682,57 @@ const welcomeDataSchema = z.object({
   lastShownKey: z.string(),
 });
 
+const waitingOnItemSchema = z.object({
+  id: z.string(),
+  who: z.string().max(200),
+  what: z.string().max(2000),
+  askedDate: z.string(),
+  followUpDate: z.string(),
+  resolvedDate: z.string(),
+  notes: z.string().max(5000),
+});
+
+const waitingOnDataSchema = z.object({
+  items: z.array(waitingOnItemSchema).max(500),
+});
+
+const vendorSchema = z.object({
+  id: z.string(),
+  name: z.string().max(200),
+  category: z.enum([
+    "Clinical Operations",
+    "Executive Support",
+    "Investor Relations",
+    "Finance",
+    "Translation",
+    "Vendor",
+    "Facilities",
+    "Regulatory",
+    "Administration",
+  ]),
+  contactName: z.string().max(200),
+  email: z.string().max(200),
+  phone: z.string().max(50),
+  notes: z.string().max(5000),
+  archived: z.boolean(),
+});
+
+const vendorsDataSchema = z.object({
+  vendors: z.array(vendorSchema).max(500),
+});
+
+const shutdownStepSchema = z.object({
+  id: z.string(),
+  text: z.string().max(300),
+  order: z.number(),
+});
+
+const workShutdownDataSchema = z.object({
+  steps: z.array(shutdownStepSchema).max(50),
+  days: z.record(z.array(z.string()).max(50)),
+  seedVersion: z.number(),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -709,6 +760,9 @@ const dashboardSchema = z.object({
   planner: plannerDataSchema,
   homeZones: homeZonesDataSchema,
   welcome: welcomeDataSchema,
+  waitingOn: waitingOnDataSchema,
+  vendors: vendorsDataSchema,
+  workShutdown: workShutdownDataSchema,
 });
 
 export async function GET() {

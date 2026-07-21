@@ -27,6 +27,13 @@ import { HomeZonesData } from "@/lib/home";
 import { TodayFocusItem } from "@/lib/frontpage";
 import { WelcomeData, shouldShowWelcome, markWelcomeShown } from "@/lib/welcome";
 import WelcomeScreen from "./WelcomeScreen";
+import { WaitingOnData } from "@/lib/waitingon";
+import { VendorsData } from "@/lib/vendors";
+import { WorkShutdownData } from "@/lib/workshutdown";
+import OpsHub, { OpsTool } from "./work/OpsHub";
+import WaitingOnView from "./work/WaitingOnView";
+import WorkShutdownView from "./work/WorkShutdownView";
+import VendorsView from "./work/VendorsView";
 import BoardMeeting from "./BoardMeeting";
 import QuickDump from "./QuickDump";
 import { todayKey } from "@/lib/date";
@@ -64,7 +71,8 @@ import SaveIndicator, { SaveStatus } from "./SaveIndicator";
 import TabErrorBoundary from "./TabErrorBoundary";
 
 type World = "front" | "work" | "life";
-type WorkView = "dashboard" | "backbeat" | "reference";
+type WorkView = "dashboard" | "backbeat" | "ops" | "reference";
+type OpsSubView = "hub" | "waitingOn" | "workShutdown" | "vendors";
 type LifeView =
   | "tasks"
   | "week"
@@ -91,6 +99,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   const [data, setData] = useState<DashboardData>(initialData);
   const [world, setWorld] = useState<World>("front");
   const [workView, setWorkView] = useState<WorkView>("dashboard");
+  const [opsView, setOpsView] = useState<OpsSubView>("hub");
   const [lifeView, setLifeView] = useState<LifeView>("week");
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -288,6 +297,25 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     setShowWelcome(false);
   }
 
+  function updateWaitingOn(updater: (w: WaitingOnData) => WaitingOnData) {
+    setData((prev) => ({ ...prev, waitingOn: updater(prev.waitingOn) }));
+    scheduleSave();
+  }
+
+  function updateVendors(updater: (v: VendorsData) => VendorsData) {
+    setData((prev) => ({ ...prev, vendors: updater(prev.vendors) }));
+    scheduleSave();
+  }
+
+  function updateWorkShutdown(updater: (w: WorkShutdownData) => WorkShutdownData) {
+    setData((prev) => ({ ...prev, workShutdown: updater(prev.workShutdown) }));
+    scheduleSave();
+  }
+
+  function handleOpenOpsTool(tool: OpsTool) {
+    setOpsView(tool);
+  }
+
   function toggleTodayFocusTask(item: TodayFocusItem) {
     if (item.source === "workOps") {
       updateWorkOps((wo) => ({
@@ -446,7 +474,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
       <WorldToggle world={world} onChange={setWorld} counts={counts} />
 
       <main className="flex min-h-0 flex-1 flex-col px-5 pt-3">
-       <TabErrorBoundary key={`${world}-${workView}-${lifeView}`}>
+       <TabErrorBoundary key={`${world}-${workView}-${opsView}-${lifeView}`}>
         {world === "front" ? (
           <FrontPage
             data={data}
@@ -465,10 +493,14 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
               items={[
                 { key: "dashboard", label: "Dashboard" },
                 { key: "backbeat", label: "BackBeat" },
+                { key: "ops", label: "Ops" },
                 { key: "reference", label: "Reference" },
               ]}
               active={workView}
-              onChange={setWorkView}
+              onChange={(v) => {
+                setWorkView(v);
+                if (v === "ops") setOpsView("hub");
+              }}
               accentClass="bg-work"
             />
             {workView === "dashboard" && (
@@ -476,6 +508,30 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             )}
             {workView === "backbeat" && (
               <BackBeat backBeat={data.backBeat} onChange={updateBackBeat} />
+            )}
+            {workView === "ops" && opsView === "hub" && (
+              <OpsHub data={data} onOpenTool={handleOpenOpsTool} />
+            )}
+            {workView === "ops" && opsView === "waitingOn" && (
+              <WaitingOnView
+                waitingOn={data.waitingOn}
+                onChange={updateWaitingOn}
+                onBack={() => setOpsView("hub")}
+              />
+            )}
+            {workView === "ops" && opsView === "workShutdown" && (
+              <WorkShutdownView
+                workShutdown={data.workShutdown}
+                onChange={updateWorkShutdown}
+                onBack={() => setOpsView("hub")}
+              />
+            )}
+            {workView === "ops" && opsView === "vendors" && (
+              <VendorsView
+                vendors={data.vendors}
+                onChange={updateVendors}
+                onBack={() => setOpsView("hub")}
+              />
             )}
             {workView === "reference" && (
               <Reference reference={data.reference} onChange={updateReference} />
