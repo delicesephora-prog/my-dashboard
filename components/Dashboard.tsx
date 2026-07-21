@@ -25,6 +25,8 @@ import { TextAlertsData } from "@/lib/textalerts";
 import { PlannerData } from "@/lib/planner";
 import { HomeZonesData } from "@/lib/home";
 import { TodayFocusItem } from "@/lib/frontpage";
+import { WelcomeData, shouldShowWelcome, markWelcomeShown } from "@/lib/welcome";
+import WelcomeScreen from "./WelcomeScreen";
 import BoardMeeting from "./BoardMeeting";
 import QuickDump from "./QuickDump";
 import { todayKey } from "@/lib/date";
@@ -56,6 +58,7 @@ import PlannerView from "./life/planner/PlannerView";
 import BooksView from "./life/BooksView";
 import BucketListView from "./life/BucketListView";
 import YearView from "./life/year/YearView";
+import VersesView from "./life/VersesView";
 import WarRoomSection from "./life/year/WarRoomSection";
 import SaveIndicator, { SaveStatus } from "./SaveIndicator";
 import TabErrorBoundary from "./TabErrorBoundary";
@@ -79,7 +82,8 @@ type LifeView =
   | "books"
   | "bucketList"
   | "year"
-  | "dec8";
+  | "dec8"
+  | "verses";
 
 const SAVE_DELAY_MS = 700;
 
@@ -95,10 +99,20 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [boardMeetingOpen, setBoardMeetingOpen] = useState(false);
   const [quickDumpOpen, setQuickDumpOpen] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestData = useRef(data);
   latestData.current = data;
+
+  // Checked once on mount only - re-running this on every data change
+  // would re-show the screen the moment updateWelcome's own save lands.
+  useEffect(() => {
+    if (shouldShowWelcome(initialData.welcome, new Date())) {
+      setShowWelcome(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // A slow save from an earlier edit can still be in flight when a newer
   // edit's save fires - without tracking this, whichever response happens
@@ -264,6 +278,16 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     scheduleSave();
   }
 
+  function updateWelcome(updater: (w: WelcomeData) => WelcomeData) {
+    setData((prev) => ({ ...prev, welcome: updater(prev.welcome) }));
+    scheduleSave();
+  }
+
+  function dismissWelcome() {
+    updateWelcome((w) => markWelcomeShown(w, new Date()));
+    setShowWelcome(false);
+  }
+
   function toggleTodayFocusTask(item: TodayFocusItem) {
     if (item.source === "workOps") {
       updateWorkOps((wo) => ({
@@ -395,6 +419,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-paper-bg">
+      {showWelcome && <WelcomeScreen onDone={dismissWelcome} />}
       <header className="safe-top px-5 pb-2 pt-2">
         <div className="flex items-center justify-end gap-2">
           <SaveIndicator status={status} lastSavedAt={lastSavedAt} onRetry={scheduleSave} />
@@ -427,7 +452,6 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             data={data}
             oneThingText={oneThingText}
             onOneThingChange={setOneThing}
-            counts={counts}
             onNavigate={handleFrontPageNavigate}
             onChangeLifeScore={updateLifeScore}
             onChangeRhythm={updateRhythm}
@@ -477,6 +501,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                   { key: "bucketList", label: "Bucket List" },
                   { key: "year", label: "Year" },
                   { key: "dec8", label: "Dec 8" },
+                  { key: "verses", label: "Verses" },
                 ]}
                 active={lifeView}
                 onChange={setLifeView}
@@ -573,6 +598,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 onChangeWarRoom={(updater) => updateYear((y) => ({ ...y, warRoom: updater(y.warRoom) }))}
               />
             )}
+            {lifeView === "verses" && <VersesView />}
           </>
         )}
        </TabErrorBoundary>

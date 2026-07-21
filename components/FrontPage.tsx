@@ -22,6 +22,7 @@ import { HomeZonesData, completedTaskIds, toggleZoneTask, zoneForDate } from "@/
 import { completionForDate } from "@/lib/routines";
 import { daysUntilDecember8 } from "@/lib/warroom";
 import { dateKey } from "@/lib/date";
+import { vocabForDate, factForDate } from "@/lib/welcome";
 import Greeting from "./Greeting";
 import OneThing from "./OneThing";
 import LifeScoreRing from "./LifeScoreRing";
@@ -30,11 +31,17 @@ import RhythmStrip from "./RhythmStrip";
 import ProgressRing from "./ProgressRing";
 import CheckCircle from "./CheckCircle";
 
+const FOLDERS: { icon: string; label: string; target: FrontPageNavTarget }[] = [
+  { icon: "📌", label: "Money", target: { world: "life", lifeView: "money" } },
+  { icon: "📌", label: "Habits", target: { world: "life", lifeView: "habits" } },
+  { icon: "🕓", label: "Routines", target: { world: "life", lifeView: "routines" } },
+  { icon: "🕓", label: "Glow Up", target: { world: "life", lifeView: "glowUp" } },
+];
+
 export default function FrontPage({
   data,
   oneThingText,
   onOneThingChange,
-  counts,
   onNavigate,
   onChangeLifeScore,
   onChangeRhythm,
@@ -45,7 +52,6 @@ export default function FrontPage({
   data: DashboardData;
   oneThingText: string;
   onOneThingChange: (text: string) => void;
-  counts: { work: number; life: number };
   onNavigate: (target: FrontPageNavTarget) => void;
   onChangeLifeScore: (updater: (l: LifeScoreData) => LifeScoreData) => void;
   onChangeRhythm: (updater: (r: RhythmData) => RhythmData) => void;
@@ -64,49 +70,83 @@ export default function FrontPage({
   const focusTasks = pinnedFocusTasks(data);
 
   return (
-    <div className="scroll-quiet flex flex-col gap-3 overflow-y-auto pb-6">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <Greeting />
-          {now && (
-            <p className="mt-1.5 text-[0.8rem] italic leading-snug text-paper-muted">
-              {quoteForToday(now)}
-            </p>
-          )}
+    <div className="flex min-h-0 flex-1 flex-col gap-2">
+      <div className="scroll-quiet flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+        <Greeting />
+        {now && (
+          <p className="-mt-2 text-[0.8rem] italic leading-snug text-paper-muted">
+            {quoteForToday(now)}
+          </p>
+        )}
+
+        <div className="flex flex-wrap gap-1.5">
+          {FOLDERS.map((f) => (
+            <button
+              key={f.label}
+              type="button"
+              onClick={() => onNavigate(f.target)}
+              className="flex shrink-0 items-center gap-1 rounded-full border border-paper-border bg-paper-surface px-3 py-1.5 text-[11px] text-paper-muted active:scale-95"
+            >
+              <span>{f.icon}</span>
+              <span className="font-medium text-paper-ink">{f.label}</span>
+            </button>
+          ))}
         </div>
-        <button
-          type="button"
-          onClick={onOpenQuickDump}
-          aria-label="Quick Dump"
-          className="flex shrink-0 items-center gap-1 rounded-full bg-work px-3 py-2 text-[12px] font-medium text-paper-surface shadow-paper active:scale-95"
-        >
-          🧠 Dump
-        </button>
+
+        <OneThing value={oneThingText} onChange={onOneThingChange} suggestion={focusTasks[0]?.title} />
+
+        {now && (
+          <FrontPageBody
+            data={data}
+            now={now}
+            focusTasks={focusTasks}
+            onNavigate={onNavigate}
+            onChangeLifeScore={onChangeLifeScore}
+            onChangeRhythm={onChangeRhythm}
+            onToggleFocusTask={onToggleFocusTask}
+            onChangeHomeZones={onChangeHomeZones}
+          />
+        )}
       </div>
 
-      <OneThing value={oneThingText} onChange={onOneThingChange} />
-
-      {now && (
-        <FrontPageBody
-          data={data}
-          now={now}
-          counts={counts}
-          focusTasks={focusTasks}
-          onNavigate={onNavigate}
-          onChangeLifeScore={onChangeLifeScore}
-          onChangeRhythm={onChangeRhythm}
-          onToggleFocusTask={onToggleFocusTask}
-          onChangeHomeZones={onChangeHomeZones}
+      {/* Below the scroll area, not overlaid on it - same pattern as
+          DailyReviewBar, so it never covers content underneath. */}
+      <div className="flex shrink-0 gap-1.5 rounded-full border border-paper-border bg-paper-surface p-1.5 shadow-paper">
+        <DockButton icon="🧠" label="Dump" onClick={onOpenQuickDump} />
+        <DockButton
+          icon="🛒"
+          label="Grocery"
+          onClick={() => onNavigate({ world: "life", lifeView: "lists" })}
         />
-      )}
+      </div>
     </div>
+  );
+}
+
+function DockButton({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: string;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[12px] font-medium text-paper-ink active:scale-95"
+    >
+      <span>{icon}</span>
+      <span>{label}</span>
+    </button>
   );
 }
 
 function FrontPageBody({
   data,
   now,
-  counts,
   focusTasks,
   onNavigate,
   onChangeLifeScore,
@@ -116,7 +156,6 @@ function FrontPageBody({
 }: {
   data: DashboardData;
   now: Date;
-  counts: { work: number; life: number };
   focusTasks: TodayFocusItem[];
   onNavigate: (target: FrontPageNavTarget) => void;
   onChangeLifeScore: (updater: (l: LifeScoreData) => LifeScoreData) => void;
@@ -129,6 +168,7 @@ function FrontPageBody({
   const recap = computeWeekRecap(data, now);
   const breakdown = computeLifeScoreBreakdown(data, now);
   const [scoreOpen, setScoreOpen] = useState(false);
+  const [timelineTab, setTimelineTab] = useState<"focus" | "rhythm">("focus");
 
   useEffect(() => {
     onChangeLifeScore((l) => recordTodayScore(l, breakdown.score, now));
@@ -144,6 +184,9 @@ function FrontPageBody({
     ? new Set(completedTaskIds(data.homeZones, dateKey(now), zone.id))
     : new Set<string>();
 
+  const vocab = vocabForDate(now);
+  const fact = factForDate(now);
+
   return (
     <>
       <button
@@ -158,44 +201,51 @@ function FrontPageBody({
         <p className="font-serif text-[1.05rem] leading-snug text-paper-ink">{recommendation.text}</p>
       </button>
 
-      <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
-        <p className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-xl2 border border-paper-border bg-paper-surface p-3">
+          <p className="mb-1 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-gold">
+            ✦ Vocab of the Day
+          </p>
+          <p className="font-serif text-[1.05rem] leading-snug text-paper-ink">{vocab.word}</p>
+          <p className="text-[10px] italic text-paper-faint">{vocab.partOfSpeech}</p>
+          <p className="mt-1 text-[12px] leading-snug text-paper-muted">{vocab.definition}</p>
+        </div>
+        <div className="rounded-xl2 border border-paper-border bg-paper-surface p-3">
+          <p className="mb-1 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-gold">
+            ✦ Fact of the Day
+          </p>
+          <p className="text-[12px] leading-snug text-paper-ink">{fact.fact}</p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 rounded-xl2 border border-dashed border-paper-border bg-paper-surface2 p-3">
+        <span className="shrink-0 text-xl">🗺️</span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-medium text-paper-ink">Today&apos;s Quest</p>
+          <p className="text-[11px] text-paper-muted">Coming in a later stage</p>
+        </div>
+        <span className="shrink-0 rounded-full border border-paper-border px-2 py-0.5 text-[10px] uppercase tracking-wide text-paper-faint">
+          Soon
+        </span>
+      </div>
+
+      <div>
+        <p className="mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
           Today at a Glance
         </p>
-
-        <div className="mb-4 flex items-center justify-around">
+        <div className="flex items-center justify-around">
           <RingStat pct={morning.pct ?? 0} color="#B08B4F" label="Morning" />
           <RingStat pct={dayRoutine.pct ?? 0} color="#5B2333" label="Day" />
           <RingStat pct={night.pct ?? 0} color="#3D1622" label="Night" />
           <RingStat pct={recap.avgHabitPct} color="#8A9B7C" label="Habits" />
-        </div>
-
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            onClick={() => onNavigate({ world: "work", workView: "dashboard" })}
-            className="rounded-xl border border-paper-border bg-paper-surface2 px-2 py-2.5 text-center transition active:scale-[0.97]"
-          >
-            <div className="font-serif text-xl text-paper-ink">{counts.work}</div>
-            <div className="mt-0.5 text-[0.65rem] uppercase tracking-wide text-paper-muted">
-              Work Open
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex h-[48px] w-[48px] flex-col items-center justify-center rounded-full border-2 border-work">
+              <span className="font-serif text-sm leading-none text-paper-ink">
+                {daysUntilDecember8(now)}
+              </span>
+              <span className="text-[7px] uppercase tracking-wide text-paper-faint">days</span>
             </div>
-          </button>
-          <button
-            type="button"
-            onClick={() => onNavigate({ world: "life", lifeView: "week" })}
-            className="rounded-xl border border-paper-border bg-paper-surface2 px-2 py-2.5 text-center transition active:scale-[0.97]"
-          >
-            <div className="font-serif text-xl text-paper-ink">{counts.life}</div>
-            <div className="mt-0.5 text-[0.65rem] uppercase tracking-wide text-paper-muted">
-              Life Open
-            </div>
-          </button>
-          <div className="rounded-xl border border-paper-border bg-paper-surface2 px-2 py-2.5 text-center">
-            <div className="font-serif text-xl text-work">{daysUntilDecember8(now)}</div>
-            <div className="mt-0.5 text-[0.65rem] uppercase tracking-wide text-paper-muted">
-              Days to Dec 8
-            </div>
+            <span className="text-[10px] uppercase tracking-wide text-paper-muted">Dec 8</span>
           </div>
         </div>
 
@@ -214,31 +264,63 @@ function FrontPageBody({
       </div>
 
       <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
-        <p className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
-          Today&apos;s Focus
-        </p>
-        {focusTasks.length === 0 ? (
-          <p className="text-[13px] italic text-paper-muted">
-            Nothing pinned yet. Star a task on Work or Life to see it here.
-          </p>
+        <div className="mb-3 flex gap-1 rounded-full bg-paper-surface2 p-1">
+          <button
+            type="button"
+            onClick={() => setTimelineTab("focus")}
+            className={`flex-1 rounded-full py-1.5 text-[11.5px] font-medium transition ${
+              timelineTab === "focus"
+                ? "bg-paper-surface text-paper-ink shadow-paper"
+                : "text-paper-muted"
+            }`}
+          >
+            Today&apos;s Focus
+          </button>
+          <button
+            type="button"
+            onClick={() => setTimelineTab("rhythm")}
+            className={`flex-1 rounded-full py-1.5 text-[11.5px] font-medium transition ${
+              timelineTab === "rhythm"
+                ? "bg-paper-surface text-paper-ink shadow-paper"
+                : "text-paper-muted"
+            }`}
+          >
+            Rhythm
+          </button>
+        </div>
+
+        {timelineTab === "focus" ? (
+          focusTasks.length === 0 ? (
+            <p className="text-[13px] italic text-paper-muted">
+              Nothing pinned yet. Star a task on Work or Life to see it here.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {focusTasks.map((item) => (
+                <li key={`${item.side}-${item.id}`} className="flex items-center gap-2.5">
+                  <CheckCircle
+                    done={false}
+                    onToggle={() => onToggleFocusTask(item)}
+                    accentClass="bg-work"
+                    size="sm"
+                    ariaLabel="Mark done"
+                  />
+                  <span className="min-w-0 flex-1 truncate text-[14px] text-paper-ink">{item.title}</span>
+                  <span className="shrink-0 rounded-full border border-paper-border px-2 py-0.5 text-[10px] uppercase tracking-wide text-paper-muted">
+                    {item.side}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )
         ) : (
-          <ul className="flex flex-col gap-2">
-            {focusTasks.map((item) => (
-              <li key={`${item.side}-${item.id}`} className="flex items-center gap-2.5">
-                <CheckCircle
-                  done={false}
-                  onToggle={() => onToggleFocusTask(item)}
-                  accentClass="bg-work"
-                  size="sm"
-                  ariaLabel="Mark done"
-                />
-                <span className="min-w-0 flex-1 truncate text-[14px] text-paper-ink">{item.title}</span>
-                <span className="shrink-0 rounded-full border border-paper-border px-2 py-0.5 text-[10px] uppercase tracking-wide text-paper-muted">
-                  {item.side}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <RhythmStrip
+            rhythmData={data.rhythm}
+            paydayAnchorDate={data.lifeQuarterly.paydayChecklist.anchorDate}
+            now={now}
+            onChange={onChangeRhythm}
+            bare
+          />
         )}
       </div>
 
@@ -281,13 +363,6 @@ function FrontPageBody({
           onClose={() => setScoreOpen(false)}
         />
       )}
-
-      <RhythmStrip
-        rhythmData={data.rhythm}
-        paydayAnchorDate={data.lifeQuarterly.paydayChecklist.anchorDate}
-        now={now}
-        onChange={onChangeRhythm}
-      />
 
       <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
         <p className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
@@ -335,7 +410,7 @@ function FrontPageBody({
 function RingStat({ pct, color, label }: { pct: number; color: string; label: string }) {
   return (
     <div className="flex flex-col items-center gap-1">
-      <ProgressRing pct={pct} size={52} strokeWidth={5} color={color} label={`${pct}%`} />
+      <ProgressRing pct={pct} size={48} strokeWidth={4.5} color={color} label={`${pct}%`} />
       <span className="text-[10px] uppercase tracking-wide text-paper-muted">{label}</span>
     </div>
   );

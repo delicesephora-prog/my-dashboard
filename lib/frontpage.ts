@@ -23,12 +23,15 @@ export type FrontPageNavTarget =
         | "week"
         | "routines"
         | "habits"
+        | "money"
         | "quarter"
+        | "lists"
         | "rhythm"
         | "glowUp"
         | "books"
         | "bucketList"
-        | "year";
+        | "year"
+        | "verses";
       openBoardMeeting?: boolean;
     };
 

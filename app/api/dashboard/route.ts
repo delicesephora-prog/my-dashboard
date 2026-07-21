@@ -678,6 +678,10 @@ const homeZonesDataSchema = z.object({
   monthly: z.array(homeMonthlyItemSchema).max(50),
 });
 
+const welcomeDataSchema = z.object({
+  lastShownKey: z.string(),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -704,6 +708,7 @@ const dashboardSchema = z.object({
   textAlerts: textAlertsDataSchema,
   planner: plannerDataSchema,
   homeZones: homeZonesDataSchema,
+  welcome: welcomeDataSchema,
 });
 
 export async function GET() {

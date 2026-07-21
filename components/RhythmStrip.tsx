@@ -7,15 +7,53 @@ export default function RhythmStrip({
   paydayAnchorDate,
   now,
   onChange,
+  bare = false,
 }: {
   rhythmData: RhythmData;
   paydayAnchorDate: string;
   now: Date;
   onChange: (updater: (r: RhythmData) => RhythmData) => void;
+  // When true, renders just the checklist (no card, no header) so a
+  // parent can embed it inside its own card/tabs (see FrontPage's
+  // combined Focus/Rhythm card).
+  bare?: boolean;
 }) {
   const { anchors, done, total } = todayRhythm(rhythmData, paydayAnchorDate, now);
 
-  if (total === 0) return null;
+  if (total === 0) {
+    return bare ? (
+      <p className="py-2 text-[13px] italic text-paper-muted">No rhythm anchors set for today.</p>
+    ) : null;
+  }
+
+  const list = (
+    <ul className="flex flex-col gap-1">
+      {anchors.map(({ anchor, state }) => (
+        <li key={anchor.id}>
+          <button
+            type="button"
+            onClick={() => onChange((r) => toggleAnchorDone(r, anchor.id, now))}
+            className="flex w-full items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left active:bg-paper-surface2"
+          >
+            <Dot state={state} />
+            <span
+              className={`min-w-0 flex-1 truncate text-[14px] ${
+                state === "done"
+                  ? "text-paper-faint line-through"
+                  : state === "current"
+                    ? "font-medium text-paper-ink"
+                    : "text-paper-muted"
+              }`}
+            >
+              {anchor.text}
+            </span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+
+  if (bare) return list;
 
   return (
     <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
@@ -27,30 +65,7 @@ export default function RhythmStrip({
           {done}/{total}
         </span>
       </div>
-      <ul className="flex flex-col gap-1">
-        {anchors.map(({ anchor, state }) => (
-          <li key={anchor.id}>
-            <button
-              type="button"
-              onClick={() => onChange((r) => toggleAnchorDone(r, anchor.id, now))}
-              className="flex w-full items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left active:bg-paper-surface2"
-            >
-              <Dot state={state} />
-              <span
-                className={`min-w-0 flex-1 truncate text-[14px] ${
-                  state === "done"
-                    ? "text-paper-faint line-through"
-                    : state === "current"
-                      ? "font-medium text-paper-ink"
-                      : "text-paper-muted"
-                }`}
-              >
-                {anchor.text}
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
+      {list}
     </div>
   );
 }

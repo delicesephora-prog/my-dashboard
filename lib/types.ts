@@ -9,6 +9,7 @@ import { GlowUpData, emptyGlowUpData, normalizeGlowUpData } from "./glowup";
 import { TextAlertsData, emptyTextAlertsData, normalizeTextAlertsData } from "./textalerts";
 import { PlannerData, emptyPlannerData, normalizePlannerData } from "./planner";
 import { HomeZonesData, emptyHomeZonesData, normalizeHomeZonesData } from "./home";
+import { WelcomeData, emptyWelcomeData, normalizeWelcomeData } from "./welcome";
 
 export type TaskItem = {
   id: string;
@@ -805,6 +806,7 @@ export type DashboardData = {
   textAlerts: TextAlertsData;
   planner: PlannerData;
   homeZones: HomeZonesData;
+  welcome: WelcomeData;
 };
 
 export function emptyWorld(): WorldData {
@@ -842,6 +844,7 @@ export function defaultDashboardData(): DashboardData {
     textAlerts: emptyTextAlertsData(),
     planner: emptyPlannerData(),
     homeZones: emptyHomeZonesData(),
+    welcome: emptyWelcomeData(),
   };
 }
 
@@ -958,6 +961,7 @@ export function normalizeDashboardData(
     textAlerts: normalizeTextAlertsData(data.textAlerts),
     planner: normalizePlannerData(data.planner),
     homeZones: normalizeHomeZonesData(data.homeZones),
+    welcome: normalizeWelcomeData(data.welcome),
   };
 }
 
