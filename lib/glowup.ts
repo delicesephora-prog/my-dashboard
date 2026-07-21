@@ -35,6 +35,9 @@ export type GlowUpData = {
   // Keyed by YYYY-MM.
   monthlyLogs: Record<string, string[]>;
   diyLog: DiyLogEntry[];
+  // Free-text note card describing the signature scent layering system.
+  scentNote: string;
+  contentVersion: number;
 };
 
 function item(text: string, order: number): GlowUpItem {
@@ -93,6 +96,9 @@ function seedDiy(): GlowUpDiyItem[] {
   ];
 }
 
+export const SCENT_NOTE_DEFAULT =
+  "Lane: warm cocoa/vanilla/tropical. Layer the same family at every step: wash → lotion → oil → mist → perfume on pulse points + light hair mist. Consistency is the signature.";
+
 export function emptyGlowUpData(): GlowUpData {
   return {
     dailyItems: seedDaily(),
@@ -103,6 +109,8 @@ export function emptyGlowUpData(): GlowUpData {
     weeklyLogs: {},
     monthlyLogs: {},
     diyLog: [],
+    scentNote: SCENT_NOTE_DEFAULT,
+    contentVersion: GLOWUP_CONTENT_VERSION,
   };
 }
 
@@ -120,6 +128,64 @@ export function normalizeGlowUpData(partial: Partial<GlowUpData> | null | undefi
     weeklyLogs: partial.weeklyLogs ?? {},
     monthlyLogs: partial.monthlyLogs ?? {},
     diyLog: partial.diyLog ?? [],
+    scentNote: partial.scentNote ?? fallback.scentNote,
+    contentVersion: partial.contentVersion ?? 0,
+  };
+}
+
+// One-time, additive rewrite of the Daily checklist into the real AM/PM
+// product routine, and additions to the Sunday Reset weekly list - gated
+// by contentVersion so it only ever runs once against existing saved data
+// and never fights the user's own later edits.
+export const GLOWUP_CONTENT_VERSION = 1;
+
+function seedDailyGlow(): GlowUpItem[] {
+  return [
+    item("AM: Shower — Native body wash + Dove antibacterial, African net sponge (3–4x/week, not daily)", 0),
+    item("AM: ✦ Face cleanser — CeraVe Acne Control Cleanser, in shower (AM + PM — if tight, switch to PM only)", 1),
+    item("AM: Pat skin damp, don't rub dry", 2),
+    item("AM: Body — CeraVe Moisturizing Lotion on damp skin, whole body", 3),
+    item("AM: ✦ Body butter on dry zones (elbows, knees, legs)", 4),
+    item("AM: Body — Tree Hut Tropical Glow Firming Oil on glow zones (arms, chest, shoulders), seals", 5),
+    item("AM: Body — Vaseline Cocoa Radiant 72hr lotion, extra-dry days only (optional)", 6),
+    item("AM: Deodorant", 7),
+    item("AM: Face — Naturium Vitamin C + Turmeric Brightening Face Oil", 8),
+    item("AM: ✦ Face moisturizer", 9),
+    item("AM: Face — Black Girl Sunscreen, LAST step, every day, non-negotiable", 10),
+    item("AM: Lips — lip treatment, sit a few minutes, then Aquaphor", 11),
+    item("AM: Edges oiled + get dressed", 12),
+    item("PM: Cleanse face — CeraVe Acne Control Cleanser (AM + PM — if tight, switch to PM only)", 13),
+    item("PM: ✦ Treatment — niacinamide serum (alternate nights to start)", 14),
+    item("PM: ✦ Night moisturizer", 15),
+    item("PM: Lips — Aquaphor", 16),
+    item("PM: ✦ Body butter on feet + elbows", 17),
+    item("Vitamins / supplements", 18),
+    item("Water goal", 19),
+  ];
+}
+
+const WEEKLY_GLOW_ADDITIONS: { text: string; afterText: string }[] = [
+  { text: "✦ Net sponge full-body exfoliation", afterText: "Everything shower: exfoliate, hair mask or deep condition, shave/groom" },
+  { text: "✦ Deep moisture night: body butter + oil, head to toe", afterText: "Face mask while hair mask sits" },
+];
+
+export function applyGlowUpContentUpdate(data: GlowUpData): GlowUpData {
+  if (data.contentVersion >= GLOWUP_CONTENT_VERSION) return data;
+
+  let weekly = data.weeklyItems;
+  for (const addition of WEEKLY_GLOW_ADDITIONS) {
+    if (weekly.some((w) => w.text === addition.text)) continue;
+    const idx = weekly.findIndex((w) => w.text === addition.afterText);
+    const insertAt = idx === -1 ? weekly.length : idx + 1;
+    const newItem: GlowUpItem = { id: crypto.randomUUID(), text: addition.text, order: 0 };
+    weekly = [...weekly.slice(0, insertAt), newItem, ...weekly.slice(insertAt)].map((w, i) => ({ ...w, order: i }));
+  }
+
+  return {
+    ...data,
+    dailyItems: seedDailyGlow(),
+    weeklyItems: weekly,
+    contentVersion: GLOWUP_CONTENT_VERSION,
   };
 }
 

@@ -54,6 +54,7 @@ export type RoutinesData = {
   // Keyed by YYYY-MM-DD.
   days: Record<string, RoutineDayLog>;
   seedVersion: number;
+  glowUpdateVersion: number;
 };
 
 function emptyVariant(): RoutineVariant {
@@ -172,6 +173,111 @@ export function emptyRoutinesData(): RoutinesData {
     config: seedRoutinesConfig(),
     days: {},
     seedVersion: ROUTINES_SEED_VERSION,
+    glowUpdateVersion: ROUTINES_GLOW_UPDATE_VERSION,
+  };
+}
+
+// One-time, additive expansion of the "Shower + get ready" morning step and
+// the "Skincare" night step into the real, checkable product-by-product
+// routine - gated by glowUpdateVersion (separate from seedVersion, which
+// wipes all saved data) so it runs exactly once against existing saved
+// routines and never re-inserts a step the user has since edited or
+// deleted.
+export const ROUTINES_GLOW_UPDATE_VERSION = 1;
+
+const MORNING_GLOW_STEPS: Omit<RoutineStep, "id" | "order">[] = [
+  step("Shower — Native body wash + Dove antibacterial, African net sponge (3–4x/week, not daily)"),
+  step("✦ Face: CeraVe Acne Control Cleanser, in shower (AM + PM — if skin feels tight, switch to PM only)"),
+  step("Pat skin damp, don't rub dry"),
+  step("Body: CeraVe Moisturizing Lotion on damp skin — whole body"),
+  step("✦ Body butter on dry zones (elbows, knees, legs)"),
+  step("Body: Tree Hut Tropical Glow Firming Oil on glow zones (arms, chest, shoulders) — seals"),
+  step("Body: Vaseline Cocoa Radiant 72hr lotion — extra-dry days only (optional)"),
+  step("Deodorant"),
+  step("Face: Naturium Vitamin C + Turmeric Brightening Face Oil"),
+  step("✦ Face moisturizer"),
+  step("Face: Black Girl Sunscreen — LAST step, every day, non-negotiable"),
+  step("Lips: lip treatment, sit a few minutes, then Aquaphor"),
+  step("Edges oiled + get dressed"),
+];
+
+const REMOTE_MORNING_EXTRAS: Omit<RoutineStep, "id" | "order">[] = [
+  step("Tend Skin on bikini area if needed (shave days only)"),
+  step("One small self-care add of choice"),
+];
+
+const NIGHT_SKINCARE_STEPS: Omit<RoutineStep, "id" | "order">[] = [
+  step("Cleanse face — CeraVe Acne Control Cleanser (AM + PM — if skin feels tight, switch to PM only)"),
+  step("✦ Treatment: niacinamide serum (alternate nights to start)"),
+  step("✦ Night moisturizer"),
+  step("Lips: Aquaphor"),
+  step("✦ Body butter on feet + elbows"),
+];
+
+// Replaces the single step matching `matchText` with `replacement`, or
+// leaves the list untouched if that step is no longer present (already
+// edited or deleted by the user).
+function expandStep(
+  steps: RoutineStep[],
+  matchText: string,
+  replacement: Omit<RoutineStep, "id" | "order">[]
+): RoutineStep[] {
+  const idx = steps.findIndex((s) => s.text === matchText);
+  if (idx === -1) return steps;
+  const inserted = replacement.map((s) => ({ ...s, id: crypto.randomUUID() }));
+  return [...steps.slice(0, idx), ...inserted, ...steps.slice(idx + 1)].map((s, i) => ({ ...s, order: i }));
+}
+
+// Inserts `additions` right after the step matching `afterText` (or at the
+// end if that step isn't found).
+function insertStepsAfter(
+  steps: RoutineStep[],
+  afterText: string,
+  additions: Omit<RoutineStep, "id" | "order">[]
+): RoutineStep[] {
+  const idx = steps.findIndex((s) => s.text === afterText);
+  const insertAt = idx === -1 ? steps.length : idx + 1;
+  const inserted = additions.map((s) => ({ ...s, id: crypto.randomUUID() }));
+  return [...steps.slice(0, insertAt), ...inserted, ...steps.slice(insertAt)].map((s, i) => ({ ...s, order: i }));
+}
+
+export function applyGlowRoutineUpdate(data: RoutinesData): RoutinesData {
+  if (data.glowUpdateVersion >= ROUTINES_GLOW_UPDATE_VERSION) return data;
+
+  const morning = data.config.morning;
+  const night = data.config.night;
+
+  return {
+    ...data,
+    config: {
+      ...data.config,
+      morning: {
+        variants: {
+          office: { steps: expandStep(morning.variants.office.steps, "Shower + get ready", MORNING_GLOW_STEPS) },
+          remote: {
+            steps: expandStep(morning.variants.remote.steps, "Shower + dress like it counts", [
+              ...MORNING_GLOW_STEPS,
+              ...REMOTE_MORNING_EXTRAS,
+            ]),
+          },
+          weekend: {
+            steps: insertStepsAfter(
+              morning.variants.weekend.steps,
+              "Unhurried devotional + journal",
+              MORNING_GLOW_STEPS
+            ),
+          },
+        },
+      },
+      night: {
+        variants: {
+          office: { steps: expandStep(night.variants.office.steps, "Skincare", NIGHT_SKINCARE_STEPS) },
+          remote: { steps: expandStep(night.variants.remote.steps, "Skincare", NIGHT_SKINCARE_STEPS) },
+          weekend: { steps: expandStep(night.variants.weekend.steps, "Skincare", NIGHT_SKINCARE_STEPS) },
+        },
+      },
+    },
+    glowUpdateVersion: ROUTINES_GLOW_UPDATE_VERSION,
   };
 }
 
@@ -192,7 +298,12 @@ export function normalizeRoutinesData(
   partial: Partial<RoutinesData> | null | undefined
 ): RoutinesData {
   if ((partial?.seedVersion ?? 0) < ROUTINES_SEED_VERSION) {
-    return { config: seedRoutinesConfig(), days: {}, seedVersion: ROUTINES_SEED_VERSION };
+    return {
+      config: seedRoutinesConfig(),
+      days: {},
+      seedVersion: ROUTINES_SEED_VERSION,
+      glowUpdateVersion: ROUTINES_GLOW_UPDATE_VERSION,
+    };
   }
   const fallback = emptyRoutinesData();
   return {
@@ -203,6 +314,7 @@ export function normalizeRoutinesData(
     },
     days: partial?.days ?? fallback.days,
     seedVersion: partial?.seedVersion ?? ROUTINES_SEED_VERSION,
+    glowUpdateVersion: partial?.glowUpdateVersion ?? 0,
   };
 }
 

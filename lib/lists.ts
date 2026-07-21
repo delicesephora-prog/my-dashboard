@@ -32,6 +32,7 @@ export type StapleItem = {
 export type GroceryData = {
   items: GroceryItem[];
   staples: StapleItem[];
+  seedItemsVersion: number;
 };
 
 function staple(text: string, category: GroceryCategory): StapleItem {
@@ -48,8 +49,10 @@ function seedStaples(): StapleItem[] {
   ];
 }
 
+export const GROCERY_SEED_ITEMS_VERSION = 1;
+
 export function emptyGroceryData(): GroceryData {
-  return { items: [], staples: seedStaples() };
+  return { items: [], staples: seedStaples(), seedItemsVersion: GROCERY_SEED_ITEMS_VERSION };
 }
 
 export function normalizeGroceryData(
@@ -60,6 +63,35 @@ export function normalizeGroceryData(
     // An empty staples list is functionally identical to "never set up" -
     // seed the default staple chips rather than leaving the row blank.
     staples: partial?.staples && partial.staples.length > 0 ? partial.staples : seedStaples(),
+    seedItemsVersion: partial?.seedItemsVersion ?? 0,
+  };
+}
+
+// One-time additive seed of specific shopping items requested outside the
+// app (e.g. "add body butter to my shopping list") - only adds an item if
+// it isn't already on the list, and only the first time, so it never
+// re-adds something the user already bought and removed.
+const SEED_ITEMS: { text: string; category: GroceryCategory }[] = [
+  { text: "Body butter", category: "Personal Care" },
+];
+
+export function ensureGrocerySeedItems(data: GroceryData): GroceryData {
+  if (data.seedItemsVersion >= GROCERY_SEED_ITEMS_VERSION) return data;
+
+  const hasItem = (text: string) =>
+    data.items.some((i) => i.text.trim().toLowerCase() === text.toLowerCase());
+  const additions: GroceryItem[] = SEED_ITEMS.filter((s) => !hasItem(s.text)).map((s) => ({
+    id: crypto.randomUUID(),
+    text: s.text,
+    category: s.category,
+    done: false,
+    createdAt: new Date().toISOString(),
+  }));
+
+  return {
+    ...data,
+    items: additions.length > 0 ? [...data.items, ...additions] : data.items,
+    seedItemsVersion: GROCERY_SEED_ITEMS_VERSION,
   };
 }
 

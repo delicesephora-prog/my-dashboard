@@ -187,7 +187,7 @@ function RoutinesSection({
                         ariaLabel={doneIds.includes(step.id) ? "Mark not done" : "Mark done"}
                       />
                       <span
-                        className={`min-w-0 flex-1 truncate text-[13px] ${
+                        className={`min-w-0 flex-1 text-[13px] leading-snug ${
                           doneIds.includes(step.id) ? "text-paper-faint line-through" : "text-paper-ink"
                         }`}
                       >

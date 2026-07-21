@@ -469,6 +469,8 @@ const glowUpDataSchema = z.object({
   weeklyLogs: z.record(z.array(z.string()).max(50)),
   monthlyLogs: z.record(z.array(z.string()).max(50)),
   diyLog: z.array(diyLogEntrySchema).max(500),
+  scentNote: z.string().max(2000),
+  contentVersion: z.number().int(),
 });
 
 const rhythmAnchorSchema = z.object({
@@ -523,6 +525,7 @@ const stapleItemSchema = z.object({
 const groceryDataSchema = z.object({
   items: z.array(groceryItemSchema).max(500),
   staples: z.array(stapleItemSchema).max(300),
+  seedItemsVersion: z.number().int(),
 });
 
 const dumpItemSchema = z.object({
@@ -588,6 +591,7 @@ const routinesDataSchema = z.object({
   }),
   days: z.record(routineDayLogSchema),
   seedVersion: z.number().int(),
+  glowUpdateVersion: z.number().int(),
 });
 
 const textAlertsSettingsSchema = z.object({

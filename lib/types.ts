@@ -1,11 +1,11 @@
-import { RoutinesData, emptyRoutinesData, normalizeRoutinesData } from "./routines";
+import { RoutinesData, emptyRoutinesData, normalizeRoutinesData, applyGlowRoutineUpdate } from "./routines";
 import { PaydayChecklistData, emptyPaydayChecklistData, seedPaydaySteps, PAYDAY_SEED_VERSION } from "./payday";
 import { WarRoomData, emptyWarRoomData, normalizeWarRoomData } from "./warroom";
 import { LifeScoreData, emptyLifeScoreData, normalizeLifeScoreData } from "./lifescore";
 import { BoardMeetingData, emptyBoardMeetingData, normalizeBoardMeetingData } from "./boardmeeting";
-import { ListsData, emptyListsData, normalizeListsData } from "./lists";
+import { ListsData, emptyListsData, normalizeListsData, ensureGrocerySeedItems } from "./lists";
 import { RhythmData, emptyRhythmData, normalizeRhythmData } from "./rhythm";
-import { GlowUpData, emptyGlowUpData, normalizeGlowUpData } from "./glowup";
+import { GlowUpData, emptyGlowUpData, normalizeGlowUpData, applyGlowUpContentUpdate } from "./glowup";
 import { TextAlertsData, emptyTextAlertsData, normalizeTextAlertsData } from "./textalerts";
 import { PlannerData, emptyPlannerData, normalizePlannerData } from "./planner";
 import { HomeZonesData, emptyHomeZonesData, normalizeHomeZonesData } from "./home";
@@ -1053,6 +1053,10 @@ export function normalizeDashboardData(
   const linked = ensureLinkedMoneyEntities(result.lifeQuarterly.money, result.budget);
   result.lifeQuarterly = { ...result.lifeQuarterly, money: linked.money };
   result.budget = linked.budget;
+
+  result.routines = applyGlowRoutineUpdate(result.routines);
+  result.glowUp = applyGlowUpContentUpdate(result.glowUp);
+  result.lists = { ...result.lists, grocery: ensureGrocerySeedItems(result.lists.grocery) };
 
   return result;
 }
