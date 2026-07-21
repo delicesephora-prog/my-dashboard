@@ -985,6 +985,55 @@ const financeDataSchema = z.object({
   budgets: z.array(budgetSchema),
 });
 
+const weddingChecklistItemSchema = z.object({
+  id: z.string(),
+  text: z.string().max(500),
+  dueDate: z.string().nullable(),
+  done: z.boolean(),
+});
+
+const weddingVendorSchema = z.object({
+  id: z.string(),
+  name: z.string().max(200),
+  category: z.string().max(200),
+  contactName: z.string().max(200),
+  phone: z.string().max(50),
+  email: z.string().max(200),
+  status: z.enum(["researching", "contacted", "booked", "paid"]),
+  notes: z.string().max(5000),
+});
+
+const weddingGuestSchema = z.object({
+  id: z.string(),
+  name: z.string().max(200),
+  group: z.string().max(200),
+  rsvp: z.enum(["pending", "yes", "no"]),
+  plusOne: z.boolean(),
+  notes: z.string().max(2000),
+});
+
+const weddingBudgetItemSchema = z.object({
+  id: z.string(),
+  category: z.string().max(200),
+  estimated: z.number(),
+  actual: z.number(),
+});
+
+const weddingTimelineEventSchema = z.object({
+  id: z.string(),
+  time: z.string().max(50),
+  text: z.string().max(500),
+});
+
+const weddingDataSchema = z.object({
+  weddingDate: z.string().nullable(),
+  checklist: z.array(weddingChecklistItemSchema),
+  vendors: z.array(weddingVendorSchema),
+  guests: z.array(weddingGuestSchema),
+  budget: z.array(weddingBudgetItemSchema),
+  timeline: z.array(weddingTimelineEventSchema),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -1030,6 +1079,7 @@ const dashboardSchema = z.object({
   memos: memosDataSchema,
   health: healthDataSchema,
   finance: financeDataSchema,
+  wedding: weddingDataSchema,
 });
 
 export async function GET() {
