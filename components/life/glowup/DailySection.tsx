@@ -24,7 +24,7 @@ export default function DailySection({
         <textarea
           value={data.scentNote}
           onChange={(e) => onChange((g) => ({ ...g, scentNote: e.target.value }))}
-          rows={3}
+          rows={4}
           className="w-full resize-none rounded-lg border border-paper-border bg-paper-surface2 p-2.5 text-[13px] leading-snug text-paper-ink outline-none"
         />
       </div>
