@@ -1034,6 +1034,50 @@ const weddingDataSchema = z.object({
   timeline: z.array(weddingTimelineEventSchema),
 });
 
+const itineraryEventSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  time: z.string().max(50),
+  text: z.string().max(500),
+});
+
+const packingItemSchema = z.object({
+  id: z.string(),
+  text: z.string().max(300),
+  packed: z.boolean(),
+});
+
+const tripBudgetItemSchema = z.object({
+  id: z.string(),
+  category: z.string().max(200),
+  estimated: z.number(),
+  actual: z.number(),
+});
+
+const tripSchema = z.object({
+  id: z.string(),
+  name: z.string().max(200),
+  destination: z.string().max(200),
+  startDate: z.string().nullable(),
+  endDate: z.string().nullable(),
+  notes: z.string().max(5000),
+  itinerary: z.array(itineraryEventSchema),
+  packingList: z.array(packingItemSchema),
+  budget: z.array(tripBudgetItemSchema),
+});
+
+const savedIdeaSchema = z.object({
+  id: z.string(),
+  text: z.string().max(500),
+  link: z.string().max(2000),
+  notes: z.string().max(2000),
+});
+
+const tripsDataSchema = z.object({
+  trips: z.array(tripSchema),
+  savedIdeas: z.array(savedIdeaSchema),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -1080,6 +1124,7 @@ const dashboardSchema = z.object({
   health: healthDataSchema,
   finance: financeDataSchema,
   wedding: weddingDataSchema,
+  trips: tripsDataSchema,
 });
 
 export async function GET() {
