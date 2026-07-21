@@ -863,6 +863,45 @@ const focusDataSchema = z.object({
   sessions: z.array(focusSessionSchema).max(2000),
 });
 
+const assistantMessageSchema = z.object({
+  id: z.string(),
+  role: z.enum(["user", "assistant"]),
+  content: z.string().max(8000),
+  createdAt: z.string(),
+});
+
+const assistantDataSchema = z.object({
+  messages: z.array(assistantMessageSchema).max(200),
+});
+
+const becomingMessageSchema = z.object({
+  id: z.string(),
+  role: z.enum(["user", "assistant"]),
+  content: z.string().max(8000),
+  createdAt: z.string(),
+});
+
+const dailyActionSchema = z.object({
+  date: z.string(),
+  action: z.string().max(2000),
+  done: z.boolean(),
+});
+
+const reflectionSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  text: z.string().max(8000),
+  aiResponse: z.string().max(8000),
+});
+
+const becomingDataSchema = z.object({
+  onboarded: z.boolean(),
+  profileSummary: z.string().max(4000),
+  conversation: z.array(becomingMessageSchema).max(200),
+  dailyActions: z.record(dailyActionSchema),
+  reflections: z.array(reflectionSchema).max(1000),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -902,6 +941,8 @@ const dashboardSchema = z.object({
   fridayLedger: fridayLedgerDataSchema,
   events: eventsDataSchema,
   focus: focusDataSchema,
+  assistant: assistantDataSchema,
+  becoming: becomingDataSchema,
 });
 
 export async function GET() {

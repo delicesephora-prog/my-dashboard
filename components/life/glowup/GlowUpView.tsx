@@ -2,26 +2,33 @@
 
 import { useState } from "react";
 import { GlowUpData } from "@/lib/glowup";
+import { BecomingData } from "@/lib/becoming";
 import DailySection from "./DailySection";
 import WeeklySection from "./WeeklySection";
 import MonthlySection from "./MonthlySection";
 import DiySection from "./DiySection";
+import BecomingSection from "./BecomingSection";
 
-type SubView = "daily" | "weekly" | "monthly" | "diy";
+type SubView = "daily" | "weekly" | "monthly" | "diy" | "becoming";
 
 const TABS: { key: SubView; label: string }[] = [
   { key: "daily", label: "Daily" },
   { key: "weekly", label: "Sunday Reset" },
   { key: "monthly", label: "Monthly" },
   { key: "diy", label: "DIY Bank" },
+  { key: "becoming", label: "Becoming" },
 ];
 
 export default function GlowUpView({
   data,
   onChange,
+  becoming,
+  onChangeBecoming,
 }: {
   data: GlowUpData;
   onChange: (updater: (g: GlowUpData) => GlowUpData) => void;
+  becoming: BecomingData;
+  onChangeBecoming: (updater: (b: BecomingData) => BecomingData) => void;
 }) {
   const [sub, setSub] = useState<SubView>("daily");
 
@@ -53,6 +60,7 @@ export default function GlowUpView({
       {sub === "weekly" && <WeeklySection data={data} onChange={onChange} />}
       {sub === "monthly" && <MonthlySection data={data} onChange={onChange} />}
       {sub === "diy" && <DiySection data={data} onChange={onChange} />}
+      {sub === "becoming" && <BecomingSection becoming={becoming} onChange={onChangeBecoming} />}
     </div>
   );
 }

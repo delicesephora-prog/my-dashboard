@@ -53,6 +53,9 @@ import FridayLedgerView from "./work/FridayLedgerView";
 import EventsView from "./work/EventsView";
 import { FocusData } from "@/lib/focus";
 import FocusModeView from "./FocusModeView";
+import { AssistantData } from "@/lib/assistant";
+import AssistantView from "./AssistantView";
+import { BecomingData } from "@/lib/becoming";
 import BoardMeeting from "./BoardMeeting";
 import QuickDump from "./QuickDump";
 import { todayKey } from "@/lib/date";
@@ -125,7 +128,8 @@ type LifeView =
   | "year"
   | "dec8"
   | "verses"
-  | "pixels";
+  | "pixels"
+  | "assistant";
 
 const SAVE_DELAY_MS = 700;
 
@@ -439,6 +443,16 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     scheduleSave();
   }
 
+  function updateAssistant(updater: (a: AssistantData) => AssistantData) {
+    setData((prev) => ({ ...prev, assistant: updater(prev.assistant) }));
+    scheduleSave();
+  }
+
+  function updateBecoming(updater: (b: BecomingData) => BecomingData) {
+    setData((prev) => ({ ...prev, becoming: updater(prev.becoming) }));
+    scheduleSave();
+  }
+
   function sendDumpItemToWork(text: string) {
     setData((prev) => ({
       ...prev,
@@ -699,6 +713,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                   { key: "dec8", label: "Dec 8" },
                   { key: "verses", label: "Verses" },
                   { key: "pixels", label: "Year in Pixels" },
+                  { key: "assistant", label: "Assistant" },
                 ]}
                 active={lifeView}
                 onChange={setLifeView}
@@ -774,7 +789,12 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
               <RhythmView rhythmData={data.rhythm} onChange={updateRhythm} />
             )}
             {lifeView === "glowUp" && (
-              <GlowUpView data={data.glowUp} onChange={updateGlowUp} />
+              <GlowUpView
+                data={data.glowUp}
+                onChange={updateGlowUp}
+                becoming={data.becoming}
+                onChangeBecoming={updateBecoming}
+              />
             )}
             {lifeView === "home" && (
               <HomeView data={data.homeZones} onChange={updateHomeZones} />
@@ -797,6 +817,9 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             )}
             {lifeView === "verses" && <VersesView />}
             {lifeView === "pixels" && <YearPixelsView lifeScore={data.lifeScore} />}
+            {lifeView === "assistant" && (
+              <AssistantView data={data} assistant={data.assistant} onChange={updateAssistant} />
+            )}
           </>
         )}
        </TabErrorBoundary>

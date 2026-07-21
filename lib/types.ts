@@ -22,6 +22,8 @@ import { FireDrillLogData, emptyFireDrillLogData, normalizeFireDrillLogData } fr
 import { FridayLedgerData, emptyFridayLedgerData, normalizeFridayLedgerData } from "./fridayledger";
 import { EventsData, emptyEventsData, normalizeEventsData } from "./events";
 import { FocusData, emptyFocusData, normalizeFocusData } from "./focus";
+import { AssistantData, emptyAssistantData, normalizeAssistantData } from "./assistant";
+import { BecomingData, emptyBecomingData, normalizeBecomingData } from "./becoming";
 
 export type TaskItem = {
   id: string;
@@ -831,6 +833,8 @@ export type DashboardData = {
   fridayLedger: FridayLedgerData;
   events: EventsData;
   focus: FocusData;
+  assistant: AssistantData;
+  becoming: BecomingData;
 };
 
 export function emptyWorld(): WorldData {
@@ -881,6 +885,8 @@ export function defaultDashboardData(): DashboardData {
     fridayLedger: emptyFridayLedgerData(),
     events: emptyEventsData(),
     focus: emptyFocusData(),
+    assistant: emptyAssistantData(),
+    becoming: emptyBecomingData(),
   };
 }
 
@@ -1010,6 +1016,8 @@ export function normalizeDashboardData(
     fridayLedger: normalizeFridayLedgerData(data.fridayLedger),
     events: normalizeEventsData(data.events),
     focus: normalizeFocusData(data.focus),
+    assistant: normalizeAssistantData(data.assistant),
+    becoming: normalizeBecomingData(data.becoming),
   };
 }
 
