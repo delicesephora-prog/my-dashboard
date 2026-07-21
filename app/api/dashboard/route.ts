@@ -910,6 +910,37 @@ const memosDataSchema = z.object({
   entries: z.record(z.string().max(20000)),
 });
 
+const appointmentSchema = z.object({
+  id: z.string(),
+  provider: z.string().max(200),
+  specialty: z.string().max(200),
+  date: z.string(),
+  time: z.string().max(50),
+  location: z.string().max(300),
+  notes: z.string().max(5000),
+});
+
+const medicationSchema = z.object({
+  id: z.string(),
+  name: z.string().max(200),
+  dosage: z.string().max(200),
+  frequency: z.string().max(200),
+  active: z.boolean(),
+  notes: z.string().max(5000),
+});
+
+const healthNoteSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  text: z.string().max(10000),
+});
+
+const healthDataSchema = z.object({
+  appointments: z.array(appointmentSchema),
+  medications: z.array(medicationSchema),
+  notes: z.array(healthNoteSchema),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -953,6 +984,7 @@ const dashboardSchema = z.object({
   becoming: becomingDataSchema,
   quest: questDataSchema,
   memos: memosDataSchema,
+  health: healthDataSchema,
 });
 
 export async function GET() {

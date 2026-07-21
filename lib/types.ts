@@ -26,6 +26,7 @@ import { AssistantData, emptyAssistantData, normalizeAssistantData } from "./ass
 import { BecomingData, emptyBecomingData, normalizeBecomingData } from "./becoming";
 import { QuestData, emptyQuestData, normalizeQuestData } from "./quest";
 import { MemosData, emptyMemosData, normalizeMemosData } from "./memos";
+import { HealthData, emptyHealthData, normalizeHealthData } from "./health";
 
 export type TaskItem = {
   id: string;
@@ -839,6 +840,7 @@ export type DashboardData = {
   becoming: BecomingData;
   quest: QuestData;
   memos: MemosData;
+  health: HealthData;
 };
 
 export function emptyWorld(): WorldData {
@@ -893,6 +895,7 @@ export function defaultDashboardData(): DashboardData {
     becoming: emptyBecomingData(),
     quest: emptyQuestData(),
     memos: emptyMemosData(),
+    health: emptyHealthData(),
   };
 }
 
@@ -1026,6 +1029,7 @@ export function normalizeDashboardData(
     becoming: normalizeBecomingData(data.becoming),
     quest: normalizeQuestData(data.quest),
     memos: normalizeMemosData(data.memos),
+    health: normalizeHealthData(data.health),
   };
 }
 

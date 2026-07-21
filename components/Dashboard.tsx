@@ -59,6 +59,7 @@ import { BecomingData } from "@/lib/becoming";
 import { Celebration, CelebrationTier } from "@/lib/celebration";
 import { QuestData } from "@/lib/quest";
 import { MemosData } from "@/lib/memos";
+import { HealthData } from "@/lib/health";
 import CelebrationOverlay from "./CelebrationOverlay";
 import BoardMeeting from "./BoardMeeting";
 import QuickDump from "./QuickDump";
@@ -94,6 +95,7 @@ import YearView from "./life/year/YearView";
 import VersesView from "./life/VersesView";
 import YearPixelsView from "./life/YearPixelsView";
 import MemosView from "./life/MemosView";
+import HealthView from "./life/HealthView";
 import WarRoomSection from "./life/year/WarRoomSection";
 import SaveIndicator, { SaveStatus } from "./SaveIndicator";
 import TabErrorBoundary from "./TabErrorBoundary";
@@ -135,7 +137,8 @@ type LifeView =
   | "verses"
   | "pixels"
   | "assistant"
-  | "memos";
+  | "memos"
+  | "health";
 
 const SAVE_DELAY_MS = 700;
 
@@ -340,6 +343,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
 
   function updateMemos(updater: (m: MemosData) => MemosData) {
     setData((prev) => ({ ...prev, memos: updater(prev.memos) }));
+    scheduleSave();
+  }
+
+  function updateHealth(updater: (h: HealthData) => HealthData) {
+    setData((prev) => ({ ...prev, health: updater(prev.health) }));
     scheduleSave();
   }
 
@@ -739,6 +747,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                   { key: "pixels", label: "Year in Pixels" },
                   { key: "assistant", label: "Assistant" },
                   { key: "memos", label: "Memos" },
+                  { key: "health", label: "Health" },
                 ]}
                 active={lifeView}
                 onChange={setLifeView}
@@ -845,6 +854,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             {lifeView === "verses" && <VersesView />}
             {lifeView === "pixels" && <YearPixelsView lifeScore={data.lifeScore} />}
             {lifeView === "memos" && <MemosView data={data.memos} onChange={updateMemos} />}
+            {lifeView === "health" && <HealthView health={data.health} onChange={updateHealth} />}
             {lifeView === "assistant" && (
               <AssistantView data={data} assistant={data.assistant} onChange={updateAssistant} />
             )}
