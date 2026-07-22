@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  PLANNER_CATEGORIES,
-  PLANNER_CATEGORY_COLORS,
   PlannerBlock,
   PlannerCategory,
+  PlannerCategoryDef,
   RoutineGhostBlock,
+  categoryColor,
   layoutByTime,
+  sortedCategories,
   timeToMinutes,
 } from "@/lib/planner";
 import CheckCircle from "../../CheckCircle";
@@ -59,6 +60,7 @@ export default function DayTimeline({
   isToday,
   blocks,
   ghosts,
+  categories,
   doneBlockIds,
   doneGhostIds,
   onEditBlock,
@@ -73,6 +75,7 @@ export default function DayTimeline({
   isToday: boolean;
   blocks: PlannerBlock[];
   ghosts: RoutineGhostBlock[];
+  categories: PlannerCategoryDef[];
   doneBlockIds: Set<string>;
   doneGhostIds: Set<string>;
   onEditBlock: (block: PlannerBlock) => void;
@@ -254,10 +257,12 @@ export default function DayTimeline({
   const laid = layoutByTime(openItems);
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
-  const doneByCategory = PLANNER_CATEGORIES.map((cat) => ({
-    category: cat,
-    items: doneItems.filter((i) => i.category === cat),
-  })).filter((g) => g.items.length > 0);
+  const doneByCategory = sortedCategories(categories)
+    .map((cat) => ({
+      category: cat,
+      items: doneItems.filter((i) => i.category === cat.id),
+    }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <div
@@ -318,7 +323,7 @@ export default function DayTimeline({
             const height = Math.max(((item.endMin - item.startMin) / 60) * HOUR_HEIGHT, 22);
             const widthPct = 100 / item.columns;
             const leftPct = widthPct * item.column;
-            const color = item.category ? PLANNER_CATEGORY_COLORS[item.category] : GHOST_COLOR;
+            const color = item.category ? categoryColor(categories, item.category) : GHOST_COLOR;
 
             return (
               <div
@@ -426,14 +431,11 @@ export default function DayTimeline({
           </p>
           <div className="flex flex-col gap-2.5">
             {doneByCategory.map(({ category, items }) => (
-              <div key={category}>
+              <div key={category.id}>
                 <div className="mb-1 flex items-center gap-1.5">
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{ backgroundColor: PLANNER_CATEGORY_COLORS[category] }}
-                  />
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: category.color }} />
                   <p className="text-[11px] font-medium text-paper-muted">
-                    {category} ({items.length})
+                    {category.label} ({items.length})
                   </p>
                 </div>
                 <ul className="flex flex-col gap-1 pl-3.5">

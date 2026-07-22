@@ -2,15 +2,15 @@
 
 import { useState } from "react";
 import {
-  PLANNER_CATEGORIES,
-  PLANNER_CATEGORY_COLORS,
   PLANNER_DAYS,
   PLANNER_DAY_SHORT_LABELS,
   PlannerBlock,
   PlannerCategory,
+  PlannerCategoryDef,
   PlannerDayKey,
   RoutineGhostBlock,
   minutesToTime,
+  sortedCategories,
   timeToMinutes,
 } from "@/lib/planner";
 import { RoutineKey, ROUTINE_LABELS } from "@/lib/routines";
@@ -22,15 +22,18 @@ export type BlockEditTarget =
 export default function BlockEditorSheet({
   target,
   defaultDate,
+  categories,
   onSaveBlock,
   onDeleteBlock,
   onSaveGhostOverride,
   onHideGhostForToday,
   onEditTemplate,
+  onManageCategories,
   onClose,
 }: {
   target: BlockEditTarget;
   defaultDate: string;
+  categories: PlannerCategoryDef[];
   onSaveBlock: (block: PlannerBlock) => void;
   onDeleteBlock?: () => void;
   onSaveGhostOverride: (
@@ -39,14 +42,18 @@ export default function BlockEditorSheet({
   ) => void;
   onHideGhostForToday: (ghost: RoutineGhostBlock) => void;
   onEditTemplate: (routineKey: RoutineKey) => void;
+  onManageCategories: () => void;
   onClose: () => void;
 }) {
   const block = target.kind === "block" ? target.block : null;
   const ghost = target.kind === "ghost" ? target.ghost : null;
   const isGhost = target.kind === "ghost";
+  const sorted = sortedCategories(categories);
 
   const [title, setTitle] = useState(block?.title ?? ghost?.title ?? "");
-  const [category, setCategory] = useState<PlannerCategory>(block?.category ?? ghost?.category ?? "Work");
+  const [category, setCategory] = useState<PlannerCategory>(
+    block?.category ?? ghost?.category ?? sorted[0]?.id ?? "work"
+  );
   const [notes, setNotes] = useState(block?.notes ?? ghost?.notes ?? "");
   const [startTime, setStartTime] = useState(block?.startTime ?? ghost?.startTime ?? "09:00");
   const [endTime, setEndTime] = useState(
@@ -110,27 +117,32 @@ export default function BlockEditorSheet({
           />
 
           <div>
-            <p className="mb-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-paper-muted">
-              Category
-            </p>
+            <div className="mb-1.5 flex items-center justify-between">
+              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-paper-muted">
+                Category
+              </p>
+              <button
+                type="button"
+                onClick={onManageCategories}
+                className="text-[11px] font-medium text-life underline underline-offset-2"
+              >
+                Edit categories
+              </button>
+            </div>
             <div className="flex flex-wrap gap-1.5">
-              {PLANNER_CATEGORIES.map((c) => (
+              {sorted.map((c) => (
                 <button
-                  key={c}
+                  key={c.id}
                   type="button"
-                  onClick={() => setCategory(c)}
+                  onClick={() => setCategory(c.id)}
                   className="rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition"
                   style={
-                    category === c
-                      ? {
-                          backgroundColor: PLANNER_CATEGORY_COLORS[c],
-                          borderColor: PLANNER_CATEGORY_COLORS[c],
-                          color: "#FBF8F2",
-                        }
-                      : { borderColor: PLANNER_CATEGORY_COLORS[c], color: PLANNER_CATEGORY_COLORS[c] }
+                    category === c.id
+                      ? { backgroundColor: c.color, borderColor: c.color, color: "#FBF8F2" }
+                      : { borderColor: c.color, color: c.color }
                   }
                 >
-                  {c}
+                  {c.label}
                 </button>
               ))}
             </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { PLANNER_CATEGORY_COLORS, PlannerBlock, PlannerDayEntry } from "@/lib/planner";
+import { PlannerBlock, PlannerCategoryDef, PlannerDayEntry, categoryColor } from "@/lib/planner";
 import { todayKey } from "@/lib/date";
 
 function formatClock(hhmm: string): string {
@@ -12,10 +12,12 @@ function formatClock(hhmm: string): string {
 
 export default function WeekTimeline({
   days,
+  categories,
   onEditBlock,
   onJumpToDay,
 }: {
   days: PlannerDayEntry[];
+  categories: PlannerCategoryDef[];
   onEditBlock: (block: PlannerBlock) => void;
   onJumpToDay: (dateKeyStr: string) => void;
 }) {
@@ -58,7 +60,7 @@ export default function WeekTimeline({
                       >
                         <span
                           className="h-2 w-2 shrink-0 rounded-full"
-                          style={{ backgroundColor: PLANNER_CATEGORY_COLORS[b.category] }}
+                          style={{ backgroundColor: categoryColor(categories, b.category) }}
                         />
                         <span className="shrink-0 text-[11px] text-paper-muted">{formatClock(b.startTime)}</span>
                         <span className="min-w-0 flex-1 truncate text-[13px] text-paper-ink">{b.title}</span>

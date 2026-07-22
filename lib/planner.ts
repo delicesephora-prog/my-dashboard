@@ -1,17 +1,116 @@
 import { dateKey } from "./date";
 import { RoutineKey, ROUTINE_ICONS, ROUTINE_KEYS, RoutinesConfig, dayTypeForDate, stepsFor } from "./routines";
 
-export type PlannerCategory = "Work" | "Life" | "Faith" | "Fitness" | "Admin";
+// A category is a user-managed id + label + color, not a fixed set - so
+// Sephora can add her own (Date Night, Girls' Night, ...) and recolor any
+// of them. `category` fields elsewhere just store the id; a deleted or
+// unrecognized id falls back to FALLBACK_CATEGORY_COLOR/"Other" rather
+// than breaking anything that referenced it.
+export type PlannerCategory = string;
 
-export const PLANNER_CATEGORIES: PlannerCategory[] = ["Work", "Life", "Faith", "Fitness", "Admin"];
-
-export const PLANNER_CATEGORY_COLORS: Record<PlannerCategory, string> = {
-  Work: "#4B5A24",
-  Life: "#C7A46B",
-  Faith: "#6B6E9B",
-  Fitness: "#8FA37E",
-  Admin: "#9C8B6F",
+export type PlannerCategoryDef = {
+  id: string;
+  label: string;
+  color: string;
+  order: number;
 };
+
+export const FALLBACK_CATEGORY_COLOR = "#A9A296";
+
+// A curated set of preset swatches to pick from when coloring a category -
+// distinct hues in the app's warm-paper palette, shown as a grid of
+// circles in the category editor.
+export const PLANNER_COLOR_PALETTE: string[] = [
+  "#4B5A24",
+  "#8FA37E",
+  "#5C8A72",
+  "#3F6B7A",
+  "#4E8FA3",
+  "#6E7B8B",
+  "#6B6E9B",
+  "#7A6BA5",
+  "#BA6E8F",
+  "#C77DA0",
+  "#B5574A",
+  "#D98E4A",
+  "#C7A46B",
+  "#9C8B6F",
+  "#8A5A44",
+  "#A9A296",
+];
+
+function defaultCategories(): PlannerCategoryDef[] {
+  return [
+    { id: "work", label: "Work", color: "#4B5A24", order: 0 },
+    { id: "life", label: "Life", color: "#C7A46B", order: 1 },
+    { id: "faith", label: "Faith", color: "#6B6E9B", order: 2 },
+    { id: "fitness", label: "Fitness", color: "#8FA37E", order: 3 },
+    { id: "admin", label: "Admin", color: "#9C8B6F", order: 4 },
+    { id: "date-night", label: "Date Night", color: "#B5574A", order: 5 },
+    { id: "girls-night", label: "Girls' Night", color: "#C77DA0", order: 6 },
+    { id: "appointments", label: "Appointments", color: "#4E8FA3", order: 7 },
+  ];
+}
+
+export function sortedCategories(categories: PlannerCategoryDef[]): PlannerCategoryDef[] {
+  return [...categories].sort((a, b) => a.order - b.order);
+}
+
+export function categoryById(
+  categories: PlannerCategoryDef[],
+  id: string | null
+): PlannerCategoryDef | null {
+  if (!id) return null;
+  return categories.find((c) => c.id === id) ?? null;
+}
+
+export function categoryColor(categories: PlannerCategoryDef[], id: string | null): string {
+  return categoryById(categories, id)?.color ?? FALLBACK_CATEGORY_COLOR;
+}
+
+export function categoryLabel(categories: PlannerCategoryDef[], id: string | null): string {
+  return categoryById(categories, id)?.label ?? "Other";
+}
+
+export function addCategory(data: PlannerData, label: string, color: string): PlannerData {
+  const order = data.categories.length;
+  const newCategory: PlannerCategoryDef = { id: crypto.randomUUID(), label, color, order };
+  return { ...data, categories: [...data.categories, newCategory] };
+}
+
+export function updateCategory(
+  data: PlannerData,
+  id: string,
+  updater: (c: PlannerCategoryDef) => PlannerCategoryDef
+): PlannerData {
+  return { ...data, categories: data.categories.map((c) => (c.id === id ? updater(c) : c)) };
+}
+
+// Refuses to delete the last remaining category - every block needs
+// somewhere to land. Blocks/overrides pointing at the deleted id are left
+// as-is; categoryColor/categoryLabel already fall back gracefully for an
+// id that no longer resolves.
+export function deleteCategory(data: PlannerData, id: string): PlannerData {
+  if (data.categories.length <= 1) return data;
+  return { ...data, categories: data.categories.filter((c) => c.id !== id) };
+}
+
+export function reorderCategory(data: PlannerData, id: string, direction: -1 | 1): PlannerData {
+  const sorted = sortedCategories(data.categories);
+  const idx = sorted.findIndex((c) => c.id === id);
+  const swapIdx = idx + direction;
+  if (idx === -1 || swapIdx < 0 || swapIdx >= sorted.length) return data;
+  const a = sorted[idx];
+  const b = sorted[swapIdx];
+  return {
+    ...data,
+    categories: data.categories.map((c) => {
+      if (c.id === a.id) return { ...c, order: b.order };
+      if (c.id === b.id) return { ...c, order: a.order };
+      return c;
+    }),
+  };
+}
 
 export type PlannerDayKey =
   | "monday"
@@ -79,6 +178,7 @@ export type RoutineBlockOverride = {
 export type PlannerData = {
   blocks: PlannerBlock[];
   routineOverrides: RoutineBlockOverride[];
+  categories: PlannerCategoryDef[];
   // Real (non-routine) blocks marked done on a given day - keyed by
   // dateKeyStr, listing block ids. A repeating block's completion is
   // naturally per-occurrence this way, the same as a one-off block's.
@@ -89,7 +189,25 @@ export type PlannerData = {
 };
 
 export function emptyPlannerData(): PlannerData {
-  return { blocks: [], routineOverrides: [], completedBlockDays: {} };
+  return { blocks: [], routineOverrides: [], categories: defaultCategories(), completedBlockDays: {} };
+}
+
+// The category picker used to be a fixed "Work"/"Life"/"Faith"/"Fitness"/
+// "Admin" enum - blocks saved before categories became user-managed still
+// carry those literal labels as their category value. Map them onto the
+// matching default category's id so existing blocks keep their color
+// instead of silently falling back to gray.
+const LEGACY_CATEGORY_ID_MAP: Record<string, string> = {
+  Work: "work",
+  Life: "life",
+  Faith: "faith",
+  Fitness: "fitness",
+  Admin: "admin",
+};
+
+function migrateCategoryId(id: string | undefined): string {
+  if (!id) return "work";
+  return LEGACY_CATEGORY_ID_MAP[id] ?? id;
 }
 
 export function normalizePlannerData(partial: Partial<PlannerData> | null | undefined): PlannerData {
@@ -97,7 +215,7 @@ export function normalizePlannerData(partial: Partial<PlannerData> | null | unde
     blocks: (partial?.blocks ?? []).map((b) => ({
       id: b.id,
       title: b.title,
-      category: b.category,
+      category: migrateCategoryId(b.category),
       notes: b.notes ?? "",
       startTime: b.startTime,
       endTime: b.endTime,
@@ -109,11 +227,20 @@ export function normalizePlannerData(partial: Partial<PlannerData> | null | unde
       dateKeyStr: o.dateKeyStr,
       hidden: o.hidden ?? false,
       title: o.title ?? "",
-      category: o.category ?? "Life",
+      category: migrateCategoryId(o.category ?? "Life"),
       notes: o.notes ?? "",
       startTime: o.startTime ?? "",
       durationMinutes: o.durationMinutes ?? 15,
     })),
+    categories:
+      partial?.categories && partial.categories.length > 0
+        ? partial.categories.map((c, i) => ({
+            id: c.id,
+            label: c.label ?? "Untitled",
+            color: c.color ?? FALLBACK_CATEGORY_COLOR,
+            order: c.order ?? i,
+          }))
+        : defaultCategories(),
     completedBlockDays: partial?.completedBlockDays ?? {},
   };
 }
@@ -157,7 +284,7 @@ export function blocksForDate(data: PlannerData, d: Date): PlannerBlock[] {
 // Default category used for a routine-derived ghost block until the user
 // customizes it for a given day - routines are mostly personal-care / life
 // oriented, so "Life" is the least-surprising starting point.
-const GHOST_DEFAULT_CATEGORY: PlannerCategory = "Life";
+const GHOST_DEFAULT_CATEGORY: PlannerCategory = "life";
 
 export type RoutineGhostBlock = {
   id: string; // `${routineKey}:${stepId}` - stable across days, matches RoutineBlockOverride.id

@@ -5,13 +5,18 @@ import {
   PlannerBlock,
   PlannerData,
   RoutineGhostBlock,
+  addCategory,
   blocksForDate,
   blocksForWeek,
+  deleteCategory,
   hideRoutineGhostForDay,
   minutesToTime,
+  reorderCategory,
   routineGhostBlocksForDate,
+  sortedCategories,
   timeToMinutes,
   toggleBlockDoneOnDate,
+  updateCategory,
   upsertRoutineOverride,
 } from "@/lib/planner";
 import { ROUTINE_KEYS, RoutineKey, RoutinesData, logFor, toggleStepDone } from "@/lib/routines";
@@ -22,6 +27,7 @@ import DayTimeline from "./DayTimeline";
 import WeekTimeline from "./WeekTimeline";
 import MonthCalendar from "./MonthCalendar";
 import BlockEditorSheet, { BlockEditTarget } from "./BlockEditorSheet";
+import CategoryManagerSheet from "./CategoryManagerSheet";
 import YearPixelsView from "../YearPixelsView";
 
 type ViewMode = "day" | "week" | "month" | "pixels";
@@ -51,6 +57,7 @@ export default function PlannerView({
   const [viewMode, setViewMode] = useState<ViewMode>("day");
   const [viewingDateKey, setViewingDateKey] = useState(todayKey());
   const [editing, setEditing] = useState<BlockEditTarget | null>(null);
+  const [managingCategories, setManagingCategories] = useState(false);
 
   const [y, m, d] = viewingDateKey.split("-").map(Number);
   const viewingDate = new Date(y, m - 1, d);
@@ -122,7 +129,7 @@ export default function PlannerView({
     const block: PlannerBlock = {
       id: crypto.randomUUID(),
       title,
-      category: "Work",
+      category: sortedCategories(data.categories)[0]?.id ?? "work",
       notes: "",
       startTime: minutesToTime(startMin),
       endTime: minutesToTime(endMin),
@@ -243,8 +250,16 @@ export default function PlannerView({
           )}
           <button
             type="button"
+            onClick={() => setManagingCategories(true)}
+            aria-label="Manage categories"
+            className="ml-auto rounded-full border border-paper-border px-3 py-1.5 text-[12.5px] text-paper-muted"
+          >
+            ● Categories
+          </button>
+          <button
+            type="button"
             onClick={() => setEditing({ kind: "block", block: null })}
-            className="ml-auto rounded-full bg-life px-3.5 py-1.5 text-[12.5px] font-medium text-paper-surface"
+            className="rounded-full bg-life px-3.5 py-1.5 text-[12.5px] font-medium text-paper-surface"
           >
             + Add Block
           </button>
@@ -257,6 +272,7 @@ export default function PlannerView({
           isToday={isToday}
           blocks={blocks}
           ghosts={ghosts}
+          categories={data.categories}
           doneBlockIds={doneBlockIds}
           doneGhostIds={doneGhostIds}
           onEditBlock={(block) => setEditing({ kind: "block", block })}
@@ -269,7 +285,14 @@ export default function PlannerView({
         />
       )}
 
-      {viewMode === "week" && <WeekTimeline days={weekDays} onEditBlock={(block) => setEditing({ kind: "block", block })} onJumpToDay={jumpToDay} />}
+      {viewMode === "week" && (
+        <WeekTimeline
+          days={weekDays}
+          categories={data.categories}
+          onEditBlock={(block) => setEditing({ kind: "block", block })}
+          onJumpToDay={jumpToDay}
+        />
+      )}
 
       {viewMode === "month" && (
         <MonthCalendar data={data} year={viewingDate.getFullYear()} month={viewingDate.getMonth()} onJumpToDay={jumpToDay} />
@@ -281,12 +304,27 @@ export default function PlannerView({
         <BlockEditorSheet
           target={editing}
           defaultDate={viewingDateKey}
+          categories={data.categories}
           onSaveBlock={saveBlock}
           onDeleteBlock={editing.kind === "block" && editing.block ? () => deleteBlock(editing.block!.id) : undefined}
           onSaveGhostOverride={saveGhostOverride}
           onHideGhostForToday={hideGhostForToday}
           onEditTemplate={onEditRoutineTemplate}
+          onManageCategories={() => setManagingCategories(true)}
           onClose={() => setEditing(null)}
+        />
+      )}
+
+      {managingCategories && (
+        <CategoryManagerSheet
+          categories={data.categories}
+          onAdd={(label, color) => onChange((p) => addCategory(p, label, color))}
+          onUpdate={(id, label, color) =>
+            onChange((p) => updateCategory(p, id, (c) => ({ ...c, label, color })))
+          }
+          onDelete={(id) => onChange((p) => deleteCategory(p, id))}
+          onReorder={(id, direction) => onChange((p) => reorderCategory(p, id, direction))}
+          onClose={() => setManagingCategories(false)}
         />
       )}
     </div>

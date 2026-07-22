@@ -652,7 +652,11 @@ const plannerDaySchema = z.enum([
   "sunday",
 ]);
 
-const plannerCategorySchema = z.enum(["Work", "Life", "Faith", "Fitness", "Admin"]);
+// Categories used to be a fixed 5-value enum - now they're user-managed
+// (id/label/color), so a block's category is just a free-form id string.
+// See lib/planner.ts's migrateCategoryId for how old literal values like
+// "Work" get mapped onto the new default category ids.
+const plannerCategorySchema = z.string().max(100);
 
 const plannerBlockSchema = z.object({
   id: z.string(),
@@ -676,9 +680,17 @@ const routineBlockOverrideSchema = z.object({
   durationMinutes: z.number().int().min(0).max(600),
 });
 
+const plannerCategoryDefSchema = z.object({
+  id: z.string(),
+  label: z.string().max(60),
+  color: z.string().max(20),
+  order: z.number(),
+});
+
 const plannerDataSchema = z.object({
   blocks: z.array(plannerBlockSchema).max(2000),
   routineOverrides: z.array(routineBlockOverrideSchema).max(4000),
+  categories: z.array(plannerCategoryDefSchema).max(60),
   completedBlockDays: z.record(z.array(z.string()).max(200)),
 });
 

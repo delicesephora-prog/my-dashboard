@@ -1,6 +1,6 @@
 "use client";
 
-import { PLANNER_CATEGORY_COLORS, PlannerData, blocksForMonthGrid } from "@/lib/planner";
+import { PlannerData, blocksForMonthGrid, categoryColor } from "@/lib/planner";
 import { todayKey } from "@/lib/date";
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -52,7 +52,7 @@ export default function MonthCalendar({
                     <span
                       key={c}
                       className="h-[4px] w-[4px] rounded-full"
-                      style={{ backgroundColor: PLANNER_CATEGORY_COLORS[c] }}
+                      style={{ backgroundColor: categoryColor(data.categories, c) }}
                     />
                   ))}
                 </span>
