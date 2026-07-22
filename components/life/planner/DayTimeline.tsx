@@ -319,7 +319,6 @@ export default function DayTimeline({
             const widthPct = 100 / item.columns;
             const leftPct = widthPct * item.column;
             const color = item.category ? PLANNER_CATEGORY_COLORS[item.category] : GHOST_COLOR;
-            const showCheckbox = height >= 30;
 
             return (
               <div
@@ -345,7 +344,7 @@ export default function DayTimeline({
                   item.isGhost && !item.ghost?.overridden ? "border-dashed" : ""
                 } ${isMoving ? "scale-[1.03] shadow-paper-lg" : "shadow-paper active:scale-[0.98]"}`}
               >
-                {showCheckbox && item.canToggleDone && (
+                {item.canToggleDone && (
                   <span
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => e.stopPropagation()}
