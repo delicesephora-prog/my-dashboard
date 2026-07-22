@@ -1,6 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 import { DashboardData, defaultDashboardData, normalizeDashboardData } from "./types";
 import { isLetterUnlocked } from "./warroom";
+import { BackupMeta } from "./backups";
 
 const ROW_ID = "main";
 
@@ -161,4 +162,62 @@ export async function saveDashboardData(data: DashboardData, clientSeq: number):
     // race loss, not a bug. Nothing to repair.
     console.warn("[db] save skipped: a newer save already landed within the race window.");
   }
+}
+
+// Independent weekly snapshots, separate from the live dashboard_state row -
+// these exist specifically so her data's survival doesn't depend on
+// whatever a free-tier database provider's retention policy happens to be.
+const MAX_BACKUPS = 8;
+
+async function ensureBackupsTable() {
+  const db = sql();
+  await db`
+    CREATE TABLE IF NOT EXISTS dashboard_backups (
+      id TEXT PRIMARY KEY,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      data JSONB NOT NULL,
+      size_bytes INTEGER NOT NULL
+    )
+  `;
+}
+
+export async function createBackup(data: DashboardData): Promise<void> {
+  const db = sql();
+  await ensureBackupsTable();
+  const json = JSON.stringify(data);
+  const id = crypto.randomUUID();
+  const sizeBytes = Buffer.byteLength(json, "utf8");
+  await db`
+    INSERT INTO dashboard_backups (id, data, size_bytes)
+    VALUES (${id}, ${json}::jsonb, ${sizeBytes})
+  `;
+  // Keep only the most recent MAX_BACKUPS snapshots so this never grows
+  // without bound - a weekly cadence means 8 covers about two months.
+  await db`
+    DELETE FROM dashboard_backups
+    WHERE id NOT IN (
+      SELECT id FROM dashboard_backups ORDER BY created_at DESC LIMIT ${MAX_BACKUPS}
+    )
+  `;
+}
+
+export async function listBackups(): Promise<BackupMeta[]> {
+  const db = sql();
+  await ensureBackupsTable();
+  const rows = await db`
+    SELECT id, created_at, size_bytes FROM dashboard_backups ORDER BY created_at DESC
+  `;
+  return rows.map((r) => ({
+    id: String(r.id),
+    createdAt: String(r.created_at),
+    sizeBytes: Number(r.size_bytes),
+  }));
+}
+
+export async function getBackupData(id: string): Promise<DashboardData | null> {
+  const db = sql();
+  await ensureBackupsTable();
+  const rows = await db`SELECT data FROM dashboard_backups WHERE id = ${id}`;
+  if (rows.length === 0) return null;
+  return normalizeDashboardData(rows[0].data as Partial<DashboardData>);
 }

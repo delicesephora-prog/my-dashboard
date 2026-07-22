@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DashboardData, normalizeDashboardData } from "@/lib/types";
 import { todayKey } from "@/lib/date";
 import {
@@ -10,6 +10,7 @@ import {
 } from "@/lib/lifescore";
 import { TextAlertsSettings } from "@/lib/textalerts";
 import { AssistantData, currentMonthUsage } from "@/lib/assistant";
+import { BackupMeta, formatBackupSize } from "@/lib/backups";
 
 type ImportState =
   | { step: "idle" }
@@ -17,6 +18,20 @@ type ImportState =
   | { step: "importing" }
   | { step: "success" }
   | { step: "error"; message: string };
+
+type RestoreState =
+  | { step: "idle" }
+  | { step: "confirming"; backup: BackupMeta }
+  | { step: "restoring" }
+  | { step: "success" }
+  | { step: "error"; message: string };
+
+function formatBackupDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) +
+    " · " +
+    d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
 
 export default function SettingsSheet({
   data,
@@ -35,6 +50,43 @@ export default function SettingsSheet({
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importState, setImportState] = useState<ImportState>({ step: "idle" });
+
+  const [backups, setBackups] = useState<BackupMeta[] | null>(null);
+  const [backupsError, setBackupsError] = useState<string | null>(null);
+  const [restoreState, setRestoreState] = useState<RestoreState>({ step: "idle" });
+
+  useEffect(() => {
+    fetch("/api/backups", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((body) => {
+        if (body.ok) setBackups(body.backups);
+        else setBackupsError(body.error || "Couldn't load backups.");
+      })
+      .catch(() => setBackupsError("Couldn't load backups."));
+  }, []);
+
+  async function confirmRestore() {
+    if (restoreState.step !== "confirming") return;
+    const { backup } = restoreState;
+    setRestoreState({ step: "restoring" });
+    try {
+      const res = await fetch("/api/backups/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: backup.id }),
+        cache: "no-store",
+      });
+      const body = await res.json();
+      if (!res.ok || !body.ok) throw new Error(body?.error || "Restore failed.");
+      onImported(normalizeDashboardData(body.data as Partial<DashboardData>));
+      setRestoreState({ step: "success" });
+    } catch (err) {
+      setRestoreState({
+        step: "error",
+        message: err instanceof Error ? err.message : "Restore failed.",
+      });
+    }
+  }
 
   function handleExport() {
     const json = JSON.stringify(data, null, 2);
@@ -217,6 +269,107 @@ export default function SettingsSheet({
               onChange={handleFileSelected}
               className="hidden"
             />
+          </div>
+
+          <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
+            <p className="mb-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+              Backups
+            </p>
+            <p className="mb-3 text-[13px] leading-relaxed text-paper-muted">
+              A snapshot of everything is taken automatically every Sunday night - the last 8 weeks
+              are kept here, independent of your export file.
+            </p>
+
+            {backupsError && <p className="text-[13px] text-[#B5574A]">{backupsError}</p>}
+
+            {!backupsError && backups === null && (
+              <p className="py-2 text-center text-sm italic text-paper-muted">Loading…</p>
+            )}
+
+            {!backupsError && backups !== null && backups.length === 0 && (
+              <p className="py-2 text-center text-[13px] italic text-paper-muted">
+                No snapshots yet - the first one lands after this Sunday.
+              </p>
+            )}
+
+            {!backupsError && backups !== null && backups.length > 0 && (
+              <ul className="flex flex-col gap-1.5">
+                {backups.map((b) => (
+                  <li
+                    key={b.id}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-paper-border bg-paper-surface2 px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-[13px] text-paper-ink">{formatBackupDate(b.createdAt)}</p>
+                      <p className="text-[11px] text-paper-faint">{formatBackupSize(b.sizeBytes)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setRestoreState({ step: "confirming", backup: b })}
+                      className="shrink-0 rounded-full border border-paper-border px-3 py-1 text-[11.5px] font-medium text-paper-ink"
+                    >
+                      Restore
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {restoreState.step === "confirming" && (
+              <div className="mt-3 rounded-xl border border-[#B5574A] bg-[#B5574A]/5 p-3.5">
+                <p className="mb-3 text-[13.5px] leading-relaxed text-paper-ink">
+                  Replace everything currently in your dashboard with the snapshot from{" "}
+                  <strong>{formatBackupDate(restoreState.backup.createdAt)}</strong>? Whatever is
+                  saved right now will be gone. This can&apos;t be undone.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRestoreState({ step: "idle" })}
+                    className="flex-1 rounded-lg border border-paper-border bg-paper-surface py-2.5 text-sm font-medium text-paper-muted"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmRestore}
+                    className="flex-1 rounded-lg bg-[#B5574A] py-2.5 text-sm font-medium text-paper-surface"
+                  >
+                    Yes, Restore This
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {restoreState.step === "restoring" && (
+              <p className="mt-3 py-2 text-center text-sm italic text-paper-muted">Restoring…</p>
+            )}
+
+            {restoreState.step === "success" && (
+              <div className="mt-3 rounded-xl border border-[#8FA37E] bg-[#8FA37E]/10 p-3.5 text-center">
+                <p className="text-sm text-paper-ink">Your data has been restored.</p>
+                <button
+                  type="button"
+                  onClick={() => setRestoreState({ step: "idle" })}
+                  className="mt-2 text-xs text-paper-muted underline underline-offset-2"
+                >
+                  Done
+                </button>
+              </div>
+            )}
+
+            {restoreState.step === "error" && (
+              <div className="mt-3 rounded-xl border border-[#B5574A] bg-[#B5574A]/5 p-3.5">
+                <p className="mb-2 text-sm text-paper-ink">{restoreState.message}</p>
+                <button
+                  type="button"
+                  onClick={() => setRestoreState({ step: "idle" })}
+                  className="text-xs text-paper-muted underline underline-offset-2"
+                >
+                  Try again
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
