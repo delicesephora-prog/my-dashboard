@@ -4,18 +4,23 @@ import { useState } from "react";
 import {
   PlannerBlock,
   PlannerData,
+  RoutineGhostBlock,
   blocksForDate,
   blocksForWeek,
+  hideRoutineGhostForDay,
+  minutesToTime,
   routineGhostBlocksForDate,
+  timeToMinutes,
+  upsertRoutineOverride,
 } from "@/lib/planner";
-import { RoutinesConfig } from "@/lib/routines";
+import { RoutineKey, RoutinesConfig } from "@/lib/routines";
 import { LifeScoreData } from "@/lib/lifescore";
 import { dateKey, formatDayLabel, shiftDateKey, todayKey } from "@/lib/date";
 import { formatWeekRange, mondayOf, weekKeyFor } from "@/lib/week";
 import DayTimeline from "./DayTimeline";
 import WeekTimeline from "./WeekTimeline";
 import MonthCalendar from "./MonthCalendar";
-import BlockEditorSheet from "./BlockEditorSheet";
+import BlockEditorSheet, { BlockEditTarget } from "./BlockEditorSheet";
 import YearPixelsView from "../YearPixelsView";
 
 type ViewMode = "day" | "week" | "month" | "pixels";
@@ -32,22 +37,24 @@ export default function PlannerView({
   routinesConfig,
   lifeScore,
   onChange,
+  onEditRoutineTemplate,
 }: {
   data: PlannerData;
   routinesConfig: RoutinesConfig;
   lifeScore: LifeScoreData;
   onChange: (updater: (p: PlannerData) => PlannerData) => void;
+  onEditRoutineTemplate: (routineKey: RoutineKey) => void;
 }) {
   const [viewMode, setViewMode] = useState<ViewMode>("day");
   const [viewingDateKey, setViewingDateKey] = useState(todayKey());
-  const [editing, setEditing] = useState<{ block: PlannerBlock | null } | null>(null);
+  const [editing, setEditing] = useState<BlockEditTarget | null>(null);
 
   const [y, m, d] = viewingDateKey.split("-").map(Number);
   const viewingDate = new Date(y, m - 1, d);
   const isToday = viewingDateKey === todayKey();
 
   const blocks = blocksForDate(data, viewingDate);
-  const ghosts = routineGhostBlocksForDate(routinesConfig, viewingDate);
+  const ghosts = routineGhostBlocksForDate(routinesConfig, data.routineOverrides, viewingDate);
   const weekDays = blocksForWeek(data, mondayOf(viewingDate));
 
   function jumpToDay(dateKeyStr: string) {
@@ -70,6 +77,7 @@ export default function PlannerView({
     onChange((p) => {
       const exists = p.blocks.some((b) => b.id === block.id);
       return {
+        ...p,
         blocks: exists ? p.blocks.map((b) => (b.id === block.id ? block : b)) : [...p.blocks, block],
       };
     });
@@ -77,8 +85,67 @@ export default function PlannerView({
   }
 
   function deleteBlock(id: string) {
-    onChange((p) => ({ blocks: p.blocks.filter((b) => b.id !== id) }));
+    onChange((p) => ({ ...p, blocks: p.blocks.filter((b) => b.id !== id) }));
     setEditing(null);
+  }
+
+  function saveGhostOverride(
+    ghost: RoutineGhostBlock,
+    fields: { title: string; category: PlannerBlock["category"]; notes: string; startTime: string; durationMinutes: number }
+  ) {
+    onChange((p) =>
+      upsertRoutineOverride(p, {
+        id: ghost.id,
+        dateKeyStr: viewingDateKey,
+        hidden: false,
+        ...fields,
+      })
+    );
+    setEditing(null);
+  }
+
+  function hideGhostForToday(ghost: RoutineGhostBlock) {
+    onChange((p) => hideRoutineGhostForDay(p, ghost, viewingDateKey));
+    setEditing(null);
+  }
+
+  function quickCreateBlock(startMin: number, endMin: number, title: string) {
+    const block: PlannerBlock = {
+      id: crypto.randomUUID(),
+      title,
+      category: "Work",
+      notes: "",
+      startTime: minutesToTime(startMin),
+      endTime: minutesToTime(endMin),
+      repeatDays: [],
+      date: viewingDateKey,
+    };
+    onChange((p) => ({ ...p, blocks: [...p.blocks, block] }));
+  }
+
+  function moveBlock(block: PlannerBlock, newStartMin: number) {
+    const durationMin = Math.max(timeToMinutes(block.endTime) - timeToMinutes(block.startTime), 15);
+    const updated: PlannerBlock = {
+      ...block,
+      startTime: minutesToTime(newStartMin),
+      endTime: minutesToTime(newStartMin + durationMin),
+    };
+    onChange((p) => ({ ...p, blocks: p.blocks.map((b) => (b.id === block.id ? updated : b)) }));
+  }
+
+  function moveGhost(ghost: RoutineGhostBlock, newStartMin: number) {
+    onChange((p) =>
+      upsertRoutineOverride(p, {
+        id: ghost.id,
+        dateKeyStr: viewingDateKey,
+        hidden: false,
+        title: ghost.title,
+        category: ghost.category,
+        notes: ghost.notes,
+        startTime: minutesToTime(newStartMin),
+        durationMinutes: ghost.durationMinutes,
+      })
+    );
   }
 
   return (
@@ -155,7 +222,7 @@ export default function PlannerView({
           )}
           <button
             type="button"
-            onClick={() => setEditing({ block: null })}
+            onClick={() => setEditing({ kind: "block", block: null })}
             className="ml-auto rounded-full bg-life px-3.5 py-1.5 text-[12.5px] font-medium text-paper-surface"
           >
             + Add Block
@@ -169,11 +236,15 @@ export default function PlannerView({
           isToday={isToday}
           blocks={blocks}
           ghosts={ghosts}
-          onEditBlock={(block) => setEditing({ block })}
+          onEditBlock={(block) => setEditing({ kind: "block", block })}
+          onEditGhost={(ghost) => setEditing({ kind: "ghost", ghost })}
+          onQuickCreate={quickCreateBlock}
+          onMoveBlock={moveBlock}
+          onMoveGhost={moveGhost}
         />
       )}
 
-      {viewMode === "week" && <WeekTimeline days={weekDays} onEditBlock={(block) => setEditing({ block })} onJumpToDay={jumpToDay} />}
+      {viewMode === "week" && <WeekTimeline days={weekDays} onEditBlock={(block) => setEditing({ kind: "block", block })} onJumpToDay={jumpToDay} />}
 
       {viewMode === "month" && (
         <MonthCalendar data={data} year={viewingDate.getFullYear()} month={viewingDate.getMonth()} onJumpToDay={jumpToDay} />
@@ -183,10 +254,13 @@ export default function PlannerView({
 
       {editing && (
         <BlockEditorSheet
-          block={editing.block}
+          target={editing}
           defaultDate={viewingDateKey}
-          onSave={saveBlock}
-          onDelete={editing.block ? () => deleteBlock(editing.block!.id) : undefined}
+          onSaveBlock={saveBlock}
+          onDeleteBlock={editing.kind === "block" && editing.block ? () => deleteBlock(editing.block!.id) : undefined}
+          onSaveGhostOverride={saveGhostOverride}
+          onHideGhostForToday={hideGhostForToday}
+          onEditTemplate={onEditRoutineTemplate}
           onClose={() => setEditing(null)}
         />
       )}

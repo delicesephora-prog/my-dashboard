@@ -620,10 +620,12 @@ const plannerDaySchema = z.enum([
   "sunday",
 ]);
 
+const plannerCategorySchema = z.enum(["Work", "Life", "Faith", "Fitness", "Admin"]);
+
 const plannerBlockSchema = z.object({
   id: z.string(),
   title: z.string().max(200),
-  category: z.enum(["Work", "Life", "Faith", "Fitness", "Admin"]),
+  category: plannerCategorySchema,
   notes: z.string().max(2000),
   startTime: z.string().max(10),
   endTime: z.string().max(10),
@@ -631,8 +633,20 @@ const plannerBlockSchema = z.object({
   date: z.string().max(10),
 });
 
+const routineBlockOverrideSchema = z.object({
+  id: z.string(),
+  dateKeyStr: z.string().max(10),
+  hidden: z.boolean(),
+  title: z.string().max(200),
+  category: plannerCategorySchema,
+  notes: z.string().max(2000),
+  startTime: z.string().max(10),
+  durationMinutes: z.number().int().min(0).max(600),
+});
+
 const plannerDataSchema = z.object({
   blocks: z.array(plannerBlockSchema).max(2000),
+  routineOverrides: z.array(routineBlockOverrideSchema).max(4000),
 });
 
 const homeDaySchema = z.enum([

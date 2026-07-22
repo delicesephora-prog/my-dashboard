@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   PLANNER_CATEGORY_COLORS,
   PlannerBlock,
@@ -17,9 +17,21 @@ const TOTAL_MIN = (END_HOUR - START_HOUR) * 60;
 const TOTAL_HEIGHT = (TOTAL_MIN / 60) * HOUR_HEIGHT;
 const GHOST_COLOR = "#A9A296";
 const NOW_COLOR = "#B5574A";
+const SNAP_MIN = 15;
+const LONG_PRESS_MS = 450;
+const MOVE_THRESHOLD_PX = 6;
+const DEFAULT_QUICK_DURATION = 30;
 
 function clampMin(min: number): number {
   return Math.min(Math.max(min - START_HOUR * 60, 0), TOTAL_MIN);
+}
+
+function clampAbsoluteMin(min: number): number {
+  return Math.min(Math.max(min, START_HOUR * 60), END_HOUR * 60);
+}
+
+function snap(min: number): number {
+  return Math.round(min / SNAP_MIN) * SNAP_MIN;
 }
 
 function topFor(min: number): number {
@@ -29,11 +41,13 @@ function topFor(min: number): number {
 type TimelineItem = {
   id: string;
   title: string;
+  icon: string;
   isGhost: boolean;
   category: PlannerCategory | null;
   startMin: number;
   endMin: number;
   block: PlannerBlock | null;
+  ghost: RoutineGhostBlock | null;
 };
 
 export default function DayTimeline({
@@ -42,16 +56,37 @@ export default function DayTimeline({
   blocks,
   ghosts,
   onEditBlock,
+  onEditGhost,
+  onQuickCreate,
+  onMoveBlock,
+  onMoveGhost,
 }: {
   dateKeyStr: string;
   isToday: boolean;
   blocks: PlannerBlock[];
   ghosts: RoutineGhostBlock[];
   onEditBlock: (block: PlannerBlock) => void;
+  onEditGhost: (ghost: RoutineGhostBlock) => void;
+  onQuickCreate: (startMin: number, endMin: number, title: string) => void;
+  onMoveBlock: (block: PlannerBlock, newStartMin: number) => void;
+  onMoveGhost: (ghost: RoutineGhostBlock, newStartMin: number) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const now = new Date();
   const nowMin = now.getHours() * 60 + now.getMinutes();
+
+  // Empty-space tap/drag-to-create.
+  const createOrigin = useRef<{ clientY: number; min: number } | null>(null);
+  const [createDragMin, setCreateDragMin] = useState<number | null>(null);
+  const [quickCreate, setQuickCreate] = useState<{ startMin: number; endMin: number } | null>(null);
+  const [quickTitle, setQuickTitle] = useState("");
+
+  // Long-press-drag-to-move on an existing item.
+  const pressOrigin = useRef<{ clientY: number; itemId: string; startMin: number } | null>(null);
+  const longPressTimer = useRef<number | null>(null);
+  const didDragRef = useRef(false);
+  const [moving, setMoving] = useState<{ id: string; deltaMin: number } | null>(null);
 
   useEffect(() => {
     if (!scrollRef.current) return;
@@ -61,24 +96,134 @@ export default function DayTimeline({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateKeyStr]);
 
+  function minutesFromClientY(clientY: number): number {
+    const rect = contentRef.current?.getBoundingClientRect();
+    if (!rect) return START_HOUR * 60;
+    const relY = clientY - rect.top;
+    return clampAbsoluteMin(START_HOUR * 60 + (relY / HOUR_HEIGHT) * 60);
+  }
+
+  function resetCreateGesture() {
+    createOrigin.current = null;
+    setCreateDragMin(null);
+  }
+
+  function handleBackgroundPointerDown(e: React.PointerEvent) {
+    if (quickCreate || moving) return;
+    createOrigin.current = { clientY: e.clientY, min: snap(minutesFromClientY(e.clientY)) };
+  }
+
+  function handleBackgroundPointerMove(e: React.PointerEvent) {
+    if (!createOrigin.current) return;
+    const dy = Math.abs(e.clientY - createOrigin.current.clientY);
+    if (dy > MOVE_THRESHOLD_PX) {
+      e.preventDefault();
+      setCreateDragMin(snap(minutesFromClientY(e.clientY)));
+    }
+  }
+
+  function handleBackgroundPointerUp() {
+    if (!createOrigin.current) return;
+    const startMin = createOrigin.current.min;
+    const dragMin = createDragMin;
+    resetCreateGesture();
+    if (dragMin === null) {
+      setQuickCreate({ startMin, endMin: startMin + DEFAULT_QUICK_DURATION });
+    } else {
+      const a = Math.min(startMin, dragMin);
+      const b = Math.max(startMin, dragMin);
+      setQuickCreate({ startMin: a, endMin: Math.max(b, a + SNAP_MIN) });
+    }
+    setQuickTitle("");
+  }
+
+  function confirmQuickCreate() {
+    if (!quickCreate) return;
+    const title = quickTitle.trim();
+    if (title) onQuickCreate(quickCreate.startMin, quickCreate.endMin, title);
+    setQuickCreate(null);
+    setQuickTitle("");
+  }
+
+  function cancelQuickCreate() {
+    setQuickCreate(null);
+    setQuickTitle("");
+  }
+
+  function handleItemPointerDown(e: React.PointerEvent, item: TimelineItem) {
+    e.stopPropagation();
+    pressOrigin.current = { clientY: e.clientY, itemId: item.id, startMin: item.startMin };
+    didDragRef.current = false;
+    const pointerId = e.pointerId;
+    const target = e.currentTarget;
+    longPressTimer.current = window.setTimeout(() => {
+      if (!pressOrigin.current || pressOrigin.current.itemId !== item.id) return;
+      setMoving({ id: item.id, deltaMin: 0 });
+      target.setPointerCapture?.(pointerId);
+    }, LONG_PRESS_MS);
+  }
+
+  function handleItemPointerMove(e: React.PointerEvent, item: TimelineItem) {
+    if (!pressOrigin.current || pressOrigin.current.itemId !== item.id) return;
+    const dy = e.clientY - pressOrigin.current.clientY;
+    if (!moving || moving.id !== item.id) {
+      if (Math.abs(dy) > MOVE_THRESHOLD_PX && longPressTimer.current) {
+        window.clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+        pressOrigin.current = null;
+      }
+      return;
+    }
+    e.preventDefault();
+    didDragRef.current = true;
+    setMoving({ id: item.id, deltaMin: snap((dy / HOUR_HEIGHT) * 60) });
+  }
+
+  function handleItemPointerUp(item: TimelineItem) {
+    if (longPressTimer.current) {
+      window.clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    if (moving && moving.id === item.id && pressOrigin.current) {
+      const newStartMin = clampAbsoluteMin(pressOrigin.current.startMin + moving.deltaMin);
+      if (item.isGhost && item.ghost) onMoveGhost(item.ghost, newStartMin);
+      else if (item.block) onMoveBlock(item.block, newStartMin);
+    }
+    pressOrigin.current = null;
+    setMoving(null);
+  }
+
+  function handleItemClick(item: TimelineItem) {
+    if (didDragRef.current) {
+      didDragRef.current = false;
+      return;
+    }
+    if (item.isGhost && item.ghost) onEditGhost(item.ghost);
+    else if (item.block) onEditBlock(item.block);
+  }
+
   const items: TimelineItem[] = [
     ...ghosts.map((g) => ({
       id: g.id,
       title: g.title,
+      icon: g.icon,
       isGhost: true,
-      category: null,
+      category: g.category,
       startMin: timeToMinutes(g.startTime),
       endMin: timeToMinutes(g.startTime) + g.durationMinutes,
       block: null,
+      ghost: g,
     })),
     ...blocks.map((b) => ({
       id: b.id,
       title: b.title,
+      icon: "",
       isGhost: false,
       category: b.category,
       startMin: timeToMinutes(b.startTime),
       endMin: Math.max(timeToMinutes(b.endTime), timeToMinutes(b.startTime) + 15),
       block: b,
+      ghost: null,
     })),
   ];
 
@@ -90,7 +235,15 @@ export default function DayTimeline({
       ref={scrollRef}
       className="scroll-quiet safe-bottom relative flex-1 overflow-y-auto rounded-xl2 border border-paper-border bg-paper-surface"
     >
-      <div className="relative" style={{ height: TOTAL_HEIGHT }}>
+      <div
+        ref={contentRef}
+        className="relative touch-pan-y"
+        style={{ height: TOTAL_HEIGHT }}
+        onPointerDown={handleBackgroundPointerDown}
+        onPointerMove={handleBackgroundPointerMove}
+        onPointerUp={handleBackgroundPointerUp}
+        onPointerCancel={resetCreateGesture}
+      >
         {hours.map((h) => (
           <div
             key={h}
@@ -113,9 +266,26 @@ export default function DayTimeline({
           </div>
         )}
 
+        {createDragMin !== null && createOrigin.current && (
+          <div
+            className="pointer-events-none absolute left-9 right-1 z-10 rounded-lg bg-life/15"
+            style={{
+              top: topFor(Math.min(createOrigin.current.min, createDragMin)),
+              height: Math.max(
+                (Math.abs(createDragMin - createOrigin.current.min) / 60) * HOUR_HEIGHT,
+                4
+              ),
+            }}
+          />
+        )}
+
         <div className="absolute bottom-0 left-9 right-1 top-0">
           {laid.map((item) => {
-            const top = topFor(item.startMin);
+            const isMoving = moving?.id === item.id;
+            const displayStartMin = isMoving
+              ? clampAbsoluteMin(item.startMin + moving!.deltaMin)
+              : item.startMin;
+            const top = topFor(displayStartMin);
             const height = Math.max(((item.endMin - item.startMin) / 60) * HOUR_HEIGHT, 22);
             const widthPct = 100 / item.columns;
             const leftPct = widthPct * item.column;
@@ -125,11 +295,11 @@ export default function DayTimeline({
               <button
                 key={item.id}
                 type="button"
-                disabled={item.isGhost}
-                onClick={() => item.block && onEditBlock(item.block)}
-                className={`absolute overflow-hidden rounded-lg border px-1.5 py-1 text-left ${
-                  item.isGhost ? "border-dashed opacity-70" : "shadow-paper active:scale-[0.98]"
-                }`}
+                onPointerDown={(e) => handleItemPointerDown(e, item)}
+                onPointerMove={(e) => handleItemPointerMove(e, item)}
+                onPointerUp={() => handleItemPointerUp(item)}
+                onPointerCancel={() => handleItemPointerUp(item)}
+                onClick={() => handleItemClick(item)}
                 style={{
                   top,
                   height,
@@ -137,9 +307,15 @@ export default function DayTimeline({
                   width: `calc(${widthPct}% - 4px)`,
                   borderColor: color,
                   backgroundColor: `${color}1A`,
+                  touchAction: "none",
+                  zIndex: isMoving ? 30 : undefined,
                 }}
+                className={`absolute overflow-hidden rounded-lg border px-1.5 py-1 text-left transition-shadow ${
+                  item.isGhost && !item.ghost?.overridden ? "border-dashed" : ""
+                } ${isMoving ? "scale-[1.03] shadow-paper-lg" : "shadow-paper active:scale-[0.98]"}`}
               >
                 <p className="truncate text-[11.5px] font-medium" style={{ color }}>
+                  {item.icon ? `${item.icon} ` : ""}
                   {item.title}
                 </p>
                 {height > 34 && (
@@ -151,6 +327,49 @@ export default function DayTimeline({
             );
           })}
         </div>
+
+        {quickCreate && (
+          <div
+            className="absolute z-40 overflow-visible rounded-lg border-2 border-life bg-paper-surface px-2 py-1.5 shadow-paper-lg"
+            style={{
+              top: topFor(quickCreate.startMin),
+              height: Math.max(((quickCreate.endMin - quickCreate.startMin) / 60) * HOUR_HEIGHT, 34),
+              left: "calc(2.25rem + 2px)",
+              right: 4,
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <input
+              autoFocus
+              value={quickTitle}
+              onChange={(e) => setQuickTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") confirmQuickCreate();
+                if (e.key === "Escape") cancelQuickCreate();
+              }}
+              placeholder="Quick title…"
+              className="w-full bg-transparent text-[12.5px] text-paper-ink outline-none"
+            />
+            <div className="mt-0.5 flex items-center justify-between">
+              <span className="text-[10px] text-paper-muted">
+                {formatRange(quickCreate.startMin, quickCreate.endMin)}
+              </span>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={cancelQuickCreate} className="text-[13px] text-paper-faint">
+                  ✕
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmQuickCreate}
+                  className="text-[11.5px] font-medium text-life"
+                >
+                  ✓ Done
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -9,26 +9,50 @@ import {
   PlannerBlock,
   PlannerCategory,
   PlannerDayKey,
+  RoutineGhostBlock,
+  minutesToTime,
+  timeToMinutes,
 } from "@/lib/planner";
+import { RoutineKey, ROUTINE_LABELS } from "@/lib/routines";
+
+export type BlockEditTarget =
+  | { kind: "block"; block: PlannerBlock | null }
+  | { kind: "ghost"; ghost: RoutineGhostBlock };
 
 export default function BlockEditorSheet({
-  block,
+  target,
   defaultDate,
-  onSave,
-  onDelete,
+  onSaveBlock,
+  onDeleteBlock,
+  onSaveGhostOverride,
+  onHideGhostForToday,
+  onEditTemplate,
   onClose,
 }: {
-  block: PlannerBlock | null;
+  target: BlockEditTarget;
   defaultDate: string;
-  onSave: (block: PlannerBlock) => void;
-  onDelete?: () => void;
+  onSaveBlock: (block: PlannerBlock) => void;
+  onDeleteBlock?: () => void;
+  onSaveGhostOverride: (
+    ghost: RoutineGhostBlock,
+    fields: { title: string; category: PlannerCategory; notes: string; startTime: string; durationMinutes: number }
+  ) => void;
+  onHideGhostForToday: (ghost: RoutineGhostBlock) => void;
+  onEditTemplate: (routineKey: RoutineKey) => void;
   onClose: () => void;
 }) {
-  const [title, setTitle] = useState(block?.title ?? "");
-  const [category, setCategory] = useState<PlannerCategory>(block?.category ?? "Work");
-  const [notes, setNotes] = useState(block?.notes ?? "");
-  const [startTime, setStartTime] = useState(block?.startTime ?? "09:00");
-  const [endTime, setEndTime] = useState(block?.endTime ?? "09:30");
+  const block = target.kind === "block" ? target.block : null;
+  const ghost = target.kind === "ghost" ? target.ghost : null;
+  const isGhost = target.kind === "ghost";
+
+  const [title, setTitle] = useState(block?.title ?? ghost?.title ?? "");
+  const [category, setCategory] = useState<PlannerCategory>(block?.category ?? ghost?.category ?? "Work");
+  const [notes, setNotes] = useState(block?.notes ?? ghost?.notes ?? "");
+  const [startTime, setStartTime] = useState(block?.startTime ?? ghost?.startTime ?? "09:00");
+  const [endTime, setEndTime] = useState(
+    block?.endTime ??
+      (ghost ? minutesToTime(timeToMinutes(ghost.startTime) + ghost.durationMinutes) : "09:30")
+  );
   const [repeatDays, setRepeatDays] = useState<PlannerDayKey[]>(block?.repeatDays ?? []);
 
   function toggleDay(day: PlannerDayKey) {
@@ -37,7 +61,18 @@ export default function BlockEditorSheet({
 
   function submit() {
     if (!title.trim()) return;
-    onSave({
+    if (isGhost && ghost) {
+      const durationMinutes = Math.max(5, timeToMinutes(endTime) - timeToMinutes(startTime));
+      onSaveGhostOverride(ghost, {
+        title: title.trim(),
+        category,
+        notes: notes.trim(),
+        startTime,
+        durationMinutes,
+      });
+      return;
+    }
+    onSaveBlock({
       id: block?.id ?? crypto.randomUUID(),
       title: title.trim(),
       category,
@@ -55,7 +90,15 @@ export default function BlockEditorSheet({
         className="scroll-quiet safe-bottom max-h-[85vh] overflow-y-auto rounded-t-xl3 bg-paper-surface p-5 shadow-paper-lg"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="mb-4 font-serif text-[1.1rem] text-paper-ink">{block ? "Edit Block" : "New Block"}</p>
+        <p className="mb-1 font-serif text-[1.1rem] text-paper-ink">
+          {isGhost ? "Edit Routine Block" : block ? "Edit Block" : "New Block"}
+        </p>
+        {isGhost && ghost && (
+          <p className="mb-4 text-[12px] text-paper-muted">
+            From your {ROUTINE_LABELS[ghost.routineKey]} routine — changes here only apply to today.
+          </p>
+        )}
+        {!isGhost && <div className="mb-4" />}
 
         <div className="flex flex-col gap-3.5">
           <input
@@ -114,32 +157,34 @@ export default function BlockEditorSheet({
             </label>
           </div>
 
-          <div>
-            <p className="mb-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-paper-muted">
-              Repeat weekly
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {PLANNER_DAYS.map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  onClick={() => toggleDay(d)}
-                  className={`rounded-full border px-2.5 py-1.5 text-[12px] font-medium ${
-                    repeatDays.includes(d)
-                      ? "border-life bg-life text-paper-surface"
-                      : "border-paper-border text-paper-muted"
-                  }`}
-                >
-                  {PLANNER_DAY_SHORT_LABELS[d]}
-                </button>
-              ))}
+          {!isGhost && (
+            <div>
+              <p className="mb-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-paper-muted">
+                Repeat weekly
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {PLANNER_DAYS.map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => toggleDay(d)}
+                    className={`rounded-full border px-2.5 py-1.5 text-[12px] font-medium ${
+                      repeatDays.includes(d)
+                        ? "border-life bg-life text-paper-surface"
+                        : "border-paper-border text-paper-muted"
+                    }`}
+                  >
+                    {PLANNER_DAY_SHORT_LABELS[d]}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[11px] text-paper-muted">
+                {repeatDays.length > 0
+                  ? "Repeats every week on the days above."
+                  : "One-time block, just for this day."}
+              </p>
             </div>
-            <p className="mt-1.5 text-[11px] text-paper-muted">
-              {repeatDays.length > 0
-                ? "Repeats every week on the days above."
-                : "One-time block, just for this day."}
-            </p>
-          </div>
+          )}
 
           <textarea
             value={notes}
@@ -148,13 +193,35 @@ export default function BlockEditorSheet({
             rows={2}
             className="rounded-xl border border-paper-border bg-paper-surface2 px-3.5 py-2.5 text-[13.5px] text-paper-ink outline-none"
           />
+
+          {isGhost && ghost && (
+            <button
+              type="button"
+              onClick={() => {
+                onEditTemplate(ghost.routineKey);
+                onClose();
+              }}
+              className="self-start text-[12.5px] font-medium text-life underline underline-offset-2"
+            >
+              ✎ Edit the template instead
+            </button>
+          )}
         </div>
 
         <div className="mt-5 flex gap-2">
-          {onDelete && (
+          {isGhost && ghost && (
             <button
               type="button"
-              onClick={onDelete}
+              onClick={() => onHideGhostForToday(ghost)}
+              className="rounded-xl border border-[#B5574A] px-4 py-2.5 text-sm font-medium text-[#B5574A]"
+            >
+              Remove for today
+            </button>
+          )}
+          {!isGhost && onDeleteBlock && (
+            <button
+              type="button"
+              onClick={onDeleteBlock}
               className="rounded-xl border border-[#B5574A] px-4 py-2.5 text-sm font-medium text-[#B5574A]"
             >
               Delete

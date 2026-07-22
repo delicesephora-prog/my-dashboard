@@ -23,6 +23,24 @@ export type GroceryItem = {
   createdAt: string;
 };
 
+// Rough keyword guess for a freshly-filed grocery item (e.g. from the Dump
+// triage flow) - just a starting point, always editable afterward in the
+// Grocery list itself.
+const CATEGORY_WORDS: [GroceryCategory, RegExp][] = [
+  ["Produce", /\b(apple|banana|spinach|lettuce|tomato|onion|garlic|potato|fruit|veg|berries|avocado|pepper)\b/i],
+  ["Protein", /\b(chicken|beef|pork|fish|salmon|shrimp|egg|tofu|beans|turkey|bacon|sausage)\b/i],
+  ["Frozen", /\b(frozen|ice cream|popsicle)\b/i],
+  ["Household", /\b(paper towel|toilet paper|detergent|trash bag|dish soap|sponge|batter(y|ies)|cleaner)\b/i],
+  ["Personal Care", /\b(shampoo|soap|lotion|toothpaste|deodorant|razor|body wash|butter|sunscreen)\b/i],
+];
+
+export function guessGroceryCategory(text: string): GroceryCategory {
+  for (const [category, pattern] of CATEGORY_WORDS) {
+    if (pattern.test(text)) return category;
+  }
+  return "Pantry";
+}
+
 export type StapleItem = {
   id: string;
   text: string;

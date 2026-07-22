@@ -14,11 +14,13 @@ import {
   WorkOps,
   WorldData,
   YearData,
+  quarterDataFor,
   weekDataFor,
 } from "@/lib/types";
-import { RoutinesData } from "@/lib/routines";
+import { RoutineKey, RoutinesData } from "@/lib/routines";
 import { LifeScoreData } from "@/lib/lifescore";
-import { GroceryData, DumpData } from "@/lib/lists";
+import { GroceryData, DumpData, guessGroceryCategory } from "@/lib/lists";
+import { quarterKeyFor } from "@/lib/quarter";
 import { RhythmData } from "@/lib/rhythm";
 import { GlowUpData } from "@/lib/glowup";
 import { TextAlertsData } from "@/lib/textalerts";
@@ -154,6 +156,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   const [workView, setWorkView] = useState<WorkView>("dashboard");
   const [opsView, setOpsView] = useState<OpsSubView>("hub");
   const [lifeView, setLifeView] = useState<LifeView>("hub");
+  const [manageRoutinesTarget, setManageRoutinesTarget] = useState<RoutineKey | null>(null);
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
@@ -545,6 +548,50 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     scheduleSave();
   }
 
+  function sendDumpItemToGrocery(text: string) {
+    setData((prev) => ({
+      ...prev,
+      lists: {
+        ...prev.lists,
+        grocery: {
+          ...prev.lists.grocery,
+          items: [
+            ...prev.lists.grocery.items,
+            {
+              id: crypto.randomUUID(),
+              text,
+              category: guessGroceryCategory(text),
+              done: false,
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        },
+      },
+    }));
+    scheduleSave();
+  }
+
+  function sendDumpItemToParkingLot(text: string) {
+    setData((prev) => {
+      const quarterKey = quarterKeyFor(new Date());
+      const quarterData = quarterDataFor(prev.lifeQuarterly, quarterKey);
+      return {
+        ...prev,
+        lifeQuarterly: {
+          ...prev.lifeQuarterly,
+          quarters: {
+            ...prev.lifeQuarterly.quarters,
+            [quarterKey]: {
+              ...quarterData,
+              parkingLot: [...quarterData.parkingLot, { id: crypto.randomUUID(), text }],
+            },
+          },
+        },
+      };
+    });
+    scheduleSave();
+  }
+
   function updateHabits(updater: (h: HabitsData) => HabitsData) {
     setData((prev) => ({ ...prev, habits: updater(prev.habits) }));
     scheduleSave();
@@ -809,6 +856,10 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 routinesConfig={data.routines.config}
                 lifeScore={data.lifeScore}
                 onChange={updatePlanner}
+                onEditRoutineTemplate={(routineKey) => {
+                  setManageRoutinesTarget(routineKey);
+                  setLifeView("manageRoutines");
+                }}
               />
             )}
             {lifeView === "rituals" && (
@@ -826,7 +877,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
               <ManageRoutines
                 routinesData={data.routines}
                 onChange={updateRoutines}
-                onBack={() => setLifeView("rituals")}
+                initialRoutineKey={manageRoutinesTarget ?? undefined}
+                onBack={() => {
+                  setManageRoutinesTarget(null);
+                  setLifeView("rituals");
+                }}
               />
             )}
             {lifeView === "manageHabits" && (
@@ -864,6 +919,8 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 onChangeDump={updateDump}
                 onSendToWork={sendDumpItemToWork}
                 onSendToLife={sendDumpItemToLife}
+                onSendToGrocery={sendDumpItemToGrocery}
+                onSendToParkingLot={sendDumpItemToParkingLot}
               />
             )}
             {lifeView === "rhythm" && (

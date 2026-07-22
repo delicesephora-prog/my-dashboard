@@ -17,12 +17,14 @@ export default function ManageRoutines({
   routinesData,
   onChange,
   onBack,
+  initialRoutineKey,
 }: {
   routinesData: RoutinesData;
   onChange: (updater: (r: RoutinesData) => RoutinesData) => void;
   onBack: () => void;
+  initialRoutineKey?: RoutineKey;
 }) {
-  const [routineKey, setRoutineKey] = useState<RoutineKey>("morning");
+  const [routineKey, setRoutineKey] = useState<RoutineKey>(initialRoutineKey ?? "morning");
   const [dayType, setDayType] = useState<DayType>("office");
 
   const steps = [...routinesData.config[routineKey].variants[dayType].steps].sort(

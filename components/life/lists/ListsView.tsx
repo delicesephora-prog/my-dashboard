@@ -15,6 +15,8 @@ export default function ListsView({
   onChangeDump,
   onSendToWork,
   onSendToLife,
+  onSendToGrocery,
+  onSendToParkingLot,
 }: {
   grocery: GroceryData;
   dump: DumpData;
@@ -22,6 +24,8 @@ export default function ListsView({
   onChangeDump: (updater: (d: DumpData) => DumpData) => void;
   onSendToWork: (text: string) => void;
   onSendToLife: (text: string) => void;
+  onSendToGrocery: (text: string) => void;
+  onSendToParkingLot: (text: string) => void;
 }) {
   const [sub, setSub] = useState<SubView>("grocery");
 
@@ -61,7 +65,14 @@ export default function ListsView({
         <ManageStaples data={grocery} onChange={onChangeGrocery} onBack={() => setSub("grocery")} />
       )}
       {sub === "dump" && (
-        <DumpList data={dump} onChange={onChangeDump} onSendToWork={onSendToWork} onSendToLife={onSendToLife} />
+        <DumpList
+          data={dump}
+          onChange={onChangeDump}
+          onSendToWork={onSendToWork}
+          onSendToLife={onSendToLife}
+          onSendToGrocery={onSendToGrocery}
+          onSendToParkingLot={onSendToParkingLot}
+        />
       )}
     </div>
   );

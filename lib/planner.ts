@@ -60,12 +60,29 @@ export type PlannerBlock = {
   date: string;
 };
 
+// A per-day customization of a single routine-derived ghost block - never
+// touches the routine template itself. `id` matches the ghost's id
+// (`${routineKey}:${stepId}`) and `dateKeyStr` pins it to one specific day.
+// When `hidden` is true the ghost is skipped entirely for that day (a
+// "delete for today" that leaves the template and every other day alone).
+export type RoutineBlockOverride = {
+  id: string;
+  dateKeyStr: string;
+  hidden: boolean;
+  title: string;
+  category: PlannerCategory;
+  notes: string;
+  startTime: string;
+  durationMinutes: number;
+};
+
 export type PlannerData = {
   blocks: PlannerBlock[];
+  routineOverrides: RoutineBlockOverride[];
 };
 
 export function emptyPlannerData(): PlannerData {
-  return { blocks: [] };
+  return { blocks: [], routineOverrides: [] };
 }
 
 export function normalizePlannerData(partial: Partial<PlannerData> | null | undefined): PlannerData {
@@ -80,6 +97,16 @@ export function normalizePlannerData(partial: Partial<PlannerData> | null | unde
       repeatDays: b.repeatDays ?? [],
       date: b.date ?? "",
     })),
+    routineOverrides: (partial?.routineOverrides ?? []).map((o) => ({
+      id: o.id,
+      dateKeyStr: o.dateKeyStr,
+      hidden: o.hidden ?? false,
+      title: o.title ?? "",
+      category: o.category ?? "Life",
+      notes: o.notes ?? "",
+      startTime: o.startTime ?? "",
+      durationMinutes: o.durationMinutes ?? 15,
+    })),
   };
 }
 
@@ -87,6 +114,13 @@ export function timeToMinutes(t: string): number {
   const [h, m] = t.split(":").map(Number);
   if (Number.isNaN(h) || Number.isNaN(m)) return 0;
   return h * 60 + m;
+}
+
+export function minutesToTime(min: number): string {
+  const clamped = Math.max(0, Math.min(23 * 60 + 59, Math.round(min)));
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 // Blocks that apply on the given date - one-off blocks whose date matches,
@@ -100,34 +134,103 @@ export function blocksForDate(data: PlannerData, d: Date): PlannerBlock[] {
     .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
 }
 
+// Default category used for a routine-derived ghost block until the user
+// customizes it for a given day - routines are mostly personal-care / life
+// oriented, so "Life" is the least-surprising starting point.
+const GHOST_DEFAULT_CATEGORY: PlannerCategory = "Life";
+
 export type RoutineGhostBlock = {
-  id: string;
+  id: string; // `${routineKey}:${stepId}` - stable across days, matches RoutineBlockOverride.id
   title: string;
+  icon: string;
+  category: PlannerCategory;
+  notes: string;
   routineKey: RoutineKey;
+  sourceStepId: string;
   startTime: string;
   durationMinutes: number;
+  // True when this day has a per-day override applied (edited, not hidden).
+  overridden: boolean;
 };
 
-// Read-only "ghost" blocks derived from today's Routine steps (for the
-// current day type) that have a target time set - a preview of the
-// routine on the timeline, not stored as real Planner blocks. Routine
-// step times are edited in the Routines guided flow, not here.
-export function routineGhostBlocksForDate(config: RoutinesConfig, d: Date): RoutineGhostBlock[] {
+// Blocks derived from today's Routine steps (for the current day type)
+// that have a target time set - a live preview of the routine on the
+// timeline. Not stored as real Planner blocks by default, but any field
+// can be customized for just this one day via a RoutineBlockOverride
+// (looked up by ghost id + date) without ever touching the routine
+// template itself - that's still edited in the Routines guided flow /
+// Manage Routines screen.
+export function routineGhostBlocksForDate(
+  config: RoutinesConfig,
+  overrides: RoutineBlockOverride[],
+  d: Date
+): RoutineGhostBlock[] {
   const dayType = dayTypeForDate(d);
+  const todayKeyStr = dateKey(d);
   const ghosts: RoutineGhostBlock[] = [];
   for (const routineKey of ROUTINE_KEYS) {
     for (const step of stepsFor(config, routineKey, dayType)) {
       if (!step.targetTime) continue;
+      const id = `${routineKey}:${step.id}`;
+      const dayOverrides = overrides.filter((o) => o.id === id && o.dateKeyStr === todayKeyStr);
+      if (dayOverrides.some((o) => o.hidden)) continue;
+      const override = dayOverrides.find((o) => !o.hidden);
       ghosts.push({
-        id: `${routineKey}:${step.id}`,
-        title: `${ROUTINE_ICONS[routineKey]} ${step.text}`,
+        id,
+        title: override?.title || step.text,
+        icon: ROUTINE_ICONS[routineKey],
+        category: override?.category ?? GHOST_DEFAULT_CATEGORY,
+        notes: override?.notes ?? "",
         routineKey,
-        startTime: step.targetTime,
-        durationMinutes: step.durationMinutes ?? 15,
+        sourceStepId: step.id,
+        startTime: override?.startTime || step.targetTime,
+        durationMinutes: override?.durationMinutes ?? (step.durationMinutes ?? 15),
+        overridden: Boolean(override),
       });
     }
   }
   return ghosts.sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+}
+
+export function findRoutineOverride(
+  overrides: RoutineBlockOverride[],
+  id: string,
+  dateKeyStr: string
+): RoutineBlockOverride | undefined {
+  return overrides.find((o) => o.id === id && o.dateKeyStr === dateKeyStr);
+}
+
+// Creates or replaces the override for this ghost's id+day - used both to
+// save an edit and to write a "hidden" record for a same-day delete.
+export function upsertRoutineOverride(data: PlannerData, override: RoutineBlockOverride): PlannerData {
+  const exists = data.routineOverrides.some(
+    (o) => o.id === override.id && o.dateKeyStr === override.dateKeyStr
+  );
+  return {
+    ...data,
+    routineOverrides: exists
+      ? data.routineOverrides.map((o) =>
+          o.id === override.id && o.dateKeyStr === override.dateKeyStr ? override : o
+        )
+      : [...data.routineOverrides, override],
+  };
+}
+
+export function hideRoutineGhostForDay(
+  data: PlannerData,
+  ghost: RoutineGhostBlock,
+  dateKeyStr: string
+): PlannerData {
+  return upsertRoutineOverride(data, {
+    id: ghost.id,
+    dateKeyStr,
+    hidden: true,
+    title: ghost.title,
+    category: ghost.category,
+    notes: ghost.notes,
+    startTime: ghost.startTime,
+    durationMinutes: ghost.durationMinutes,
+  });
 }
 
 // Greedy lane assignment so overlapping timeline items sit side by side
