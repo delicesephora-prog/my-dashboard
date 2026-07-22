@@ -1,4 +1,12 @@
 import { Department, DEPARTMENTS } from "./department";
+import {
+  TabUsageData,
+  SystemCheckData,
+  emptyTabUsageData,
+  normalizeTabUsageData,
+  emptySystemCheckData,
+  normalizeSystemCheckData,
+} from "./systemcheck";
 import { RoutinesData, emptyRoutinesData, normalizeRoutinesData, applyGlowRoutineUpdate } from "./routines";
 import { CadenceData, emptyCadenceData, normalizeCadenceData } from "./cadence";
 import { PaydayChecklistData, emptyPaydayChecklistData, seedPaydaySteps, PAYDAY_SEED_VERSION } from "./payday";
@@ -881,6 +889,8 @@ export type DashboardData = {
   wedding: WeddingData;
   trips: TripsData;
   budget: BudgetData;
+  tabUsage: TabUsageData;
+  systemCheck: SystemCheckData;
 };
 
 export function emptyWorld(): WorldData {
@@ -942,6 +952,8 @@ export function defaultDashboardData(): DashboardData {
     wedding: emptyWeddingData(),
     trips: emptyTripsData(),
     budget: emptyBudgetData(),
+    tabUsage: emptyTabUsageData(),
+    systemCheck: emptySystemCheckData(),
   };
 }
 
@@ -1087,6 +1099,8 @@ export function normalizeDashboardData(
     wedding: normalizeWeddingData(data.wedding),
     trips: normalizeTripsData(data.trips),
     budget: normalizeBudgetData(data.budget),
+    tabUsage: normalizeTabUsageData(data.tabUsage),
+    systemCheck: normalizeSystemCheckData(data.systemCheck),
   };
 
   // One-time additive link: makes sure the vaults/debt this feature depends

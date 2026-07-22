@@ -42,6 +42,9 @@ export type CadenceData = {
   weeklyLogs: Record<string, string[]>;
   monthlyLogs: Record<string, string[]>;
   quarterlyLogs: Record<string, string[]>;
+  // Gates the one-time additive System Check seed below - bumped only when
+  // that seed itself changes, never on every save.
+  systemCheckSeedVersion: number;
 };
 
 function item(
@@ -77,24 +80,51 @@ function seedItems(): CadenceItem[] {
     item("Update Accomplishment Record with the month's work", "monthly", "Career", 2),
     item("Review approval chain — new contract types to log", "monthly", "Vendor", 3),
     item("Check BACKBEAT enrollment vs Q3 2026 target", "monthly", "Clinical Operations", 4),
+    item("Run System Check", "monthly", "Career", 5),
 
     // Quarterly - empty for now.
   ];
 }
 
 export function emptyCadenceData(): CadenceData {
-  return { items: seedItems(), dailyLogs: {}, weeklyLogs: {}, monthlyLogs: {}, quarterlyLogs: {} };
+  return {
+    items: seedItems(),
+    dailyLogs: {},
+    weeklyLogs: {},
+    monthlyLogs: {},
+    quarterlyLogs: {},
+    systemCheckSeedVersion: SYSTEM_CHECK_SEED_VERSION,
+  };
 }
 
 export function normalizeCadenceData(partial: Partial<CadenceData> | null | undefined): CadenceData {
   const fallback = emptyCadenceData();
   if (!partial) return fallback;
-  return {
+  return applySystemCheckSeed({
     items: partial.items ?? fallback.items,
     dailyLogs: partial.dailyLogs ?? {},
     weeklyLogs: partial.weeklyLogs ?? {},
     monthlyLogs: partial.monthlyLogs ?? {},
     quarterlyLogs: partial.quarterlyLogs ?? {},
+    systemCheckSeedVersion: partial.systemCheckSeedVersion ?? 0,
+  });
+}
+
+// One-time additive insert of a monthly "Run System Check" reminder into
+// existing saved Cadence data - never overwrites or duplicates if she's
+// since edited or deleted it (matches the pattern in lib/routines.ts's
+// applyGlowRoutineUpdate).
+export const SYSTEM_CHECK_SEED_VERSION = 1;
+
+export function applySystemCheckSeed(data: CadenceData): CadenceData {
+  if (data.systemCheckSeedVersion >= SYSTEM_CHECK_SEED_VERSION) return data;
+  const alreadyPresent = data.items.some((i) => i.text === "Run System Check");
+  if (alreadyPresent) return { ...data, systemCheckSeedVersion: SYSTEM_CHECK_SEED_VERSION };
+  const order = itemsFor(data, "monthly", "Career").length;
+  return {
+    ...data,
+    items: [...data.items, item("Run System Check", "monthly", "Career", order)],
+    systemCheckSeedVersion: SYSTEM_CHECK_SEED_VERSION,
   };
 }
 

@@ -65,10 +65,12 @@ import { HealthData } from "@/lib/health";
 import { MealPlanData } from "@/lib/mealplan";
 import { FinanceData } from "@/lib/finance";
 import { BudgetData } from "@/lib/budget";
+import { TabUsageData, SystemCheckData, trackTabOpen, isTabHidden } from "@/lib/systemcheck";
 import { WeddingData } from "@/lib/wedding";
 import { TripsData } from "@/lib/trips";
 import CelebrationOverlay from "./CelebrationOverlay";
 import BoardMeeting from "./BoardMeeting";
+import SystemCheckFlow from "./SystemCheckFlow";
 import QuickDump from "./QuickDump";
 import { todayKey } from "@/lib/date";
 import { weekKeyFor } from "@/lib/week";
@@ -163,6 +165,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   const [dailyReviewOpen, setDailyReviewOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [boardMeetingOpen, setBoardMeetingOpen] = useState(false);
+  const [systemCheckOpen, setSystemCheckOpen] = useState(false);
   const [quickDumpOpen, setQuickDumpOpen] = useState(false);
   const [focusOpen, setFocusOpen] = useState(false);
   const [celebration, setCelebration] = useState<Celebration | null>(null);
@@ -377,6 +380,21 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
 
   function updateBudget(updater: (b: BudgetData) => BudgetData) {
     setData((prev) => ({ ...prev, budget: updater(prev.budget) }));
+    scheduleSave();
+  }
+
+  function updateTabUsage(updater: (t: TabUsageData) => TabUsageData) {
+    setData((prev) => ({ ...prev, tabUsage: updater(prev.tabUsage) }));
+    scheduleSave();
+  }
+
+  function updateSystemCheck(updater: (s: SystemCheckData) => SystemCheckData) {
+    setData((prev) => ({ ...prev, systemCheck: updater(prev.systemCheck) }));
+    scheduleSave();
+  }
+
+  function trackTabOpenNow(key: string) {
+    setData((prev) => ({ ...prev, tabUsage: trackTabOpen(prev.tabUsage, key) }));
     scheduleSave();
   }
 
@@ -726,11 +744,12 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 { key: "backbeat", label: "BackBeat" },
                 { key: "ops", label: "Ops" },
                 { key: "reference", label: "Reference" },
-              ]}
+              ].filter((i) => !isTabHidden(data.tabUsage, `work:${i.key}`)) as { key: WorkView; label: string }[]}
               active={workView}
-              onChange={(v) => {
+              onChange={(v: WorkView) => {
                 setWorkView(v);
                 if (v === "ops") setOpsView("hub");
+                trackTabOpenNow(`work:${v}`);
               }}
               accentClass="bg-work"
             />
@@ -738,7 +757,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
               <OperationsDashboard workOps={data.workOps} onChange={updateWorkOps} />
             )}
             {workView === "cadence" && (
-              <CadenceView data={data.cadence} onChange={updateCadence} />
+              <CadenceView
+                data={data.cadence}
+                onChange={updateCadence}
+                onStartSystemCheck={() => setSystemCheckOpen(true)}
+              />
             )}
             {workView === "backbeat" && (
               <BackBeat backBeat={data.backBeat} onChange={updateBackBeat} />
@@ -869,9 +892,12 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                   { key: "health", label: "Health" },
                   { key: "wedding", label: "Wedding" },
                   { key: "trips", label: "Trips" },
-                ]}
+                ].filter((i) => !isTabHidden(data.tabUsage, `life:${i.key}`)) as { key: LifeView; label: string }[]}
                 active={lifeView}
-                onChange={setLifeView}
+                onChange={(v: LifeView) => {
+                  setLifeView(v);
+                  trackTabOpenNow(`life:${v}`);
+                }}
                 accentClass="bg-life"
               />
             )}
@@ -1022,6 +1048,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             updateTextAlerts((t) => ({ ...t, settings: updater(t.settings) }))
           }
           onChangeAssistant={updateAssistant}
+          onChangeTabUsage={updateTabUsage}
           onClose={() => setSettingsOpen(false)}
         />
       )}
@@ -1031,6 +1058,14 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           data={data}
           onChangeData={updateData}
           onClose={() => setBoardMeetingOpen(false)}
+        />
+      )}
+
+      {systemCheckOpen && (
+        <SystemCheckFlow
+          data={data}
+          onChangeData={updateData}
+          onClose={() => setSystemCheckOpen(false)}
         />
       )}
 

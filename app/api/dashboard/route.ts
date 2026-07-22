@@ -118,6 +118,7 @@ const cadenceDataSchema = z.object({
   weeklyLogs: z.record(z.array(z.string()).max(200)),
   monthlyLogs: z.record(z.array(z.string()).max(200)),
   quarterlyLogs: z.record(z.array(z.string()).max(200)),
+  systemCheckSeedVersion: z.number().optional().default(0),
 });
 
 const studyOverviewSchema = z.object({
@@ -1252,6 +1253,28 @@ const budgetDataSchema = z.object({
   linkedSeedVersion: z.number(),
 });
 
+const tabUsageEntrySchema = z.object({
+  opens: z.number().int().min(0),
+  lastOpenedAt: z.string(),
+});
+
+const tabUsageDataSchema = z.object({
+  usage: z.record(tabUsageEntrySchema),
+  hiddenTabs: z.array(z.string()).max(50),
+});
+
+const systemCheckLogEntrySchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  notUsing: z.string().max(2000),
+  annoying: z.string().max(2000),
+  hiddenTabKeys: z.array(z.string()).max(50),
+});
+
+const systemCheckDataSchema = z.object({
+  log: z.array(systemCheckLogEntrySchema).max(500),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -1302,6 +1325,8 @@ const dashboardSchema = z.object({
   wedding: weddingDataSchema,
   trips: tripsDataSchema,
   budget: budgetDataSchema,
+  tabUsage: tabUsageDataSchema,
+  systemCheck: systemCheckDataSchema,
 });
 
 export async function GET() {

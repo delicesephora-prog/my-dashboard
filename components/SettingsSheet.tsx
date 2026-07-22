@@ -11,6 +11,7 @@ import {
 import { TextAlertsSettings } from "@/lib/textalerts";
 import { AssistantData, currentMonthUsage } from "@/lib/assistant";
 import { BackupMeta, formatBackupSize } from "@/lib/backups";
+import { TAB_LABELS, TabUsageData, unhideTab } from "@/lib/systemcheck";
 
 type ImportState =
   | { step: "idle" }
@@ -39,6 +40,7 @@ export default function SettingsSheet({
   onChangeLifeScoreWeights,
   onChangeTextAlerts,
   onChangeAssistant,
+  onChangeTabUsage,
   onClose,
 }: {
   data: DashboardData;
@@ -46,6 +48,7 @@ export default function SettingsSheet({
   onChangeLifeScoreWeights: (updater: (w: LifeScoreWeights) => LifeScoreWeights) => void;
   onChangeTextAlerts: (updater: (t: TextAlertsSettings) => TextAlertsSettings) => void;
   onChangeAssistant: (updater: (a: AssistantData) => AssistantData) => void;
+  onChangeTabUsage: (updater: (t: TabUsageData) => TabUsageData) => void;
   onClose: () => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -369,6 +372,37 @@ export default function SettingsSheet({
                   Try again
                 </button>
               </div>
+            )}
+          </div>
+
+          <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
+            <p className="mb-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+              Hidden Tabs
+            </p>
+            <p className="mb-3 text-[13px] leading-relaxed text-paper-muted">
+              Tabs hidden from a System Check land here - nothing is ever deleted, bring any of
+              these back with one tap.
+            </p>
+            {data.tabUsage.hiddenTabs.length === 0 ? (
+              <p className="py-1 text-[13px] italic text-paper-muted">Nothing hidden right now.</p>
+            ) : (
+              <ul className="flex flex-col gap-1.5">
+                {data.tabUsage.hiddenTabs.map((key) => (
+                  <li
+                    key={key}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-paper-border bg-paper-surface2 px-3 py-2"
+                  >
+                    <span className="text-[13px] text-paper-ink">{TAB_LABELS[key] ?? key}</span>
+                    <button
+                      type="button"
+                      onClick={() => onChangeTabUsage((t) => unhideTab(t, key))}
+                      className="shrink-0 rounded-full border border-paper-border px-3 py-1 text-[11.5px] font-medium text-paper-ink"
+                    >
+                      Unhide
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
 

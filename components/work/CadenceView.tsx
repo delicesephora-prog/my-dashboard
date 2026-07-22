@@ -31,9 +31,11 @@ const FREQUENCY_ICONS: Record<CadenceFrequency, string> = {
 export default function CadenceView({
   data,
   onChange,
+  onStartSystemCheck,
 }: {
   data: CadenceData;
   onChange: (updater: (c: CadenceData) => CadenceData) => void;
+  onStartSystemCheck: () => void;
 }) {
   const [frequency, setFrequency] = useState<CadenceFrequency | null>(null);
   const [department, setDepartment] = useState<CadenceDepartment | null>(null);
@@ -104,6 +106,18 @@ export default function CadenceView({
             );
           })}
         </div>
+        {frequency === "monthly" && (
+          <button
+            type="button"
+            onClick={onStartSystemCheck}
+            className="mt-1 rounded-xl2 border border-work bg-paper-surface px-4 py-3 text-left shadow-paper transition active:scale-[0.98]"
+          >
+            <span className="text-[14px] font-medium text-work">Run System Check</span>
+            <p className="mt-0.5 text-[12px] text-paper-muted">
+              See what&apos;s getting used, hide what isn&apos;t, log what&apos;s annoying you.
+            </p>
+          </button>
+        )}
       </div>
     );
   }
