@@ -45,8 +45,8 @@ export default function QuestionBankView({
       </button>
 
       <div>
-        <h2 className="font-serif text-[1.15rem] text-paper-ink">Question Bank</h2>
-        <p className="mt-0.5 text-[0.8rem] text-paper-muted">
+        <h2 className="font-serif text-[1.15rem] text-backdrop-ink">Question Bank</h2>
+        <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">
           Good questions worth asking again, saved so you don&apos;t have to remember them cold.
         </p>
       </div>

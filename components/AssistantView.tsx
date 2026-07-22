@@ -255,8 +255,8 @@ export default function AssistantView({
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h2 className="font-serif text-[1.15rem] text-paper-ink">{name}</h2>
-          <p className="mt-0.5 text-[0.8rem] text-paper-muted">
+          <h2 className="font-serif text-[1.15rem] text-backdrop-ink">{name}</h2>
+          <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">
             Talk through your day, work, or anything else - and ask her to add or change things for you.
           </p>
         </div>

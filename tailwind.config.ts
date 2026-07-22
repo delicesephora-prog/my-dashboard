@@ -40,15 +40,28 @@ const config: Config = {
           DEFAULT: "#8A9B7C",
           soft: "#E7EBE2",
         },
-        // Luxury paper-planner neutrals
+        // Luxury paper-planner neutrals. `bg` is the one token that shifts
+        // for Evening Luxe (see globals.css) - it's the page backdrop
+        // behind the cards, never a card or text color itself, so letting
+        // it move doesn't touch contrast anywhere else in the app.
         paper: {
-          bg: "#F7F2EA",
+          bg: "var(--paper-bg)",
           surface: "#FFFDF8",
           surface2: "#F2EBDD",
           border: "#E8DFD0",
           ink: "#2B1B22",
           muted: "#9C8F94",
           faint: "#C7B9BC",
+        },
+        // Text that sits directly on the page backdrop rather than inside
+        // a card (Greeting, world nav, Front Page's un-carded ring
+        // stats) - these are the only text colors that need to react to
+        // Evening Luxe, since every card keeps its normal light surface
+        // and paper-ink/muted/faint text in both themes.
+        backdrop: {
+          ink: "var(--backdrop-ink)",
+          muted: "var(--backdrop-muted)",
+          faint: "var(--backdrop-faint)",
         },
       },
       borderRadius: {
@@ -84,11 +97,16 @@ const config: Config = {
           "0%": { opacity: "0" },
           "100%": { opacity: "1" },
         },
+        shimmer: {
+          "0%": { backgroundPosition: "0% 50%" },
+          "100%": { backgroundPosition: "200% 50%" },
+        },
       },
       animation: {
         "pop-in": "pop-in 0.18s ease-out",
         "check-pulse": "check-pulse 0.28s ease-out",
         "fade-in": "fade-in 0.2s ease-out",
+        shimmer: "shimmer 6s linear infinite",
       },
     },
   },

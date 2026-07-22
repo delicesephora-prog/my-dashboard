@@ -22,7 +22,7 @@ export default function OneThing({
   }, [value]);
 
   return (
-    <div className="rounded-xl2 bg-work p-3.5 shadow-paper-lg">
+    <div className="card-velvet rounded-xl2 p-3.5 shadow-paper-lg">
       <p className="mb-1 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-gold-soft">
         My One Thing Today
       </p>

@@ -37,8 +37,8 @@ export default function VendorsView({
       </button>
 
       <div>
-        <h2 className="font-serif text-[1.15rem] text-paper-ink">Vendors</h2>
-        <p className="mt-0.5 text-[0.8rem] text-paper-muted">Contacts you work with, saved by category.</p>
+        <h2 className="font-serif text-[1.15rem] text-backdrop-ink">Vendors</h2>
+        <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">Contacts you work with, saved by category.</p>
       </div>
 
       <div className="rounded-xl2 border border-paper-border bg-paper-surface p-3.5 shadow-paper">

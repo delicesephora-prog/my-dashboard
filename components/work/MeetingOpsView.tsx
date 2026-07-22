@@ -93,8 +93,8 @@ function MeetingList({
       </button>
 
       <div>
-        <h2 className="font-serif text-[1.15rem] text-paper-ink">Meeting Ops</h2>
-        <p className="mt-0.5 text-[0.8rem] text-paper-muted">Agendas, notes, and action items in one place.</p>
+        <h2 className="font-serif text-[1.15rem] text-backdrop-ink">Meeting Ops</h2>
+        <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">Agendas, notes, and action items in one place.</p>
       </div>
 
       <div className="rounded-xl2 border border-paper-border bg-paper-surface p-3.5 shadow-paper">
@@ -222,8 +222,8 @@ function MeetingDetail({
       </button>
 
       <div>
-        <h2 className="font-serif text-[1.15rem] text-paper-ink">{meeting.title}</h2>
-        <p className="mt-0.5 text-[0.8rem] text-paper-muted">
+        <h2 className="font-serif text-[1.15rem] text-backdrop-ink">{meeting.title}</h2>
+        <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">
           {meeting.date}
           {meeting.time ? ` · ${meeting.time}` : ""}
         </p>

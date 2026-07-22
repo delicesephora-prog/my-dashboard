@@ -75,12 +75,12 @@ function Tab({
     >
       <span
         className={`font-serif text-[1.05rem] ${
-          active ? "text-paper-ink" : "text-paper-muted"
+          active ? "text-backdrop-ink" : "text-backdrop-muted"
         }`}
       >
         {label}
       </span>
-      {count !== undefined && <span className="text-xs text-paper-faint">{count}</span>}
+      {count !== undefined && <span className="text-xs text-backdrop-faint">{count}</span>}
     </button>
   );
 }

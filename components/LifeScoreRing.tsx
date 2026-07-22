@@ -18,9 +18,9 @@ export default function LifeScoreRing({
     <button
       type="button"
       onClick={onTap}
-      className="flex w-full items-center gap-3 rounded-xl2 border border-paper-border bg-paper-surface p-4 text-left shadow-paper transition active:scale-[0.99]"
+      className="hover-lift flex w-full items-center gap-3 rounded-xl2 border border-paper-border bg-paper-surface p-4 text-left shadow-paper transition active:scale-[0.99]"
     >
-      <ProgressRing pct={score} size={64} strokeWidth={6} color={color} label={String(score)} />
+      <ProgressRing pct={score} size={64} strokeWidth={6} color={color} value={score} />
       <div className="min-w-0 flex-1">
         <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
           Life Score

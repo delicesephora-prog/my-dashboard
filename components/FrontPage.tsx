@@ -34,6 +34,8 @@ import LifeScoreSheet from "./LifeScoreSheet";
 import RhythmStrip from "./RhythmStrip";
 import ProgressRing from "./ProgressRing";
 import CheckCircle from "./CheckCircle";
+import AnimatedNumber from "./AnimatedNumber";
+import Flourish from "./Flourish";
 
 const FOLDERS: { icon: string; label: string; target: FrontPageNavTarget }[] = [
   { icon: "📌", label: "Money", target: { world: "life", lifeView: "money" } },
@@ -83,7 +85,7 @@ export default function FrontPage({
       <div className="scroll-quiet flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
         <Greeting />
         {now && (
-          <p className="-mt-2 text-[0.8rem] italic leading-snug text-paper-muted">
+          <p className="-mt-2 text-[0.8rem] italic leading-snug text-backdrop-muted">
             {quoteForToday(now)}
           </p>
         )}
@@ -223,7 +225,7 @@ function FrontPageBody({
         type="button"
         onClick={() => recommendation.target && onNavigate(recommendation.target)}
         disabled={!recommendation.target}
-        className="rounded-xl2 border-l-4 border-gold bg-paper-surface p-4 text-left shadow-paper transition active:scale-[0.99] disabled:active:scale-100"
+        className="hover-lift rounded-xl2 border-l-4 border-gold bg-paper-surface p-4 text-left shadow-paper transition active:scale-[0.99] disabled:active:scale-100"
       >
         <p className="mb-1 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-gold">
           Suggested Next
@@ -280,7 +282,7 @@ function FrontPageBody({
         <button
           type="button"
           onClick={() => onNavigate({ world: "work", workView: "ops", opsView: "waitingOn" })}
-          className="rounded-xl2 border border-paper-border bg-paper-surface p-4 text-left shadow-paper transition active:scale-[0.99]"
+          className="hover-lift rounded-xl2 border border-paper-border bg-paper-surface p-4 text-left shadow-paper transition active:scale-[0.99]"
         >
           <div className="mb-2 flex items-center justify-between">
             <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
@@ -311,22 +313,23 @@ function FrontPageBody({
       )}
 
       <div>
-        <p className="mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+        <p className="mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-backdrop-muted">
           Today at a Glance
         </p>
         <div className="flex items-center justify-around">
           <RingStat pct={morning.pct ?? 0} color="#B08B4F" label="Morning" />
           <RingStat pct={dayRoutine.pct ?? 0} color="#5B2333" label="Day" />
-          <RingStat pct={night.pct ?? 0} color="#3D1622" label="Night" />
+          <RingStat pct={night.pct ?? 0} color="#7A3B4D" label="Night" />
           <RingStat pct={recap.avgHabitPct} color="#8A9B7C" label="Habits" />
           <div className="flex flex-col items-center gap-1">
             <div className="flex h-[48px] w-[48px] flex-col items-center justify-center rounded-full border-2 border-work">
-              <span className="font-serif text-sm leading-none text-paper-ink">
-                {daysUntilDecember8(now)}
-              </span>
-              <span className="text-[7px] uppercase tracking-wide text-paper-faint">days</span>
+              <AnimatedNumber
+                value={daysUntilDecember8(now)}
+                className="font-serif text-sm leading-none text-backdrop-ink"
+              />
+              <span className="text-[7px] uppercase tracking-wide text-backdrop-faint">days</span>
             </div>
-            <span className="text-[10px] uppercase tracking-wide text-paper-muted">Dec 8</span>
+            <span className="text-[10px] uppercase tracking-wide text-backdrop-muted">Dec 8</span>
           </div>
         </div>
 
@@ -344,7 +347,9 @@ function FrontPageBody({
         )}
       </div>
 
-      <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
+      <Flourish />
+
+      <div className="hover-lift rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
         <div className="mb-3 flex gap-1 rounded-full bg-paper-surface2 p-1">
           <button
             type="button"
@@ -452,7 +457,7 @@ function FrontPageBody({
         <div className="grid grid-cols-3 gap-2 text-center">
           <div>
             <div className="font-serif text-lg text-paper-ink">
-              {recap.tasksDone}/{recap.tasksTotal}
+              <AnimatedNumber value={recap.tasksDone} />/{recap.tasksTotal}
             </div>
             <div className="mt-0.5 text-[0.62rem] uppercase tracking-wide text-paper-muted">
               Tasks Done
@@ -460,14 +465,16 @@ function FrontPageBody({
           </div>
           <div>
             <div className="font-serif text-lg text-paper-ink">
-              {recap.workoutsLogged}/{recap.workoutGoal}
+              <AnimatedNumber value={recap.workoutsLogged} />/{recap.workoutGoal}
             </div>
             <div className="mt-0.5 text-[0.62rem] uppercase tracking-wide text-paper-muted">
               Workouts
             </div>
           </div>
           <div>
-            <div className="font-serif text-lg text-paper-ink">{recap.avgHabitPct}%</div>
+            <div className="font-serif text-lg text-paper-ink">
+              <AnimatedNumber value={recap.avgHabitPct} suffix="%" />
+            </div>
             <div className="mt-0.5 text-[0.62rem] uppercase tracking-wide text-paper-muted">
               Habits Avg
             </div>
@@ -491,8 +498,14 @@ function FrontPageBody({
 function RingStat({ pct, color, label }: { pct: number; color: string; label: string }) {
   return (
     <div className="flex flex-col items-center gap-1">
-      <ProgressRing pct={pct} size={48} strokeWidth={4.5} color={color} label={`${pct}%`} />
-      <span className="text-[10px] uppercase tracking-wide text-paper-muted">{label}</span>
+      <ProgressRing
+        pct={pct}
+        size={48}
+        strokeWidth={4.5}
+        color={color}
+        textClass="text-backdrop-ink"
+      />
+      <span className="text-[10px] uppercase tracking-wide text-backdrop-muted">{label}</span>
     </div>
   );
 }

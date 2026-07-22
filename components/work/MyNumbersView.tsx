@@ -24,8 +24,8 @@ export default function MyNumbersView({
       </button>
 
       <div>
-        <h2 className="font-serif text-[1.15rem] text-paper-ink">My Numbers</h2>
-        <p className="mt-0.5 text-[0.8rem] text-paper-muted">
+        <h2 className="font-serif text-[1.15rem] text-backdrop-ink">My Numbers</h2>
+        <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">
           Computed live from your real Waiting On, meeting, and task records - not tracked separately.
         </p>
       </div>

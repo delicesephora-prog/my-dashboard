@@ -50,8 +50,8 @@ export default function EventsView({
       </button>
 
       <div>
-        <h2 className="font-serif text-[1.15rem] text-paper-ink">Events</h2>
-        <p className="mt-0.5 text-[0.8rem] text-paper-muted">
+        <h2 className="font-serif text-[1.15rem] text-backdrop-ink">Events</h2>
+        <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">
           Anything on the calendar that isn&apos;t a regular meeting.
         </p>
       </div>

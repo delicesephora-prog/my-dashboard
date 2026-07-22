@@ -51,8 +51,8 @@ export default function WorkShutdownView({
       </button>
 
       <div>
-        <h2 className="font-serif text-[1.15rem] text-paper-ink">Work Shutdown</h2>
-        <p className="mt-0.5 text-[0.8rem] text-paper-muted">
+        <h2 className="font-serif text-[1.15rem] text-backdrop-ink">Work Shutdown</h2>
+        <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">
           Close out the work day on purpose, before it just trails off.
         </p>
       </div>

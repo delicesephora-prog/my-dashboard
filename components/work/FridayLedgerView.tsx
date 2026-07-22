@@ -33,8 +33,8 @@ export default function FridayLedgerView({
       </button>
 
       <div>
-        <h2 className="font-serif text-[1.15rem] text-paper-ink">Friday Ledger</h2>
-        <p className="mt-0.5 text-[0.8rem] text-paper-muted">A real week, summarized from what actually happened.</p>
+        <h2 className="font-serif text-[1.15rem] text-backdrop-ink">Friday Ledger</h2>
+        <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">A real week, summarized from what actually happened.</p>
       </div>
 
       <div className="flex items-center justify-between rounded-xl2 border border-paper-border bg-paper-surface px-3 py-2 shadow-paper">

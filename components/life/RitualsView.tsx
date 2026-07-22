@@ -120,7 +120,7 @@ function RoutinesSection({
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <p className="font-serif text-[1.05rem] text-paper-ink">
+        <p className="font-serif text-[1.05rem] text-backdrop-ink">
           Routines — Today: {DAY_TYPE_LABELS[dayType]}
         </p>
         <button
@@ -311,7 +311,7 @@ function HabitsSection({
     <div>
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <ProgressRing pct={pct} size={56} strokeWidth={6} color="#5B2333" label={`${pct}%`} />
+          <ProgressRing pct={pct} size={56} strokeWidth={6} color="#5B2333" />
           <div>
             <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
               This Week&apos;s Habits

@@ -1,5 +1,7 @@
 "use client";
 
+import AnimatedNumber from "./AnimatedNumber";
+
 export default function ProgressRing({
   pct,
   size = 64,
@@ -7,13 +9,25 @@ export default function ProgressRing({
   color,
   trackColor = "#E7DFCF",
   label,
+  value,
+  suffix,
+  textClass = "text-paper-ink",
 }: {
   pct: number;
   size?: number;
   strokeWidth?: number;
   color: string;
   trackColor?: string;
+  // Full override - skips the count-up animation. Use for a blank/custom
+  // center (e.g. Focus Mode's own countdown text).
   label?: string;
+  // A number to animate in the center instead of the ring's own pct - use
+  // for values that aren't the percentage itself (e.g. a raw score).
+  value?: number;
+  suffix?: string;
+  // Every caller renders this ring inside a card except Front Page's
+  // bare-on-backdrop ring stats, which pass text-backdrop-ink instead.
+  textClass?: string;
 }) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -45,7 +59,15 @@ export default function ProgressRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-serif text-sm text-paper-ink">{label ?? `${clamped}%`}</span>
+        {label !== undefined ? (
+          <span className={`font-serif text-sm ${textClass}`}>{label}</span>
+        ) : (
+          <AnimatedNumber
+            value={value ?? clamped}
+            suffix={value !== undefined ? suffix ?? "" : "%"}
+            className={`font-serif text-sm ${textClass}`}
+          />
+        )}
       </div>
     </div>
   );

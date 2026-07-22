@@ -46,8 +46,8 @@ export default function CadenceView({
     return (
       <div className="scroll-quiet flex flex-1 flex-col gap-3 overflow-y-auto pb-6">
         <div>
-          <h2 className="font-serif text-[1.15rem] text-paper-ink">Cadence</h2>
-          <p className="mt-0.5 text-[0.8rem] text-paper-muted">Your recurring work, by rhythm.</p>
+          <h2 className="font-serif text-[1.15rem] text-backdrop-ink">Cadence</h2>
+          <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">Your recurring work, by rhythm.</p>
         </div>
         <div className="grid grid-cols-2 gap-2.5">
           {CADENCE_FREQUENCIES.map((freq) => {
@@ -85,8 +85,8 @@ export default function CadenceView({
           <span>←</span> Cadence
         </button>
         <div>
-          <h2 className="font-serif text-[1.15rem] text-paper-ink">{CADENCE_FREQUENCY_LABELS[frequency]}</h2>
-          <p className="mt-0.5 text-[0.8rem] text-paper-muted">Pick a department to see its tasks.</p>
+          <h2 className="font-serif text-[1.15rem] text-backdrop-ink">{CADENCE_FREQUENCY_LABELS[frequency]}</h2>
+          <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">Pick a department to see its tasks.</p>
         </div>
         <div className="flex flex-col gap-2">
           {CADENCE_DEPARTMENTS.map((dept) => {
@@ -143,8 +143,8 @@ export default function CadenceView({
         <span>←</span> {CADENCE_FREQUENCY_LABELS[frequency]}
       </button>
       <div>
-        <h2 className="font-serif text-[1.15rem] text-paper-ink">{department}</h2>
-        <p className="mt-0.5 text-[0.8rem] text-paper-muted">{CADENCE_FREQUENCY_LABELS[frequency]} recurring tasks</p>
+        <h2 className="font-serif text-[1.15rem] text-backdrop-ink">{department}</h2>
+        <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">{CADENCE_FREQUENCY_LABELS[frequency]} recurring tasks</p>
       </div>
 
       {items.length === 0 ? (

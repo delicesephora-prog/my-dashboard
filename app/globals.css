@@ -2,6 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Evening Luxe: the page backdrop deepens from warm cream to a plum-dusk
+   glow after sunset (or on manual override, see Settings -> Appearance).
+   Only the backdrop token moves - every card, border, and text color in
+   the app stays exactly as designed, so nothing else can lose contrast. */
+:root {
+  --paper-bg: #f7f2ea;
+  --paper-bg-glow: radial-gradient(
+    ellipse 120% 70% at 50% -10%,
+    rgba(176, 139, 79, 0.1),
+    transparent 60%
+  );
+  --backdrop-ink: #2b1b22;
+  --backdrop-muted: #9c8f94;
+  --backdrop-faint: #c7b9bc;
+}
+:root[data-theme="evening"] {
+  --paper-bg: #241019;
+  --paper-bg-glow: radial-gradient(
+    ellipse 130% 80% at 50% -10%,
+    rgba(212, 175, 110, 0.16),
+    transparent 55%
+  );
+  --backdrop-ink: #f3e7dd;
+  --backdrop-muted: #b79aa3;
+  --backdrop-faint: #8c6e79;
+}
+
 html,
 body {
   height: 100%;
@@ -10,7 +37,70 @@ body {
 
 body {
   background-color: theme("colors.paper.bg");
+  background-image: var(--paper-bg-glow);
+  background-attachment: fixed;
   color: theme("colors.paper.ink");
+  transition: background-color 0.6s ease;
+}
+
+/* Plum velvet gradient surface for the app's most-featured cards, with a
+   thin shimmering gold ring instead of a flat border. */
+.card-velvet {
+  position: relative;
+  background: linear-gradient(155deg, #6b2b3d 0%, #4a1b29 55%, #3d1622 100%);
+  isolation: isolate;
+}
+.card-velvet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    120deg,
+    rgba(212, 175, 110, 0.65),
+    rgba(212, 175, 110, 0) 28%,
+    rgba(212, 175, 110, 0) 72%,
+    rgba(212, 175, 110, 0.65)
+  );
+  background-size: 220% 220%;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: velvet-shimmer 7s ease-in-out infinite;
+}
+@keyframes velvet-shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+/* A gentle lift + shadow bloom for pointer users - inert on touch, since
+   touch devices already have their own active:scale press feedback. */
+.hover-lift {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+@media (hover: hover) {
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(43, 27, 34, 0.07), 0 22px 40px -20px rgba(43, 27, 34, 0.24);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-velvet::before {
+    animation: none;
+  }
+  .hover-lift {
+    transition: none;
+  }
+  .hover-lift:hover {
+    transform: none;
+  }
 }
 
 /* A soft divider line for editorial-style separators between sections */

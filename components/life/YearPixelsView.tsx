@@ -15,8 +15,8 @@ export default function YearPixelsView({ lifeScore }: { lifeScore: LifeScoreData
   return (
     <div className="scroll-quiet flex flex-1 flex-col gap-3 overflow-y-auto pb-6">
       <div>
-        <h2 className="font-serif text-[1.15rem] text-paper-ink">Year in Pixels</h2>
-        <p className="mt-0.5 text-[0.8rem] text-paper-muted">
+        <h2 className="font-serif text-[1.15rem] text-backdrop-ink">Year in Pixels</h2>
+        <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">
           Every day this year, colored by that day&apos;s Life Score.
         </p>
       </div>

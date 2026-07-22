@@ -56,6 +56,7 @@ import EventsView from "./work/EventsView";
 import { FocusData } from "@/lib/focus";
 import FocusModeView from "./FocusModeView";
 import { AssistantData, assistantDisplayName } from "@/lib/assistant";
+import { AppearanceData, effectiveIsEvening } from "@/lib/appearance";
 import AssistantView from "./AssistantView";
 import { BecomingData } from "@/lib/becoming";
 import { Celebration, CelebrationTier } from "@/lib/celebration";
@@ -174,6 +175,23 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestData = useRef(data);
   latestData.current = data;
+
+  // Deferred to the client (server-rendered markup has no clock to check),
+  // then re-checked on an interval so a session left open across sunset
+  // still transitions into Evening Luxe without a reload. Set on <html>
+  // directly (not a nested div) since that's what the :root CSS variable
+  // override in globals.css targets, and :root only ever means <html>.
+  const [isEvening, setIsEvening] = useState(false);
+  useEffect(() => {
+    const recompute = () => setIsEvening(effectiveIsEvening(data.appearance.themeMode));
+    recompute();
+    const interval = setInterval(recompute, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [data.appearance.themeMode]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = isEvening ? "evening" : "light";
+  }, [isEvening]);
 
   // Checked once on mount only - re-running this on every data change
   // would re-show the screen the moment updateWelcome's own save lands.
@@ -522,6 +540,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
 
   function updateAssistant(updater: (a: AssistantData) => AssistantData) {
     setData((prev) => ({ ...prev, assistant: updater(prev.assistant) }));
+    scheduleSave();
+  }
+
+  function updateAppearance(updater: (a: AppearanceData) => AppearanceData) {
+    setData((prev) => ({ ...prev, appearance: updater(prev.appearance) }));
     scheduleSave();
   }
 
@@ -1049,6 +1072,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           }
           onChangeAssistant={updateAssistant}
           onChangeTabUsage={updateTabUsage}
+          onChangeAppearance={updateAppearance}
           onClose={() => setSettingsOpen(false)}
         />
       )}

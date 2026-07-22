@@ -57,8 +57,8 @@ export default function TemplatesView({
       </button>
 
       <div>
-        <h2 className="font-serif text-[1.15rem] text-paper-ink">Templates</h2>
-        <p className="mt-0.5 text-[0.8rem] text-paper-muted">
+        <h2 className="font-serif text-[1.15rem] text-backdrop-ink">Templates</h2>
+        <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">
           Reusable text - emails, recaps, follow-ups - ready to copy when you need it.
         </p>
       </div>

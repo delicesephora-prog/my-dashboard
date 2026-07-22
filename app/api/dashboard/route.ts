@@ -1275,6 +1275,10 @@ const systemCheckDataSchema = z.object({
   log: z.array(systemCheckLogEntrySchema).max(500),
 });
 
+const appearanceDataSchema = z.object({
+  themeMode: z.enum(["auto", "light", "evening"]),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -1327,6 +1331,7 @@ const dashboardSchema = z.object({
   budget: budgetDataSchema,
   tabUsage: tabUsageDataSchema,
   systemCheck: systemCheckDataSchema,
+  appearance: appearanceDataSchema,
 });
 
 export async function GET() {

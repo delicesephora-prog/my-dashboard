@@ -19,8 +19,8 @@ export default function MemosView({
   return (
     <div className="scroll-quiet flex flex-1 flex-col gap-3 overflow-y-auto pb-6">
       <div>
-        <h2 className="font-serif text-[1.15rem] text-paper-ink">Weekly Memos</h2>
-        <p className="mt-0.5 text-[0.8rem] text-paper-muted">
+        <h2 className="font-serif text-[1.15rem] text-backdrop-ink">Weekly Memos</h2>
+        <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">
           A running note to yourself, one per week.
         </p>
       </div>

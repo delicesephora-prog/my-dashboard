@@ -16,8 +16,8 @@ export default function VersesView() {
   return (
     <div className="scroll-quiet flex flex-1 flex-col gap-3 overflow-y-auto pb-6">
       <div>
-        <h2 className="font-serif text-[1.15rem] text-paper-ink">Verses</h2>
-        <p className="mt-0.5 text-[0.8rem] text-paper-muted">
+        <h2 className="font-serif text-[1.15rem] text-backdrop-ink">Verses</h2>
+        <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">
           {VERSE_BANK.length} verses, one shown on the welcome screen each day.
         </p>
       </div>

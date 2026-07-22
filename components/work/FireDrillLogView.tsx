@@ -49,8 +49,8 @@ export default function FireDrillLogView({
       </button>
 
       <div>
-        <h2 className="font-serif text-[1.15rem] text-paper-ink">Fire Drill Log</h2>
-        <p className="mt-0.5 text-[0.8rem] text-paper-muted">
+        <h2 className="font-serif text-[1.15rem] text-backdrop-ink">Fire Drill Log</h2>
+        <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">
           {thisMonthCount} logged this month. What broke, how it got fixed, what to remember.
         </p>
       </div>

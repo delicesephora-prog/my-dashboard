@@ -12,6 +12,7 @@ import { TextAlertsSettings } from "@/lib/textalerts";
 import { AssistantData, currentMonthUsage } from "@/lib/assistant";
 import { BackupMeta, formatBackupSize } from "@/lib/backups";
 import { TAB_LABELS, TabUsageData, unhideTab } from "@/lib/systemcheck";
+import { AppearanceData, THEME_MODES, THEME_MODE_LABELS, ThemeMode } from "@/lib/appearance";
 
 type ImportState =
   | { step: "idle" }
@@ -41,6 +42,7 @@ export default function SettingsSheet({
   onChangeTextAlerts,
   onChangeAssistant,
   onChangeTabUsage,
+  onChangeAppearance,
   onClose,
 }: {
   data: DashboardData;
@@ -49,6 +51,7 @@ export default function SettingsSheet({
   onChangeTextAlerts: (updater: (t: TextAlertsSettings) => TextAlertsSettings) => void;
   onChangeAssistant: (updater: (a: AssistantData) => AssistantData) => void;
   onChangeTabUsage: (updater: (t: TabUsageData) => TabUsageData) => void;
+  onChangeAppearance: (updater: (a: AppearanceData) => AppearanceData) => void;
   onClose: () => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -404,6 +407,33 @@ export default function SettingsSheet({
                 ))}
               </ul>
             )}
+          </div>
+
+          <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
+            <p className="mb-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+              Appearance
+            </p>
+            <p className="mb-3 text-[13px] leading-relaxed text-paper-muted">
+              After sunset, the backdrop deepens into Evening Luxe - a warmer, dimmer glow behind
+              your same cards and colors. Auto switches on its own; you can also pin it either way.
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {THEME_MODES.map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => onChangeAppearance((a) => ({ ...a, themeMode: mode as ThemeMode }))}
+                  className={`flex items-center justify-between rounded-lg border px-3 py-2.5 text-left text-[13px] transition ${
+                    data.appearance.themeMode === mode
+                      ? "border-work bg-work/10 font-medium text-work"
+                      : "border-paper-border text-paper-ink"
+                  }`}
+                >
+                  {THEME_MODE_LABELS[mode]}
+                  {data.appearance.themeMode === mode && <span className="text-[11px]">✓</span>}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">

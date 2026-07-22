@@ -75,8 +75,8 @@ function PreMortemList({
       </button>
 
       <div>
-        <h2 className="font-serif text-[1.15rem] text-paper-ink">Pre-Mortem</h2>
-        <p className="mt-0.5 text-[0.8rem] text-paper-muted">
+        <h2 className="font-serif text-[1.15rem] text-backdrop-ink">Pre-Mortem</h2>
+        <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">
           Before it starts, imagine it failed. Name why, then plan around it.
         </p>
       </div>
@@ -155,8 +155,8 @@ function PreMortemDetail({
       </button>
 
       <div>
-        <h2 className="font-serif text-[1.15rem] text-paper-ink">{premortem.projectName}</h2>
-        <p className="mt-0.5 text-[0.8rem] text-paper-muted">{premortem.date}</p>
+        <h2 className="font-serif text-[1.15rem] text-backdrop-ink">{premortem.projectName}</h2>
+        <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">{premortem.date}</p>
       </div>
 
       <div className="rounded-xl2 border border-paper-border bg-paper-surface p-3.5 shadow-paper">

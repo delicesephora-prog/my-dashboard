@@ -105,8 +105,8 @@ export default function WaitingOnView({
       </button>
 
       <div>
-        <h2 className="font-serif text-[1.15rem] text-paper-ink">Waiting On</h2>
-        <p className="mt-0.5 text-[0.8rem] text-paper-muted">
+        <h2 className="font-serif text-[1.15rem] text-backdrop-ink">Waiting On</h2>
+        <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">
           Things you&apos;re waiting to hear back on, oldest first.
         </p>
       </div>
