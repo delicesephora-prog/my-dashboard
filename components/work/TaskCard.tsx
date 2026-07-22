@@ -3,8 +3,15 @@
 import { useState } from "react";
 import { WorkTask, WORK_TASK_CATEGORIES, WORK_TASK_PRIORITIES, WORK_TASK_STATUSES } from "@/lib/types";
 import { todayKey } from "@/lib/date";
-import { PRIORITY_COLORS, STATUS_COLORS, isOverdue } from "@/lib/work-style";
+import { PRIORITY_COLORS, STATUS_COLORS, advanceTaskOnCheck, isOverdue, logTaskProgress } from "@/lib/work-style";
 import CheckCircle from "../CheckCircle";
+
+const QUICK_PCTS = [25, 50, 75] as const;
+
+function formatLogDate(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
 
 export default function TaskCard({
   task,
@@ -21,22 +28,27 @@ export default function TaskCard({
   const today = todayKey();
   const overdue = isOverdue(task.dueDate, today, task.status);
 
-  function toggleCompleted() {
-    onUpdate((t) => ({
-      ...t,
-      status: t.status === "completed" ? "in_progress" : "completed",
-    }));
+  function handleCheck() {
+    onUpdate((t) => advanceTaskOnCheck(t));
   }
+
+  const showProgressBar = task.progressPct > 0 && task.status !== "completed";
 
   return (
     <div className="overflow-hidden rounded-xl border border-paper-border bg-paper-surface shadow-paper">
       <div className="flex items-center gap-2.5 px-3.5 py-2.5">
         <CheckCircle
           done={task.status === "completed"}
-          onToggle={toggleCompleted}
+          onToggle={handleCheck}
           accentClass="bg-work"
           size="sm"
-          ariaLabel={task.status === "completed" ? "Mark not done" : "Mark done"}
+          ariaLabel={
+            task.status === "completed"
+              ? "Mark not done"
+              : task.progressPct >= 100
+                ? "Confirm completed"
+                : "Mark progress"
+          }
         />
 
         <button
@@ -65,6 +77,20 @@ export default function TaskCard({
           )}
         </button>
       </div>
+
+      {showProgressBar && (
+        <div className="px-3.5 pb-2.5 pl-[42px]">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-paper-surface2">
+            <div
+              className="h-full rounded-full bg-work transition-all"
+              style={{ width: `${task.progressPct}%` }}
+            />
+          </div>
+          <p className="mt-1 text-[10.5px] text-paper-muted">
+            {task.progressPct >= 100 ? "At 100% — tap the checkbox to confirm complete" : `${task.progressPct}% worked on`}
+          </p>
+        </div>
+      )}
 
       {expanded && (
         <div className="animate-fade-in space-y-3 border-t border-paper-border px-3.5 py-3">
@@ -112,6 +138,50 @@ export default function TaskCard({
                 </button>
               ))}
             </div>
+          </div>
+
+          <div>
+            <p className="mb-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-paper-muted">
+              Progress
+            </p>
+            <div className="flex items-center gap-1.5">
+              {QUICK_PCTS.map((pct) => (
+                <button
+                  key={pct}
+                  type="button"
+                  onClick={() => onUpdate((t) => logTaskProgress(t, pct))}
+                  className="rounded-full px-2.5 py-1 text-[11px] font-medium transition"
+                  style={
+                    task.progressPct === pct
+                      ? { backgroundColor: STATUS_COLORS.started, color: "#FBF5EA" }
+                      : { border: "1px solid #E7DFCF", color: "#948A79" }
+                  }
+                >
+                  {pct}%
+                </button>
+              ))}
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={task.progressPct}
+                onChange={(e) => onUpdate((t) => logTaskProgress(t, Number(e.target.value)))}
+                className="ml-1 h-1.5 flex-1 accent-work"
+                aria-label="Progress percentage"
+              />
+              <span className="w-9 shrink-0 text-right text-[11px] text-paper-muted">{task.progressPct}%</span>
+            </div>
+            {task.progressLog.length > 0 && (
+              <ul className="mt-2 flex flex-col gap-0.5">
+                {task.progressLog.slice(0, 6).map((entry) => (
+                  <li key={entry.date} className="flex items-center justify-between text-[11px] text-paper-muted">
+                    <span>{formatLogDate(entry.date)}</span>
+                    <span>{entry.pct}%</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div className="flex gap-3">

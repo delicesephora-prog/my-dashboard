@@ -18,6 +18,7 @@ import {
   weekDataFor,
 } from "@/lib/types";
 import { RoutineKey, RoutinesData } from "@/lib/routines";
+import { CadenceData } from "@/lib/cadence";
 import { LifeScoreData } from "@/lib/lifescore";
 import { GroceryData, DumpData, guessGroceryCategory } from "@/lib/lists";
 import { quarterKeyFor } from "@/lib/quarter";
@@ -82,6 +83,7 @@ import SettingsSheet from "./SettingsSheet";
 import FrontPage from "./FrontPage";
 import { FrontPageNavTarget } from "@/lib/frontpage";
 import OperationsDashboard from "./work/OperationsDashboard";
+import CadenceView from "./work/CadenceView";
 import BackBeat from "./work/BackBeat";
 import Reference from "./work/Reference";
 import LifeHomeView from "./life/LifeHomeView";
@@ -107,8 +109,8 @@ import WarRoomSection from "./life/year/WarRoomSection";
 import SaveIndicator, { SaveStatus } from "./SaveIndicator";
 import TabErrorBoundary from "./TabErrorBoundary";
 
-type World = "front" | "work" | "life";
-type WorkView = "dashboard" | "backbeat" | "ops" | "reference";
+type World = "front" | "work" | "planner" | "life";
+type WorkView = "dashboard" | "cadence" | "backbeat" | "ops" | "reference";
 type OpsSubView =
   | "hub"
   | "waitingOn"
@@ -127,7 +129,6 @@ type LifeView =
   | "hub"
   | "tasks"
   | "week"
-  | "planner"
   | "rituals"
   | "manageRoutines"
   | "manageHabits"
@@ -294,6 +295,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
 
   function updateWorkOps(updater: (wo: WorkOps) => WorkOps) {
     setData((prev) => ({ ...prev, workOps: updater(prev.workOps) }));
+    scheduleSave();
+  }
+
+  function updateCadence(updater: (c: CadenceData) => CadenceData) {
+    setData((prev) => ({ ...prev, cadence: updater(prev.cadence) }));
     scheduleSave();
   }
 
@@ -520,13 +526,15 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           {
             id: crypto.randomUUID(),
             title: text,
-            status: "in_progress",
+            status: "not_started",
             priority: "medium",
             category: "Administration",
             dueDate: "",
             notes: "",
             topPriority: false,
             createdAt: new Date().toISOString(),
+            progressPct: 0,
+            progressLog: [],
           },
         ],
       },
@@ -703,6 +711,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             <SubNav
               items={[
                 { key: "dashboard", label: "Dashboard" },
+                { key: "cadence", label: "Cadence" },
                 { key: "backbeat", label: "BackBeat" },
                 { key: "ops", label: "Ops" },
                 { key: "reference", label: "Reference" },
@@ -716,6 +725,9 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             />
             {workView === "dashboard" && (
               <OperationsDashboard workOps={data.workOps} onChange={updateWorkOps} />
+            )}
+            {workView === "cadence" && (
+              <CadenceView data={data.cadence} onChange={updateCadence} />
             )}
             {workView === "backbeat" && (
               <BackBeat backBeat={data.backBeat} onChange={updateBackBeat} />
@@ -808,6 +820,19 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
               <Reference reference={data.reference} onChange={updateReference} />
             )}
           </>
+        ) : world === "planner" ? (
+          <PlannerView
+            data={data.planner}
+            routinesData={data.routines}
+            lifeScore={data.lifeScore}
+            onChange={updatePlanner}
+            onChangeRoutines={updateRoutines}
+            onEditRoutineTemplate={(routineKey) => {
+              setManageRoutinesTarget(routineKey);
+              setWorld("life");
+              setLifeView("manageRoutines");
+            }}
+          />
         ) : (
           <>
             {lifeView !== "manageHabits" && lifeView !== "manageRoutines" && (
@@ -815,7 +840,6 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 items={[
                   { key: "tasks", label: "Tasks" },
                   { key: "week", label: "This Week" },
-                  { key: "planner", label: "Planner" },
                   { key: "rituals", label: "Rituals" },
                   { key: "money", label: "Money" },
                   { key: "quarter", label: "Quarter" },
@@ -848,18 +872,6 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 lifeWeekly={data.lifeWeekly}
                 currentlyReading={data.books.currentlyReading}
                 onChange={updateLifeWeekly}
-              />
-            )}
-            {lifeView === "planner" && (
-              <PlannerView
-                data={data.planner}
-                routinesConfig={data.routines.config}
-                lifeScore={data.lifeScore}
-                onChange={updatePlanner}
-                onEditRoutineTemplate={(routineKey) => {
-                  setManageRoutinesTarget(routineKey);
-                  setLifeView("manageRoutines");
-                }}
               />
             )}
             {lifeView === "rituals" && (

@@ -1,7 +1,6 @@
 import { DashboardData, quarterDataFor } from "./types";
 import { quarterKeyFor } from "./quarter";
 import { computeWeekRecap, todayHabitProgress } from "./frontpage";
-import { blocksForDate } from "./planner";
 import { dailyProgress as glowUpDailyProgress } from "./glowup";
 import { zoneForDate, completedTaskIds } from "./home";
 import { dateKey } from "./date";
@@ -43,7 +42,6 @@ export function lifePocketTiles(data: DashboardData, now: Date = new Date()): Li
   return [
     { key: "tasks", icon: "📋", label: "Tasks", stat: `${data.life.tasks.filter((t) => !t.done).length} open` },
     { key: "week", icon: "🗓️", label: "This Week", stat: `${recap.tasksDone}/${recap.tasksTotal} tasks` },
-    { key: "planner", icon: "🕰️", label: "Planner", stat: `${blocksForDate(data.planner, now).length} blocks today` },
     { key: "rituals", icon: "🕯️", label: "Rituals", stat: `${habitProgress.pct}% habits today` },
     { key: "money", icon: "💰", label: "Money", stat: `${formatMoney(money.vaultTotal)} saved` },
     { key: "quarter", icon: "🎯", label: "Quarter", stat: `${quarterDone}/${quarterGoals.length} goals` },

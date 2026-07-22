@@ -11,9 +11,10 @@ import {
   minutesToTime,
   routineGhostBlocksForDate,
   timeToMinutes,
+  toggleBlockDoneOnDate,
   upsertRoutineOverride,
 } from "@/lib/planner";
-import { RoutineKey, RoutinesConfig } from "@/lib/routines";
+import { ROUTINE_KEYS, RoutineKey, RoutinesData, logFor, toggleStepDone } from "@/lib/routines";
 import { LifeScoreData } from "@/lib/lifescore";
 import { dateKey, formatDayLabel, shiftDateKey, todayKey } from "@/lib/date";
 import { formatWeekRange, mondayOf, weekKeyFor } from "@/lib/week";
@@ -34,15 +35,17 @@ const VIEW_MODES: { key: ViewMode; label: string }[] = [
 
 export default function PlannerView({
   data,
-  routinesConfig,
+  routinesData,
   lifeScore,
   onChange,
+  onChangeRoutines,
   onEditRoutineTemplate,
 }: {
   data: PlannerData;
-  routinesConfig: RoutinesConfig;
+  routinesData: RoutinesData;
   lifeScore: LifeScoreData;
   onChange: (updater: (p: PlannerData) => PlannerData) => void;
+  onChangeRoutines: (updater: (r: RoutinesData) => RoutinesData) => void;
   onEditRoutineTemplate: (routineKey: RoutineKey) => void;
 }) {
   const [viewMode, setViewMode] = useState<ViewMode>("day");
@@ -54,8 +57,14 @@ export default function PlannerView({
   const isToday = viewingDateKey === todayKey();
 
   const blocks = blocksForDate(data, viewingDate);
-  const ghosts = routineGhostBlocksForDate(routinesConfig, data.routineOverrides, viewingDate);
+  const ghosts = routineGhostBlocksForDate(routinesData.config, data.routineOverrides, viewingDate);
   const weekDays = blocksForWeek(data, mondayOf(viewingDate));
+
+  const doneBlockIds = new Set(data.completedBlockDays[viewingDateKey] ?? []);
+  const dayLog = logFor(routinesData, viewingDateKey);
+  const doneGhostIds = new Set(
+    ROUTINE_KEYS.flatMap((rk) => (dayLog.completedStepIds[rk] ?? []).map((stepId) => `${rk}:${stepId}`))
+  );
 
   function jumpToDay(dateKeyStr: string) {
     setViewingDateKey(dateKeyStr);
@@ -148,6 +157,18 @@ export default function PlannerView({
     );
   }
 
+  function toggleBlockDone(block: PlannerBlock) {
+    onChange((p) => toggleBlockDoneOnDate(p, block.id, viewingDateKey));
+  }
+
+  // Ghost completion is the same state Rituals tracks - checking it off
+  // here checks it off there too. Routines only ever allow writing to
+  // today's log, so this is a no-op on past/future days.
+  function toggleGhostDone(ghost: RoutineGhostBlock) {
+    if (!isToday) return;
+    onChangeRoutines((r) => toggleStepDone(r, ghost.routineKey, ghost.sourceStepId));
+  }
+
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden">
       <div className="mb-3 flex items-center justify-between">
@@ -236,11 +257,15 @@ export default function PlannerView({
           isToday={isToday}
           blocks={blocks}
           ghosts={ghosts}
+          doneBlockIds={doneBlockIds}
+          doneGhostIds={doneGhostIds}
           onEditBlock={(block) => setEditing({ kind: "block", block })}
           onEditGhost={(ghost) => setEditing({ kind: "ghost", ghost })}
           onQuickCreate={quickCreateBlock}
           onMoveBlock={moveBlock}
           onMoveGhost={moveGhost}
+          onToggleBlockDone={toggleBlockDone}
+          onToggleGhostDone={toggleGhostDone}
         />
       )}
 

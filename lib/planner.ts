@@ -79,10 +79,17 @@ export type RoutineBlockOverride = {
 export type PlannerData = {
   blocks: PlannerBlock[];
   routineOverrides: RoutineBlockOverride[];
+  // Real (non-routine) blocks marked done on a given day - keyed by
+  // dateKeyStr, listing block ids. A repeating block's completion is
+  // naturally per-occurrence this way, the same as a one-off block's.
+  // Routine-derived ghost blocks use Routines' own completion log instead
+  // (see RoutinesData.days) so checking one off here and in Rituals is the
+  // same action, not two parallel states.
+  completedBlockDays: Record<string, string[]>;
 };
 
 export function emptyPlannerData(): PlannerData {
-  return { blocks: [], routineOverrides: [] };
+  return { blocks: [], routineOverrides: [], completedBlockDays: {} };
 }
 
 export function normalizePlannerData(partial: Partial<PlannerData> | null | undefined): PlannerData {
@@ -107,7 +114,20 @@ export function normalizePlannerData(partial: Partial<PlannerData> | null | unde
       startTime: o.startTime ?? "",
       durationMinutes: o.durationMinutes ?? 15,
     })),
+    completedBlockDays: partial?.completedBlockDays ?? {},
   };
+}
+
+export function isBlockDoneOnDate(data: PlannerData, blockId: string, dateKeyStr: string): boolean {
+  return (data.completedBlockDays[dateKeyStr] ?? []).includes(blockId);
+}
+
+export function toggleBlockDoneOnDate(data: PlannerData, blockId: string, dateKeyStr: string): PlannerData {
+  const current = data.completedBlockDays[dateKeyStr] ?? [];
+  const next = current.includes(blockId)
+    ? current.filter((id) => id !== blockId)
+    : [...current, blockId];
+  return { ...data, completedBlockDays: { ...data.completedBlockDays, [dateKeyStr]: next } };
 }
 
 export function timeToMinutes(t: string): number {

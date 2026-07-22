@@ -63,10 +63,15 @@ const lifeWeeklySchema = z.object({
   weeks: z.record(weekDataSchema),
 });
 
+const workTaskProgressEntrySchema = z.object({
+  date: z.string(),
+  pct: z.number().min(0).max(100),
+});
+
 const workTaskSchema = z.object({
   id: z.string(),
   title: z.string().max(300),
-  status: z.enum(["urgent", "in_progress", "waiting", "completed"]),
+  status: z.enum(["not_started", "started", "urgent", "in_progress", "waiting", "completed"]),
   priority: z.enum(["high", "medium", "low"]),
   category: z.enum([
     "Clinical Operations",
@@ -83,10 +88,37 @@ const workTaskSchema = z.object({
   notes: z.string().max(5000),
   topPriority: z.boolean(),
   createdAt: z.string(),
+  progressPct: z.number().min(0).max(100),
+  progressLog: z.array(workTaskProgressEntrySchema).max(1000),
 });
 
 const workOpsSchema = z.object({
   tasks: z.array(workTaskSchema).max(1000),
+});
+
+const cadenceItemSchema = z.object({
+  id: z.string(),
+  text: z.string().max(500),
+  frequency: z.enum(["daily", "weekly", "monthly", "quarterly"]),
+  department: z.enum([
+    "Clinical Operations",
+    "Executive Support",
+    "Investor Relations",
+    "Finance",
+    "Vendor",
+    "Facilities",
+    "Administration",
+    "Career",
+  ]),
+  order: z.number(),
+});
+
+const cadenceDataSchema = z.object({
+  items: z.array(cadenceItemSchema).max(500),
+  dailyLogs: z.record(z.array(z.string()).max(200)),
+  weeklyLogs: z.record(z.array(z.string()).max(200)),
+  monthlyLogs: z.record(z.array(z.string()).max(200)),
+  quarterlyLogs: z.record(z.array(z.string()).max(200)),
 });
 
 const studyOverviewSchema = z.object({
@@ -647,6 +679,7 @@ const routineBlockOverrideSchema = z.object({
 const plannerDataSchema = z.object({
   blocks: z.array(plannerBlockSchema).max(2000),
   routineOverrides: z.array(routineBlockOverrideSchema).max(4000),
+  completedBlockDays: z.record(z.array(z.string()).max(200)),
 });
 
 const homeDaySchema = z.enum([
@@ -1180,6 +1213,7 @@ const dashboardSchema = z.object({
   oneThing: oneThingSchema,
   lifeWeekly: lifeWeeklySchema,
   workOps: workOpsSchema,
+  cadence: cadenceDataSchema,
   backBeat: backBeatSchema,
   habits: habitsDataSchema,
   reference: referenceSchema,

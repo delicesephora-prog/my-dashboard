@@ -22,13 +22,15 @@ export default function OperationsDashboard({
     const task: WorkTask = {
       id: crypto.randomUUID(),
       title: trimmed,
-      status: "in_progress",
+      status: "not_started",
       priority: "medium",
       category: "Administration",
       dueDate: "",
       notes: "",
       topPriority: false,
       createdAt: new Date().toISOString(),
+      progressPct: 0,
+      progressLog: [],
     };
     onChange((wo) => ({ ...wo, tasks: [task, ...wo.tasks] }));
   }

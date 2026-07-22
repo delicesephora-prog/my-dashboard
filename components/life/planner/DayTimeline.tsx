@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  PLANNER_CATEGORIES,
   PLANNER_CATEGORY_COLORS,
   PlannerBlock,
   PlannerCategory,
@@ -9,6 +10,7 @@ import {
   layoutByTime,
   timeToMinutes,
 } from "@/lib/planner";
+import CheckCircle from "../../CheckCircle";
 
 const START_HOUR = 6;
 const END_HOUR = 23;
@@ -48,6 +50,8 @@ type TimelineItem = {
   endMin: number;
   block: PlannerBlock | null;
   ghost: RoutineGhostBlock | null;
+  done: boolean;
+  canToggleDone: boolean;
 };
 
 export default function DayTimeline({
@@ -55,21 +59,29 @@ export default function DayTimeline({
   isToday,
   blocks,
   ghosts,
+  doneBlockIds,
+  doneGhostIds,
   onEditBlock,
   onEditGhost,
   onQuickCreate,
   onMoveBlock,
   onMoveGhost,
+  onToggleBlockDone,
+  onToggleGhostDone,
 }: {
   dateKeyStr: string;
   isToday: boolean;
   blocks: PlannerBlock[];
   ghosts: RoutineGhostBlock[];
+  doneBlockIds: Set<string>;
+  doneGhostIds: Set<string>;
   onEditBlock: (block: PlannerBlock) => void;
   onEditGhost: (ghost: RoutineGhostBlock) => void;
   onQuickCreate: (startMin: number, endMin: number, title: string) => void;
   onMoveBlock: (block: PlannerBlock, newStartMin: number) => void;
   onMoveGhost: (ghost: RoutineGhostBlock, newStartMin: number) => void;
+  onToggleBlockDone: (block: PlannerBlock) => void;
+  onToggleGhostDone: (ghost: RoutineGhostBlock) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -202,7 +214,12 @@ export default function DayTimeline({
     else if (item.block) onEditBlock(item.block);
   }
 
-  const items: TimelineItem[] = [
+  function handleToggleDone(item: TimelineItem) {
+    if (item.isGhost && item.ghost) onToggleGhostDone(item.ghost);
+    else if (item.block) onToggleBlockDone(item.block);
+  }
+
+  const allItems: TimelineItem[] = [
     ...ghosts.map((g) => ({
       id: g.id,
       title: g.title,
@@ -213,6 +230,8 @@ export default function DayTimeline({
       endMin: timeToMinutes(g.startTime) + g.durationMinutes,
       block: null,
       ghost: g,
+      done: doneGhostIds.has(g.id),
+      canToggleDone: isToday,
     })),
     ...blocks.map((b) => ({
       id: b.id,
@@ -224,11 +243,21 @@ export default function DayTimeline({
       endMin: Math.max(timeToMinutes(b.endTime), timeToMinutes(b.startTime) + 15),
       block: b,
       ghost: null,
+      done: doneBlockIds.has(b.id),
+      canToggleDone: true,
     })),
   ];
 
-  const laid = layoutByTime(items);
+  const openItems = allItems.filter((i) => !i.done);
+  const doneItems = allItems.filter((i) => i.done);
+
+  const laid = layoutByTime(openItems);
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
+
+  const doneByCategory = PLANNER_CATEGORIES.map((cat) => ({
+    category: cat,
+    items: doneItems.filter((i) => i.category === cat),
+  })).filter((g) => g.items.length > 0);
 
   return (
     <div
@@ -290,11 +319,13 @@ export default function DayTimeline({
             const widthPct = 100 / item.columns;
             const leftPct = widthPct * item.column;
             const color = item.category ? PLANNER_CATEGORY_COLORS[item.category] : GHOST_COLOR;
+            const showCheckbox = height >= 30;
 
             return (
-              <button
+              <div
                 key={item.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onPointerDown={(e) => handleItemPointerDown(e, item)}
                 onPointerMove={(e) => handleItemPointerMove(e, item)}
                 onPointerUp={() => handleItemPointerUp(item)}
@@ -310,20 +341,37 @@ export default function DayTimeline({
                   touchAction: "none",
                   zIndex: isMoving ? 30 : undefined,
                 }}
-                className={`absolute overflow-hidden rounded-lg border px-1.5 py-1 text-left transition-shadow ${
+                className={`absolute flex cursor-pointer items-start gap-1 overflow-hidden rounded-lg border px-1.5 py-1 text-left transition-shadow ${
                   item.isGhost && !item.ghost?.overridden ? "border-dashed" : ""
                 } ${isMoving ? "scale-[1.03] shadow-paper-lg" : "shadow-paper active:scale-[0.98]"}`}
               >
-                <p className="truncate text-[11.5px] font-medium" style={{ color }}>
-                  {item.icon ? `${item.icon} ` : ""}
-                  {item.title}
-                </p>
-                {height > 34 && (
-                  <p className="truncate text-[10px] text-paper-muted">
-                    {formatRange(item.startMin, item.endMin)}
-                  </p>
+                {showCheckbox && item.canToggleDone && (
+                  <span
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    className="shrink-0 pt-0.5"
+                  >
+                    <CheckCircle
+                      done={false}
+                      onToggle={() => handleToggleDone(item)}
+                      accentClass="bg-life"
+                      size="sm"
+                      ariaLabel="Mark done"
+                    />
+                  </span>
                 )}
-              </button>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[11.5px] font-medium" style={{ color }}>
+                    {item.icon ? `${item.icon} ` : ""}
+                    {item.title}
+                  </p>
+                  {height > 34 && (
+                    <p className="truncate text-[10px] text-paper-muted">
+                      {formatRange(item.startMin, item.endMin)}
+                    </p>
+                  )}
+                </div>
+              </div>
             );
           })}
         </div>
@@ -371,6 +419,54 @@ export default function DayTimeline({
           </div>
         )}
       </div>
+
+      {doneByCategory.length > 0 && (
+        <div className="border-t border-paper-border p-3">
+          <p className="mb-2 text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-paper-muted">
+            Completed · {doneItems.length}
+          </p>
+          <div className="flex flex-col gap-2.5">
+            {doneByCategory.map(({ category, items }) => (
+              <div key={category}>
+                <div className="mb-1 flex items-center gap-1.5">
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{ backgroundColor: PLANNER_CATEGORY_COLORS[category] }}
+                  />
+                  <p className="text-[11px] font-medium text-paper-muted">
+                    {category} ({items.length})
+                  </p>
+                </div>
+                <ul className="flex flex-col gap-1 pl-3.5">
+                  {items.map((item) => (
+                    <li key={item.id} className="flex items-center gap-2">
+                      {item.canToggleDone && (
+                        <CheckCircle
+                          done
+                          onToggle={() => handleToggleDone(item)}
+                          accentClass="bg-life"
+                          size="sm"
+                          ariaLabel="Mark not done"
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          item.isGhost && item.ghost ? onEditGhost(item.ghost) : item.block && onEditBlock(item.block)
+                        }
+                        className="min-w-0 flex-1 truncate text-left text-[12.5px] text-paper-faint line-through"
+                      >
+                        {item.icon ? `${item.icon} ` : ""}
+                        {item.title}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

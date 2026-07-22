@@ -1,7 +1,7 @@
 "use client";
 
 import { WorkTask, WORK_TASK_STATUSES } from "@/lib/types";
-import { STATUS_COLORS } from "@/lib/work-style";
+import { STATUS_COLORS, advanceTaskOnCheck } from "@/lib/work-style";
 import CheckCircle from "../CheckCircle";
 
 export default function TopPriorities({
@@ -43,18 +43,26 @@ function PriorityCard({
   task: WorkTask;
   onUpdate: (updater: (t: WorkTask) => WorkTask) => void;
 }) {
-  function toggleCompleted() {
-    onUpdate((t) => ({ ...t, status: t.status === "completed" ? "in_progress" : "completed" }));
+  function handleCheck() {
+    onUpdate((t) => advanceTaskOnCheck(t));
   }
+
+  const showProgressBar = task.progressPct > 0 && task.status !== "completed";
 
   return (
     <div className="rounded-xl2 border-l-4 border-work bg-paper-surface p-3.5 shadow-paper">
       <div className="mb-2 flex items-center gap-2.5">
         <CheckCircle
           done={task.status === "completed"}
-          onToggle={toggleCompleted}
+          onToggle={handleCheck}
           accentClass="bg-work"
-          ariaLabel={task.status === "completed" ? "Mark not done" : "Mark done"}
+          ariaLabel={
+            task.status === "completed"
+              ? "Mark not done"
+              : task.progressPct >= 100
+                ? "Confirm completed"
+                : "Mark progress"
+          }
         />
         <span
           className={`flex-1 font-serif text-[1.02rem] ${
@@ -72,6 +80,17 @@ function PriorityCard({
           ★
         </button>
       </div>
+
+      {showProgressBar && (
+        <div className="mb-2 pl-[38px]">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-paper-surface2">
+            <div className="h-full rounded-full bg-work transition-all" style={{ width: `${task.progressPct}%` }} />
+          </div>
+          <p className="mt-1 text-[10.5px] text-paper-muted">
+            {task.progressPct >= 100 ? "At 100% — tap the checkbox to confirm complete" : `${task.progressPct}% worked on`}
+          </p>
+        </div>
+      )}
 
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <select

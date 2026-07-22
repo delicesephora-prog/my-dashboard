@@ -1,4 +1,5 @@
 import { RoutinesData, emptyRoutinesData, normalizeRoutinesData, applyGlowRoutineUpdate } from "./routines";
+import { CadenceData, emptyCadenceData, normalizeCadenceData } from "./cadence";
 import { PaydayChecklistData, emptyPaydayChecklistData, seedPaydaySteps, PAYDAY_SEED_VERSION } from "./payday";
 import { WarRoomData, emptyWarRoomData, normalizeWarRoomData } from "./warroom";
 import { LifeScoreData, emptyLifeScoreData, normalizeLifeScoreData } from "./lifescore";
@@ -98,7 +99,13 @@ export function emptyLifeWeekly(): LifeWeekly {
 // ---------------------------------------------------------------------------
 // Work operations: tasks
 
-export type WorkTaskStatus = "urgent" | "in_progress" | "waiting" | "completed";
+export type WorkTaskStatus =
+  | "not_started"
+  | "started"
+  | "urgent"
+  | "in_progress"
+  | "waiting"
+  | "completed";
 export type WorkTaskPriority = "high" | "medium" | "low";
 export type WorkTaskCategory =
   | "Clinical Operations"
@@ -112,6 +119,8 @@ export type WorkTaskCategory =
   | "Administration";
 
 export const WORK_TASK_STATUSES: { key: WorkTaskStatus; label: string }[] = [
+  { key: "not_started", label: "Not Started" },
+  { key: "started", label: "Started" },
   { key: "urgent", label: "Urgent" },
   { key: "in_progress", label: "In Progress" },
   { key: "waiting", label: "Waiting" },
@@ -136,6 +145,11 @@ export const WORK_TASK_CATEGORIES: WorkTaskCategory[] = [
   "Administration",
 ];
 
+export type WorkTaskProgressEntry = {
+  date: string; // YYYY-MM-DD
+  pct: number;
+};
+
 export type WorkTask = {
   id: string;
   title: string;
@@ -146,6 +160,9 @@ export type WorkTask = {
   notes: string;
   topPriority: boolean;
   createdAt: string;
+  progressPct: number; // 0-100
+  // Newest first - every check-in kept, never trimmed except a hard cap.
+  progressLog: WorkTaskProgressEntry[];
 };
 
 export type WorkOps = {
@@ -808,6 +825,7 @@ export type DashboardData = {
   oneThing: OneThing;
   lifeWeekly: LifeWeekly;
   workOps: WorkOps;
+  cadence: CadenceData;
   backBeat: BackBeat;
   habits: HabitsData;
   reference: Reference;
@@ -867,6 +885,7 @@ export function defaultDashboardData(): DashboardData {
     oneThing: emptyOneThing(),
     lifeWeekly: emptyLifeWeekly(),
     workOps: emptyWorkOps(),
+    cadence: emptyCadenceData(),
     backBeat: emptyBackBeat(),
     habits: emptyHabitsData(),
     reference: emptyReference(),
@@ -940,8 +959,13 @@ export function normalizeDashboardData(
       ),
     },
     workOps: {
-      tasks: data.workOps?.tasks ?? [],
+      tasks: (data.workOps?.tasks ?? []).map((t) => ({
+        ...t,
+        progressPct: t.progressPct ?? 0,
+        progressLog: t.progressLog ?? [],
+      })),
     },
+    cadence: normalizeCadenceData(data.cadence),
     backBeat: {
       overview: { ...fallback.backBeat.overview, ...data.backBeat?.overview },
       sites: data.backBeat?.sites ?? [],

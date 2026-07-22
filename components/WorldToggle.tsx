@@ -1,6 +1,6 @@
 "use client";
 
-type World = "front" | "work" | "life";
+type World = "front" | "work" | "planner" | "life";
 
 export default function WorldToggle({
   world,
@@ -13,7 +13,7 @@ export default function WorldToggle({
 }) {
   return (
     <div className="px-5">
-      <div className="flex gap-6 border-b border-paper-border">
+      <div className="scroll-quiet flex gap-6 overflow-x-auto border-b border-paper-border">
         <Tab
           label="Front Page"
           active={world === "front"}
@@ -26,6 +26,12 @@ export default function WorldToggle({
           count={counts.work}
           underline="border-work"
           onClick={() => onChange("work")}
+        />
+        <Tab
+          label="Planner"
+          active={world === "planner"}
+          underline="border-gold"
+          onClick={() => onChange("planner")}
         />
         <Tab
           label="Life"
@@ -55,7 +61,7 @@ function Tab({
   return (
     <button
       onClick={onClick}
-      className={`-mb-px flex items-baseline gap-1.5 border-b-2 py-2.5 transition-colors ${
+      className={`-mb-px flex shrink-0 items-baseline gap-1.5 border-b-2 py-2.5 transition-colors ${
         active ? underline : "border-transparent"
       }`}
     >
