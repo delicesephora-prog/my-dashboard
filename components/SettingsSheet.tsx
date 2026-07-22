@@ -9,6 +9,7 @@ import {
   LifeScoreWeights,
 } from "@/lib/lifescore";
 import { TextAlertsSettings } from "@/lib/textalerts";
+import { AssistantData, currentMonthUsage } from "@/lib/assistant";
 
 type ImportState =
   | { step: "idle" }
@@ -22,12 +23,14 @@ export default function SettingsSheet({
   onImported,
   onChangeLifeScoreWeights,
   onChangeTextAlerts,
+  onChangeAssistant,
   onClose,
 }: {
   data: DashboardData;
   onImported: (data: DashboardData) => void;
   onChangeLifeScoreWeights: (updater: (w: LifeScoreWeights) => LifeScoreWeights) => void;
   onChangeTextAlerts: (updater: (t: TextAlertsSettings) => TextAlertsSettings) => void;
+  onChangeAssistant: (updater: (a: AssistantData) => AssistantData) => void;
   onClose: () => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -351,6 +354,47 @@ export default function SettingsSheet({
                 )}
               </div>
             </div>
+          </div>
+
+          <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
+            <p className="mb-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+              Assistant
+            </p>
+            <div className="mb-3">
+              <label className="mb-1 block text-[12.5px] text-paper-muted">Her name</label>
+              <input
+                value={data.assistant.name}
+                onChange={(e) => onChangeAssistant((a) => ({ ...a, name: e.target.value }))}
+                placeholder="Assistant"
+                className="w-full rounded-lg border border-paper-border bg-paper-surface2 px-2.5 py-2 text-[14px] text-paper-ink outline-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-between border-t border-paper-border pt-3">
+              <span className="text-[13px] text-paper-muted">This month&apos;s cost</span>
+              <span className="text-[13.5px] font-medium text-paper-ink">
+                ${currentMonthUsage(data.assistant).costUsd.toFixed(2)}
+              </span>
+            </div>
+            <label className="mt-2.5 flex items-center justify-between text-[12.5px] text-paper-muted">
+              Monthly spend cap
+              <span className="flex items-center gap-1">
+                <span>$</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={data.assistant.usage.monthlySpendCapUsd ?? ""}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    const value = raw === "" ? null : Math.max(0, Number(raw));
+                    onChangeAssistant((a) => ({ ...a, usage: { ...a.usage, monthlySpendCapUsd: value } }));
+                  }}
+                  placeholder="No cap"
+                  className="w-24 rounded-md border border-paper-border bg-paper-surface2 px-2 py-1 text-right text-[12.5px] text-paper-ink outline-none"
+                />
+              </span>
+            </label>
           </div>
         </div>
       </div>

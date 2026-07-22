@@ -933,8 +933,38 @@ const assistantMessageSchema = z.object({
   createdAt: z.string(),
 });
 
+const memoryFactSchema = z.object({
+  id: z.string(),
+  text: z.string().max(2000),
+  category: z.enum(["preference", "person", "pattern", "note"]),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+const conversationSummarySchema = z.object({
+  id: z.string(),
+  summary: z.string().max(4000),
+  createdAt: z.string(),
+});
+
+const monthlyUsageSchema = z.object({
+  monthKey: z.string(),
+  inputTokens: z.number(),
+  outputTokens: z.number(),
+  costUsd: z.number(),
+});
+
 const assistantDataSchema = z.object({
   messages: z.array(assistantMessageSchema).max(200),
+  name: z.string().max(60),
+  memory: z.object({
+    facts: z.array(memoryFactSchema).max(300),
+    summaries: z.array(conversationSummarySchema).max(20),
+  }),
+  usage: z.object({
+    monthlySpendCapUsd: z.number().nullable(),
+    log: z.array(monthlyUsageSchema).max(120),
+  }),
 });
 
 const becomingMessageSchema = z.object({
@@ -1002,6 +1032,18 @@ const healthDataSchema = z.object({
   appointments: z.array(appointmentSchema),
   medications: z.array(medicationSchema),
   notes: z.array(healthNoteSchema),
+});
+
+const mealEntrySchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  slot: z.enum(["breakfast", "lunch", "dinner", "snack"]),
+  text: z.string().max(500),
+  notes: z.string().max(2000),
+});
+
+const mealPlanDataSchema = z.object({
+  meals: z.array(mealEntrySchema).max(2000),
 });
 
 const transactionCategorySchema = z.enum([
@@ -1263,6 +1305,7 @@ const dashboardSchema = z.object({
   quest: questDataSchema,
   memos: memosDataSchema,
   health: healthDataSchema,
+  mealPlan: mealPlanDataSchema,
   finance: financeDataSchema,
   wedding: weddingDataSchema,
   trips: tripsDataSchema,

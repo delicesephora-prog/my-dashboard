@@ -2,25 +2,32 @@
 
 import { useState } from "react";
 import { Appointment, HealthData, HealthNote, Medication } from "@/lib/health";
+import { MealEntry, MealPlanData, addMeal, deleteMeal, updateMeal } from "@/lib/mealplan";
 import { todayKey } from "@/lib/date";
 import AppointmentsTab from "./health/AppointmentsTab";
 import MedicationsTab from "./health/MedicationsTab";
 import NotesTab from "./health/NotesTab";
+import MealsTab from "./health/MealsTab";
 
-type Tab = "appointments" | "medications" | "notes";
+type Tab = "appointments" | "medications" | "notes" | "meals";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "appointments", label: "Appointments" },
   { key: "medications", label: "Medications" },
   { key: "notes", label: "Notes" },
+  { key: "meals", label: "Meals" },
 ];
 
 export default function HealthView({
   health,
   onChange,
+  mealPlan,
+  onChangeMealPlan,
 }: {
   health: HealthData;
   onChange: (updater: (h: HealthData) => HealthData) => void;
+  mealPlan: MealPlanData;
+  onChangeMealPlan: (updater: (m: MealPlanData) => MealPlanData) => void;
 }) {
   const [tab, setTab] = useState<Tab>("appointments");
 
@@ -117,6 +124,15 @@ export default function HealthView({
             onChange((h) => ({ ...h, notes: h.notes.map((n) => (n.id === id ? updater(n) : n)) }))
           }
           onDelete={(id) => onChange((h) => ({ ...h, notes: h.notes.filter((n) => n.id !== id) }))}
+        />
+      )}
+
+      {tab === "meals" && (
+        <MealsTab
+          mealPlan={mealPlan}
+          onAdd={(meal: MealEntry) => onChangeMealPlan((m) => addMeal(m, meal))}
+          onUpdate={(id, updater) => onChangeMealPlan((m) => updateMeal(m, id, updater))}
+          onDelete={(id) => onChangeMealPlan((m) => deleteMeal(m, id))}
         />
       )}
     </div>

@@ -32,6 +32,7 @@ import { FinanceData, emptyFinanceData, normalizeFinanceData } from "./finance";
 import { WeddingData, emptyWeddingData, normalizeWeddingData } from "./wedding";
 import { TripsData, emptyTripsData, normalizeTripsData } from "./trips";
 import { BudgetData, emptyBudgetData, normalizeBudgetData, ensureLinkedMoneyEntities } from "./budget";
+import { MealPlanData, emptyMealPlanData, normalizeMealPlanData } from "./mealplan";
 
 export type TaskItem = {
   id: string;
@@ -863,6 +864,7 @@ export type DashboardData = {
   quest: QuestData;
   memos: MemosData;
   health: HealthData;
+  mealPlan: MealPlanData;
   finance: FinanceData;
   wedding: WeddingData;
   trips: TripsData;
@@ -923,6 +925,7 @@ export function defaultDashboardData(): DashboardData {
     quest: emptyQuestData(),
     memos: emptyMemosData(),
     health: emptyHealthData(),
+    mealPlan: emptyMealPlanData(),
     finance: emptyFinanceData(),
     wedding: emptyWeddingData(),
     trips: emptyTripsData(),
@@ -1066,6 +1069,7 @@ export function normalizeDashboardData(
     quest: normalizeQuestData(data.quest),
     memos: normalizeMemosData(data.memos),
     health: normalizeHealthData(data.health),
+    mealPlan: normalizeMealPlanData(data.mealPlan),
     finance: normalizeFinanceData(data.finance),
     wedding: normalizeWeddingData(data.wedding),
     trips: normalizeTripsData(data.trips),

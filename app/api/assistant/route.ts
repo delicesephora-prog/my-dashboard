@@ -1,22 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { toolDefinitionsForApi } from "@/lib/assistant-tools";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MODEL = "claude-sonnet-5";
 
+// Anthropic content blocks (text / tool_use / tool_result) - validated
+// loosely since the exact shape varies by block type and the API itself
+// is the source of truth for what's well-formed.
+const contentBlockSchema = z.record(z.any());
+
 const requestSchema = z.object({
-  system: z.string().max(6000).optional(),
+  system: z.string().max(12000).optional(),
   messages: z
     .array(
       z.object({
         role: z.enum(["user", "assistant"]),
-        content: z.string().max(8000),
+        content: z.union([z.string().max(8000), z.array(contentBlockSchema).max(30)]),
       })
     )
     .min(1)
-    .max(60),
+    .max(120),
+  useTools: z.boolean().optional(),
+  monthSpendUsd: z.number().optional(),
+  monthCapUsd: z.number().nullable().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -34,6 +43,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Invalid request" }, { status: 400 });
   }
 
+  const { monthSpendUsd, monthCapUsd } = parsed.data;
+  if (monthCapUsd !== null && monthCapUsd !== undefined && (monthSpendUsd ?? 0) >= monthCapUsd) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: `You've hit your monthly Assistant budget of $${monthCapUsd.toFixed(2)} - she'll be back next month, or raise the cap in Settings.`,
+      },
+      { status: 402 }
+    );
+  }
+
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -44,9 +64,10 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 1024,
+        max_tokens: 1536,
         system: parsed.data.system ?? "",
-        messages: parsed.data.messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: parsed.data.messages,
+        ...(parsed.data.useTools !== false ? { tools: toolDefinitionsForApi() } : {}),
       }),
     });
 
@@ -59,9 +80,15 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await res.json();
-    const block = Array.isArray(data?.content) ? data.content.find((c: { type: string }) => c.type === "text") : null;
-    const reply = typeof block?.text === "string" ? block.text : "";
-    return NextResponse.json({ ok: true, reply });
+    return NextResponse.json({
+      ok: true,
+      content: Array.isArray(data?.content) ? data.content : [],
+      stopReason: data?.stop_reason ?? null,
+      usage: {
+        inputTokens: data?.usage?.input_tokens ?? 0,
+        outputTokens: data?.usage?.output_tokens ?? 0,
+      },
+    });
   } catch (err) {
     return NextResponse.json(
       { ok: false, error: err instanceof Error ? err.message : "Assistant request failed" },

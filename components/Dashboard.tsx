@@ -56,13 +56,14 @@ import FridayLedgerView from "./work/FridayLedgerView";
 import EventsView from "./work/EventsView";
 import { FocusData } from "@/lib/focus";
 import FocusModeView from "./FocusModeView";
-import { AssistantData } from "@/lib/assistant";
+import { AssistantData, assistantDisplayName } from "@/lib/assistant";
 import AssistantView from "./AssistantView";
 import { BecomingData } from "@/lib/becoming";
 import { Celebration, CelebrationTier } from "@/lib/celebration";
 import { QuestData } from "@/lib/quest";
 import { MemosData } from "@/lib/memos";
 import { HealthData } from "@/lib/health";
+import { MealPlanData } from "@/lib/mealplan";
 import { FinanceData } from "@/lib/finance";
 import { BudgetData } from "@/lib/budget";
 import { WeddingData } from "@/lib/wedding";
@@ -109,7 +110,7 @@ import WarRoomSection from "./life/year/WarRoomSection";
 import SaveIndicator, { SaveStatus } from "./SaveIndicator";
 import TabErrorBoundary from "./TabErrorBoundary";
 
-type World = "front" | "work" | "planner" | "life";
+type World = "front" | "work" | "planner" | "life" | "assistant";
 type WorkView = "dashboard" | "cadence" | "backbeat" | "ops" | "reference";
 type OpsSubView =
   | "hub"
@@ -143,7 +144,6 @@ type LifeView =
   | "year"
   | "dec8"
   | "verses"
-  | "assistant"
   | "memos"
   | "health"
   | "wedding"
@@ -366,6 +366,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     scheduleSave();
   }
 
+  function updateMealPlan(updater: (m: MealPlanData) => MealPlanData) {
+    setData((prev) => ({ ...prev, mealPlan: updater(prev.mealPlan) }));
+    scheduleSave();
+  }
+
   function updateFinance(updater: (f: FinanceData) => FinanceData) {
     setData((prev) => ({ ...prev, finance: updater(prev.finance) }));
     scheduleSave();
@@ -505,6 +510,15 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
 
   function updateAssistant(updater: (a: AssistantData) => AssistantData) {
     setData((prev) => ({ ...prev, assistant: updater(prev.assistant) }));
+    scheduleSave();
+  }
+
+  // The Assistant's tools can touch any part of the dashboard (tasks,
+  // planner, lists, health, events, meals, finance, waiting-on, Dec 8
+  // goals, her own memory) - one generic updater covers all of them
+  // instead of threading a narrow per-domain callback through for each.
+  function updateDashboardData(updater: (d: DashboardData) => DashboardData) {
+    setData(updater);
     scheduleSave();
   }
 
@@ -687,6 +701,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           }
         }}
         counts={counts}
+        assistantName={assistantDisplayName(data.assistant)}
       />
 
       <main className="flex min-h-0 flex-1 flex-col px-5 pt-3">
@@ -833,6 +848,8 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
               setLifeView("manageRoutines");
             }}
           />
+        ) : world === "assistant" ? (
+          <AssistantView data={data} onChangeData={updateDashboardData} />
         ) : (
           <>
             {lifeView !== "manageHabits" && lifeView !== "manageRoutines" && (
@@ -852,7 +869,6 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                   { key: "year", label: "Year" },
                   { key: "dec8", label: "Dec 8" },
                   { key: "verses", label: "Verses" },
-                  { key: "assistant", label: "Assistant" },
                   { key: "memos", label: "Memos" },
                   { key: "health", label: "Health" },
                   { key: "wedding", label: "Wedding" },
@@ -967,12 +983,16 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             )}
             {lifeView === "verses" && <VersesView />}
             {lifeView === "memos" && <MemosView data={data.memos} onChange={updateMemos} />}
-            {lifeView === "health" && <HealthView health={data.health} onChange={updateHealth} />}
+            {lifeView === "health" && (
+              <HealthView
+                health={data.health}
+                onChange={updateHealth}
+                mealPlan={data.mealPlan}
+                onChangeMealPlan={updateMealPlan}
+              />
+            )}
             {lifeView === "wedding" && <WeddingView wedding={data.wedding} onChange={updateWedding} />}
             {lifeView === "trips" && <TripsView trips={data.trips} onChange={updateTrips} />}
-            {lifeView === "assistant" && (
-              <AssistantView data={data} assistant={data.assistant} onChange={updateAssistant} />
-            )}
           </>
         )}
        </TabErrorBoundary>
@@ -1004,6 +1024,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           onChangeTextAlerts={(updater) =>
             updateTextAlerts((t) => ({ ...t, settings: updater(t.settings) }))
           }
+          onChangeAssistant={updateAssistant}
           onClose={() => setSettingsOpen(false)}
         />
       )}

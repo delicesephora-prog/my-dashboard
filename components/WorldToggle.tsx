@@ -1,15 +1,17 @@
 "use client";
 
-type World = "front" | "work" | "planner" | "life";
+type World = "front" | "work" | "planner" | "life" | "assistant";
 
 export default function WorldToggle({
   world,
   onChange,
   counts,
+  assistantName,
 }: {
   world: World;
   onChange: (w: World) => void;
   counts: { work: number; life: number };
+  assistantName: string;
 }) {
   return (
     <div className="px-5">
@@ -39,6 +41,12 @@ export default function WorldToggle({
           count={counts.life}
           underline="border-life"
           onClick={() => onChange("life")}
+        />
+        <Tab
+          label={assistantName}
+          active={world === "assistant"}
+          underline="border-life"
+          onClick={() => onChange("assistant")}
         />
       </div>
     </div>
