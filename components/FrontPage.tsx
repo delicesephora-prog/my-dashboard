@@ -104,22 +104,32 @@ export default function FrontPage({
           ))}
         </div>
 
-        <OneThing value={oneThingText} onChange={onOneThingChange} suggestion={focusTasks[0]?.title} />
+        {/* Below lg, this is just the existing single-column stack. At lg
+            and up it becomes a bento grid - alternating 5/12+7/12-wide
+            cards so consecutive pairs tile edge-to-edge with no gaps.
+            Conditional cards (Waiting On, Home Zone) simply aren't in the
+            DOM when absent, so the grid's normal row-major flow closes
+            around them with no explicit gap-filling logic needed. */}
+        <div className="flex flex-col gap-3 lg:grid lg:grid-cols-12 lg:items-start lg:gap-4">
+          <div className="lg:col-span-5">
+            <OneThing value={oneThingText} onChange={onOneThingChange} suggestion={focusTasks[0]?.title} />
+          </div>
 
-        {now && (
-          <FrontPageBody
-            data={data}
-            now={now}
-            focusTasks={focusTasks}
-            onNavigate={onNavigate}
-            onChangeLifeScore={onChangeLifeScore}
-            onChangeRhythm={onChangeRhythm}
-            onToggleFocusTask={onToggleFocusTask}
-            onChangeHomeZones={onChangeHomeZones}
-            onChangeQuest={onChangeQuest}
-            onCelebrate={onCelebrate}
-          />
-        )}
+          {now && (
+            <FrontPageBody
+              data={data}
+              now={now}
+              focusTasks={focusTasks}
+              onNavigate={onNavigate}
+              onChangeLifeScore={onChangeLifeScore}
+              onChangeRhythm={onChangeRhythm}
+              onToggleFocusTask={onToggleFocusTask}
+              onChangeHomeZones={onChangeHomeZones}
+              onChangeQuest={onChangeQuest}
+              onCelebrate={onCelebrate}
+            />
+          )}
+        </div>
       </div>
 
       {/* Below the scroll area, not overlaid on it - same pattern as
@@ -225,7 +235,7 @@ function FrontPageBody({
         type="button"
         onClick={() => recommendation.target && onNavigate(recommendation.target)}
         disabled={!recommendation.target}
-        className="hover-lift rounded-xl2 border-l-4 border-gold bg-paper-surface p-4 text-left shadow-paper transition active:scale-[0.99] disabled:active:scale-100"
+        className="hover-lift rounded-xl2 border-l-4 border-gold bg-paper-surface p-4 text-left shadow-paper transition active:scale-[0.99] disabled:active:scale-100 lg:col-span-7"
       >
         <p className="mb-1 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-gold">
           Suggested Next
@@ -233,7 +243,7 @@ function FrontPageBody({
         <p className="font-serif text-[1.05rem] leading-snug text-paper-ink">{recommendation.text}</p>
       </button>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 lg:col-span-5">
         <div className="rounded-xl2 border border-paper-border bg-paper-surface p-3">
           <p className="mb-1 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-gold">
             ✦ Vocab of the Day
@@ -252,7 +262,7 @@ function FrontPageBody({
 
       <div
         ref={questCardRef}
-        className={`flex items-center gap-3 rounded-xl2 border p-3 transition ${
+        className={`flex items-center gap-3 rounded-xl2 border p-3 transition lg:col-span-7 ${
           questDone
             ? "border-sage/40 bg-sage/10"
             : "border-dashed border-paper-border bg-paper-surface2"
@@ -282,7 +292,7 @@ function FrontPageBody({
         <button
           type="button"
           onClick={() => onNavigate({ world: "work", workView: "ops", opsView: "waitingOn" })}
-          className="hover-lift rounded-xl2 border border-paper-border bg-paper-surface p-4 text-left shadow-paper transition active:scale-[0.99]"
+          className="hover-lift rounded-xl2 border border-paper-border bg-paper-surface p-4 text-left shadow-paper transition active:scale-[0.99] lg:col-span-5"
         >
           <div className="mb-2 flex items-center justify-between">
             <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
@@ -312,7 +322,7 @@ function FrontPageBody({
         </button>
       )}
 
-      <div>
+      <div className="lg:col-span-7">
         <p className="mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-backdrop-muted">
           Today at a Glance
         </p>
@@ -347,9 +357,9 @@ function FrontPageBody({
         )}
       </div>
 
-      <Flourish />
+      <Flourish className="lg:hidden" />
 
-      <div className="hover-lift rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
+      <div className="hover-lift rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper lg:col-span-5">
         <div className="mb-3 flex gap-1 rounded-full bg-paper-surface2 p-1">
           <button
             type="button"
@@ -411,7 +421,7 @@ function FrontPageBody({
       </div>
 
       {zone && (
-        <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
+        <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper lg:col-span-7">
           <p className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
             Today&apos;s Home Zone — {zone.label}
           </p>
@@ -441,7 +451,9 @@ function FrontPageBody({
         </div>
       )}
 
-      <LifeScoreRing score={breakdown.score} label={breakdown.label} onTap={() => setScoreOpen(true)} />
+      <div className="lg:col-span-5">
+        <LifeScoreRing score={breakdown.score} label={breakdown.label} onTap={() => setScoreOpen(true)} />
+      </div>
       {scoreOpen && (
         <LifeScoreSheet
           breakdown={breakdown}
@@ -450,7 +462,7 @@ function FrontPageBody({
         />
       )}
 
-      <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
+      <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper lg:col-span-7">
         <p className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
           This Week So Far
         </p>
