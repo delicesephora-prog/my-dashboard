@@ -13,13 +13,16 @@ import {
 } from "./types";
 import { todayKey } from "./date";
 import { Account, TRANSACTION_CATEGORIES, Transaction, monthKey } from "./finance";
-import { PlannerBlock, sortedCategories } from "./planner";
+import { PlannerBlock, blocksForDate, routineGhostBlocksForDate, sortedCategories, timeToMinutes } from "./planner";
 import { GroceryItem, GROCERY_CATEGORIES, GroceryCategory, StapleItem, guessGroceryCategory } from "./lists";
 import { Appointment } from "./health";
 import { newEvent, WorkEvent } from "./events";
 import { MealSlot, MEAL_SLOTS, newMeal } from "./mealplan";
 import { newWaitingOnItem } from "./waitingon";
 import { addMemoryFact, forgetFactsMatching, MemoryFactCategory, MEMORY_FACT_CATEGORIES } from "./assistant";
+import { computeRecommendation, computeWeekRecap, habitsAtRisk } from "./frontpage";
+import { computeLifeScoreBreakdown } from "./lifescore";
+import { questForDate, isQuestDone } from "./quest";
 
 // A tool call falls into one of three lanes:
 // - "write": mutates the dashboard - shown to Sephora as a one-tap
@@ -548,6 +551,7 @@ const READABLE_SECTIONS = [
   "mealPlan",
   "dec8",
   "cadence",
+  "frontPage",
 ] as const;
 
 function readSection(data: DashboardData, section: string, now: Date): unknown {
@@ -565,11 +569,24 @@ function readSection(data: DashboardData, section: string, now: Date): unknown {
         lifeTasks: data.life.tasks.slice(0, 40).map((t) => ({ text: t.text, done: t.done })),
       };
     case "planner": {
-      const key = todayKey(now);
+      // blocksForDate already resolves one-off vs. weekly-repeating blocks
+      // correctly for this exact date; routineGhostBlocksForDate adds in
+      // the routine-derived time blocks (morning/day/night steps) that
+      // make up most of a real day but aren't stored as Planner blocks -
+      // both need to be included, or "what's on my planner today" reads
+      // as mostly empty even on a fully scheduled day.
+      const realBlocks = blocksForDate(data.planner, now).map((b) => ({
+        title: b.title,
+        startTime: b.startTime,
+        endTime: b.endTime,
+      }));
+      const ghostBlocks = routineGhostBlocksForDate(data.routines.config, data.planner.routineOverrides, now).map(
+        (g) => ({ title: g.title, startTime: g.startTime, endTime: "" })
+      );
       return {
-        today: data.planner.blocks
-          .filter((b) => b.date === key || b.repeatDays.length > 0)
-          .map((b) => ({ title: b.title, startTime: b.startTime, endTime: b.endTime })),
+        today: [...realBlocks, ...ghostBlocks].sort(
+          (a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
+        ),
       };
     }
     case "waitingOn":
@@ -606,6 +623,22 @@ function readSection(data: DashboardData, section: string, now: Date): unknown {
       return {
         items: data.cadence.items.map((i) => ({ text: i.text, frequency: i.frequency, department: i.department })),
       };
+    case "frontPage": {
+      const oneThing = data.oneThing.date === todayKey(now) ? data.oneThing.text : "";
+      const recommendation = computeRecommendation(data, now);
+      const recap = computeWeekRecap(data, now);
+      const atRisk = habitsAtRisk(data.habits, now);
+      const quest = questForDate(now);
+      const score = computeLifeScoreBreakdown(data, now);
+      return {
+        oneThing: oneThing || null,
+        suggestedNext: recommendation.text,
+        todaysQuest: { title: quest.title, done: isQuestDone(data.quest, now) },
+        lifeScore: { score: score.score, label: score.label },
+        habitsAtRisk: atRisk.map((r) => `${r.habit.label} (${r.doneCount}/${r.habit.weeklyGoal})`),
+        thisWeek: recap,
+      };
+    }
     default:
       return { error: `Unknown section "${section}"` };
   }
