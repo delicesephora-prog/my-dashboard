@@ -31,6 +31,7 @@ export default function OperationsDashboard({
       createdAt: new Date().toISOString(),
       progressPct: 0,
       progressLog: [],
+      stallSnoozedUntil: "",
     };
     onChange((wo) => ({ ...wo, tasks: [task, ...wo.tasks] }));
   }

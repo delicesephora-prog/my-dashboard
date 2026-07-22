@@ -7,7 +7,7 @@ import {
   quarterDataFor,
   weekDataFor,
 } from "./types";
-import { sortWorkTasks } from "./work-style";
+import { sortWorkTasks, isStalled } from "./work-style";
 import { weekKeyFor } from "./week";
 import { quarterKeyFor } from "./quarter";
 import { completionForDate } from "./routines";
@@ -155,6 +155,14 @@ export function computeRecommendation(
       // separate tab to jump to yet.
       return { text: `${zone.label} — today's home zone`, target: null };
     }
+  }
+
+  // A gentle, occasional nudge - only surfaces when nothing more pressing
+  // (a routine, a home zone) already claimed the slot above, so it never
+  // dominates. Never phrased as a warning - just a soft "this misses you."
+  const stalled = data.workOps.tasks.find((t) => isStalled(t, now));
+  if (stalled) {
+    return { text: `${stalled.title} misses you.`, target: { world: "work", workView: "dashboard" } };
   }
 
   return { text: "Set tomorrow's One Thing tonight.", target: null };

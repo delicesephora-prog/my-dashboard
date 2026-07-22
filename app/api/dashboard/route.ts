@@ -96,6 +96,7 @@ const workTaskSchema = z.object({
   createdAt: z.string(),
   progressPct: z.number().min(0).max(100),
   progressLog: z.array(workTaskProgressEntrySchema).max(1000),
+  stallSnoozedUntil: z.string().optional().default(""),
 });
 
 const workOpsSchema = z.object({

@@ -3,6 +3,7 @@ import { todayKey, greetingForHour } from "./date";
 import { openItems } from "./waitingon";
 import { completionForDate } from "./routines";
 import { monthKey } from "./finance";
+import { isStalled } from "./work-style";
 
 export type AssistantMessage = {
   id: string;
@@ -246,6 +247,18 @@ export function buildContextSnapshot(data: DashboardData, now: Date = new Date()
       `Waiting on ${waiting.length} thing${waiting.length === 1 ? "" : "s"}: ${waiting
         .slice(0, 5)
         .map((w) => `${w.who} (${w.what})`)
+        .join("; ")}`
+    );
+  }
+
+  // Gentle awareness only, never a scolding metric - mention it in passing
+  // if it comes up naturally, don't lead with it or bring it up every time.
+  const stalled = data.workOps.tasks.filter((t) => isStalled(t, now));
+  if (stalled.length > 0) {
+    lines.push(
+      `Gone quiet a few days (mention gently, only if it fits naturally - never guilt): ${stalled
+        .slice(0, 3)
+        .map((t) => t.title)
         .join("; ")}`
     );
   }

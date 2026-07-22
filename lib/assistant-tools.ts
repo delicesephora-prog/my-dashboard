@@ -110,6 +110,7 @@ const addWorkTaskTool: AssistantTool = {
       createdAt: now.toISOString(),
       progressPct: 0,
       progressLog: [],
+      stallSnoozedUntil: "",
     };
     return {
       data: { ...data, workOps: { ...data.workOps, tasks: [task, ...data.workOps.tasks] } },

@@ -1,5 +1,5 @@
 import { WorkTask, WorkTaskPriority, WorkTaskStatus } from "./types";
-import { todayKey } from "./date";
+import { todayKey, daysBetween } from "./date";
 
 export const STATUS_COLORS: Record<WorkTaskStatus, string> = {
   not_started: "#A9A296",
@@ -52,6 +52,32 @@ export function advanceTaskOnCheck(task: WorkTask, now: Date = new Date()): Work
     return { ...task, status: "completed", progressPct: 100 };
   }
   return logTaskProgress(task, task.progressPct + 25, now);
+}
+
+// Days since the most recent progress check-in - falls back to createdAt
+// when there's no log entry at all (progress was set once and never
+// touched again since).
+export function daysSinceLastWorkedOn(task: WorkTask, now: Date = new Date()): number {
+  const lastDate = task.progressLog[0]?.date ?? task.createdAt.slice(0, 10);
+  return daysBetween(lastDate, todayKey(now));
+}
+
+const STALL_THRESHOLD_DAYS = 3;
+
+// Partial progress that's gone quiet for a few days, and not snoozed -
+// never a task that's brand new, done, or never started at all, since
+// those aren't "stalled," just not begun yet.
+export function isStalled(task: WorkTask, now: Date = new Date()): boolean {
+  if (task.status === "completed") return false;
+  if (task.progressPct <= 0 || task.progressPct >= 100) return false;
+  if (task.stallSnoozedUntil && task.stallSnoozedUntil > todayKey(now)) return false;
+  return daysSinceLastWorkedOn(task, now) >= STALL_THRESHOLD_DAYS;
+}
+
+export function snoozeStall(task: WorkTask, now: Date = new Date()): WorkTask {
+  const snoozeUntil = new Date(now);
+  snoozeUntil.setDate(snoozeUntil.getDate() + 7);
+  return { ...task, stallSnoozedUntil: todayKey(snoozeUntil) };
 }
 
 const PRIORITY_RANK: Record<WorkTaskPriority, number> = { high: 0, medium: 1, low: 2 };

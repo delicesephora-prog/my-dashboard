@@ -149,6 +149,10 @@ export type WorkTask = {
   progressPct: number; // 0-100
   // Newest first - every check-in kept, never trimmed except a hard cap.
   progressLog: WorkTaskProgressEntry[];
+  // "" or YYYY-MM-DD - stall nudges (the card badge, Suggested Next, the
+  // Assistant) are suppressed until this date, even if the task is still
+  // objectively stalled.
+  stallSnoozedUntil: string;
 };
 
 export type WorkOps = {
@@ -974,6 +978,7 @@ export function normalizeDashboardData(
         ...t,
         progressPct: t.progressPct ?? 0,
         progressLog: t.progressLog ?? [],
+        stallSnoozedUntil: t.stallSnoozedUntil ?? "",
       })),
     },
     cadence: normalizeCadenceData(data.cadence),

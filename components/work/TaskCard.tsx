@@ -3,7 +3,15 @@
 import { useState } from "react";
 import { WorkTask, WORK_TASK_CATEGORIES, WORK_TASK_PRIORITIES, WORK_TASK_STATUSES } from "@/lib/types";
 import { todayKey } from "@/lib/date";
-import { PRIORITY_COLORS, STATUS_COLORS, advanceTaskOnCheck, isOverdue, logTaskProgress } from "@/lib/work-style";
+import {
+  PRIORITY_COLORS,
+  STATUS_COLORS,
+  advanceTaskOnCheck,
+  isOverdue,
+  isStalled,
+  logTaskProgress,
+  snoozeStall,
+} from "@/lib/work-style";
 import CheckCircle from "../CheckCircle";
 
 const QUICK_PCTS = [25, 50, 75] as const;
@@ -27,6 +35,7 @@ export default function TaskCard({
   const [expanded, setExpanded] = useState(false);
   const today = todayKey();
   const overdue = isOverdue(task.dueDate, today, task.status);
+  const stalled = isStalled(task);
 
   function handleCheck() {
     onUpdate((t) => advanceTaskOnCheck(t));
@@ -68,6 +77,14 @@ export default function TaskCard({
             style={{ backgroundColor: PRIORITY_COLORS[task.priority] }}
             aria-hidden
           />
+          {stalled && (
+            <span
+              className="shrink-0 rounded-full bg-gold-soft px-2 py-0.5 text-[10px] font-medium text-gold"
+              title="Hasn't been worked on in a few days"
+            >
+              been a minute
+            </span>
+          )}
           {task.dueDate && (
             <span
               className={`shrink-0 text-[11px] ${overdue ? "font-medium text-[#B5574A]" : "text-paper-muted"}`}
@@ -181,6 +198,15 @@ export default function TaskCard({
                   </li>
                 ))}
               </ul>
+            )}
+            {stalled && (
+              <button
+                type="button"
+                onClick={() => onUpdate((t) => snoozeStall(t))}
+                className="mt-2 text-[11px] text-gold underline underline-offset-2"
+              >
+                Snooze this nudge for a week
+              </button>
             )}
           </div>
 

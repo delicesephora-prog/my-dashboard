@@ -543,6 +543,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             createdAt: new Date().toISOString(),
             progressPct: 0,
             progressLog: [],
+            stallSnoozedUntil: "",
           },
         ],
       },
