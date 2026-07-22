@@ -31,13 +31,14 @@ export default function MonthCalendar({
       <div className="grid grid-cols-7 gap-1">
         {days.map((day) => {
           const isToday = day.dateKeyStr === today;
-          const categories = Array.from(new Set(day.blocks.map((b) => b.category))).slice(0, 4);
+          const visible = day.blocks.slice(0, 3);
+          const hiddenCount = day.blocks.length - visible.length;
           return (
             <button
               key={day.dateKeyStr}
               type="button"
               onClick={() => onJumpToDay(day.dateKeyStr)}
-              className={`flex aspect-square flex-col items-center justify-start gap-1 rounded-lg border px-0.5 pt-1 text-left ${
+              className={`flex min-h-[72px] flex-col items-stretch gap-0.5 rounded-lg border px-1 pb-1 pt-1 text-left ${
                 isToday ? "border-life/50 bg-life/5" : "border-paper-border bg-paper-surface"
               } ${!day.inMonth ? "opacity-35" : ""}`}
             >
@@ -46,15 +47,22 @@ export default function MonthCalendar({
               >
                 {day.date.getDate()}
               </span>
-              {categories.length > 0 && (
-                <span className="flex flex-wrap items-center justify-center gap-[2px]">
-                  {categories.map((c) => (
+              {visible.length > 0 && (
+                <span className="flex flex-col gap-[1px]">
+                  {visible.map((b) => (
                     <span
-                      key={c}
-                      className="h-[4px] w-[4px] rounded-full"
-                      style={{ backgroundColor: categoryColor(data.categories, c) }}
-                    />
+                      key={b.id}
+                      className="truncate rounded-[3px] px-[3px] py-[1px] text-[8.5px] leading-tight text-paper-ink"
+                      style={{ backgroundColor: `${categoryColor(data.categories, b.category)}33` }}
+                    >
+                      {b.title}
+                    </span>
                   ))}
+                  {hiddenCount > 0 && (
+                    <span className="px-[3px] text-[8px] leading-tight text-paper-muted">
+                      +{hiddenCount} more
+                    </span>
+                  )}
                 </span>
               )}
             </button>
