@@ -21,17 +21,17 @@ export default function WorldToggle({
           onClick={() => onChange("front")}
         />
         <Tab
+          label="Planner"
+          active={world === "planner"}
+          underline="border-gold"
+          onClick={() => onChange("planner")}
+        />
+        <Tab
           label="Work"
           active={world === "work"}
           count={counts.work}
           underline="border-work"
           onClick={() => onChange("work")}
-        />
-        <Tab
-          label="Planner"
-          active={world === "planner"}
-          underline="border-gold"
-          onClick={() => onChange("planner")}
         />
         <Tab
           label="Life"
