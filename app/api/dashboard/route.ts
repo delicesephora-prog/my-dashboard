@@ -96,21 +96,24 @@ const workOpsSchema = z.object({
   tasks: z.array(workTaskSchema).max(1000),
 });
 
+const cadenceDepartmentSchema = z.enum([
+  "Clinical Operations",
+  "Executive Support",
+  "Investor Relations",
+  "Finance",
+  "Vendor",
+  "Facilities",
+  "Administration",
+  "Career",
+]);
+
 const cadenceItemSchema = z.object({
   id: z.string(),
   text: z.string().max(500),
   frequency: z.enum(["daily", "weekly", "monthly", "quarterly"]),
-  department: z.enum([
-    "Clinical Operations",
-    "Executive Support",
-    "Investor Relations",
-    "Finance",
-    "Vendor",
-    "Facilities",
-    "Administration",
-    "Career",
-  ]),
+  department: cadenceDepartmentSchema,
   order: z.number(),
+  linkedWaitingOnId: z.string().nullable().optional(),
 });
 
 const cadenceDataSchema = z.object({
@@ -755,6 +758,8 @@ const waitingOnItemSchema = z.object({
   followUpDate: z.string(),
   resolvedDate: z.string(),
   notes: z.string().max(5000),
+  department: cadenceDepartmentSchema.nullable().default(null),
+  linkedCadenceItemId: z.string().nullable().default(null),
 });
 
 const waitingOnDataSchema = z.object({

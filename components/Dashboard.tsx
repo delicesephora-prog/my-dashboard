@@ -30,7 +30,6 @@ import { HomeZonesData } from "@/lib/home";
 import { TodayFocusItem } from "@/lib/frontpage";
 import { WelcomeData, shouldShowWelcome, markWelcomeShown } from "@/lib/welcome";
 import WelcomeScreen from "./WelcomeScreen";
-import { WaitingOnData } from "@/lib/waitingon";
 import { VendorsData } from "@/lib/vendors";
 import { WorkShutdownData } from "@/lib/workshutdown";
 import { MeetingOpsData } from "@/lib/meetingops";
@@ -401,11 +400,6 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     setShowWelcome(false);
   }
 
-  function updateWaitingOn(updater: (w: WaitingOnData) => WaitingOnData) {
-    setData((prev) => ({ ...prev, waitingOn: updater(prev.waitingOn) }));
-    scheduleSave();
-  }
-
   function updateVendors(updater: (v: VendorsData) => VendorsData) {
     setData((prev) => ({ ...prev, vendors: updater(prev.vendors) }));
     scheduleSave();
@@ -659,6 +653,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   function handleFrontPageNavigate(target: FrontPageNavTarget) {
     setWorld(target.world);
     if (target.world === "work" && target.workView) setWorkView(target.workView);
+    if (target.world === "work" && target.opsView) setOpsView(target.opsView);
     if (target.world === "life" && target.lifeView) setLifeView(target.lifeView);
     if (target.world === "life" && target.openBoardMeeting) setBoardMeetingOpen(true);
   }
@@ -753,7 +748,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             {workView === "ops" && opsView === "waitingOn" && (
               <WaitingOnView
                 waitingOn={data.waitingOn}
-                onChange={updateWaitingOn}
+                onChangeData={updateData}
                 onBack={() => setOpsView("hub")}
               />
             )}

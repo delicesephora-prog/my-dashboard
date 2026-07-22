@@ -1,4 +1,5 @@
 import { dateKey, daysBetween } from "./date";
+import { CadenceDepartment } from "./cadence";
 
 export type WaitingOnItem = {
   id: string;
@@ -8,6 +9,11 @@ export type WaitingOnItem = {
   followUpDate: string; // "" or YYYY-MM-DD
   resolvedDate: string; // "" while still open
   notes: string;
+  // Set when this item was also filed as a weekly Cadence reminder under a
+  // department - the two stay linked so resolving/deleting this item cleans
+  // up the reminder instead of leaving a stale checklist entry behind.
+  department: CadenceDepartment | null;
+  linkedCadenceItemId: string | null;
 };
 
 export type WaitingOnData = {
@@ -21,10 +27,23 @@ export function emptyWaitingOnData(): WaitingOnData {
 export function normalizeWaitingOnData(
   partial: Partial<WaitingOnData> | null | undefined
 ): WaitingOnData {
-  return { items: Array.isArray(partial?.items) ? partial.items : [] };
+  return {
+    items: Array.isArray(partial?.items)
+      ? partial.items.map((i) => ({
+          ...i,
+          department: i.department ?? null,
+          linkedCadenceItemId: i.linkedCadenceItemId ?? null,
+        }))
+      : [],
+  };
 }
 
-export function newWaitingOnItem(who: string, what: string, now: Date = new Date()): WaitingOnItem {
+export function newWaitingOnItem(
+  who: string,
+  what: string,
+  now: Date = new Date(),
+  department: CadenceDepartment | null = null
+): WaitingOnItem {
   return {
     id: crypto.randomUUID(),
     who,
@@ -33,6 +52,8 @@ export function newWaitingOnItem(who: string, what: string, now: Date = new Date
     followUpDate: "",
     resolvedDate: "",
     notes: "",
+    department,
+    linkedCadenceItemId: null,
   };
 }
 

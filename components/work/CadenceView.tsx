@@ -232,11 +232,16 @@ function CadenceItemRow({
         <button
           type="button"
           onClick={() => setEditing((v) => !v)}
-          className={`min-w-0 flex-1 truncate text-left text-[13.5px] ${
+          className={`flex min-w-0 flex-1 items-center gap-1.5 text-left text-[13.5px] ${
             done ? "text-paper-faint line-through" : "text-paper-ink"
           }`}
         >
-          {item.text}
+          <span className="min-w-0 flex-1 truncate">{item.text}</span>
+          {item.linkedWaitingOnId && (
+            <span className="shrink-0 text-[10px] text-paper-faint" title="Linked to a Waiting On item">
+              🔗
+            </span>
+          )}
         </button>
         <div className="flex shrink-0 items-center gap-0.5 text-paper-faint">
           {onMoveUp && (

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { DashboardData } from "@/lib/types";
+import { CADENCE_DEPARTMENTS, CadenceDepartment, addCadenceItem, deleteCadenceItem } from "@/lib/cadence";
 import {
   WaitingOnData,
   addItem,
@@ -15,16 +17,17 @@ import {
 
 export default function WaitingOnView({
   waitingOn,
-  onChange,
+  onChangeData,
   onBack,
 }: {
   waitingOn: WaitingOnData;
-  onChange: (updater: (w: WaitingOnData) => WaitingOnData) => void;
+  onChangeData: (updater: (d: DashboardData) => DashboardData) => void;
   onBack: () => void;
 }) {
   const [who, setWho] = useState("");
   const [what, setWhat] = useState("");
   const [followUpDate, setFollowUpDate] = useState("");
+  const [department, setDepartment] = useState<CadenceDepartment | "">("");
   const [filter, setFilter] = useState<"all" | "overdue">("all");
   const [showResolved, setShowResolved] = useState(false);
 
@@ -38,12 +41,56 @@ export default function WaitingOnView({
 
   function addNew() {
     if (!who.trim() || !what.trim()) return;
-    const item = newWaitingOnItem(who.trim(), what.trim(), now);
+    const item = newWaitingOnItem(who.trim(), what.trim(), now, department || null);
     item.followUpDate = followUpDate;
-    onChange((w) => addItem(w, item));
+
+    onChangeData((d) => {
+      let cadence = d.cadence;
+      let linkedCadenceItemId: string | null = null;
+      if (department) {
+        cadence = addCadenceItem(
+          cadence,
+          `Follow up: ${item.what} (${item.who})`,
+          "weekly",
+          department,
+          item.id
+        );
+        linkedCadenceItemId = cadence.items[cadence.items.length - 1].id;
+      }
+      return {
+        ...d,
+        waitingOn: addItem(d.waitingOn, { ...item, linkedCadenceItemId }),
+        cadence,
+      };
+    });
+
     setWho("");
     setWhat("");
     setFollowUpDate("");
+    setDepartment("");
+  }
+
+  // Resolving or deleting a Waiting On item that seeded a Cadence reminder
+  // also removes that reminder - the follow-up is done, so there's nothing
+  // left to nag her about on the weekly checklist.
+  function resolve(id: string) {
+    onChangeData((d) => {
+      const target = d.waitingOn.items.find((i) => i.id === id);
+      const cadence = target?.linkedCadenceItemId
+        ? deleteCadenceItem(d.cadence, target.linkedCadenceItemId)
+        : d.cadence;
+      return { ...d, waitingOn: resolveItem(d.waitingOn, id, now), cadence };
+    });
+  }
+
+  function del(id: string) {
+    onChangeData((d) => {
+      const target = d.waitingOn.items.find((i) => i.id === id);
+      const cadence = target?.linkedCadenceItemId
+        ? deleteCadenceItem(d.cadence, target.linkedCadenceItemId)
+        : d.cadence;
+      return { ...d, waitingOn: deleteItem(d.waitingOn, id), cadence };
+    });
   }
 
   return (
@@ -80,21 +127,39 @@ export default function WaitingOnView({
           placeholder="What you're waiting on"
           className="mb-2 w-full rounded-lg border border-paper-border bg-paper-surface2 px-3 py-2 text-[14px] text-paper-ink outline-none focus:border-work"
         />
-        <div className="flex items-center gap-2">
+        <div className="mb-2 flex items-center gap-2">
           <input
             type="date"
             value={followUpDate}
             onChange={(e) => setFollowUpDate(e.target.value)}
             className="flex-1 rounded-lg border border-paper-border bg-paper-surface2 px-3 py-2 text-[13px] text-paper-ink outline-none"
           />
-          <button
-            type="button"
-            onClick={addNew}
-            className="shrink-0 rounded-lg bg-work px-4 py-2 text-[13px] font-medium text-paper-surface active:scale-95"
+          <select
+            value={department}
+            onChange={(e) => setDepartment(e.target.value as CadenceDepartment | "")}
+            className="flex-1 rounded-lg border border-paper-border bg-paper-surface2 px-3 py-2 text-[13px] text-paper-ink outline-none"
           >
-            Add
-          </button>
+            <option value="">No Cadence reminder</option>
+            {CADENCE_DEPARTMENTS.map((dept) => (
+              <option key={dept} value={dept}>
+                {dept}
+              </option>
+            ))}
+          </select>
         </div>
+        {department && (
+          <p className="mb-2 text-[10.5px] leading-snug text-paper-faint">
+            Also adds a weekly Cadence reminder under {department} — it&apos;s removed automatically
+            once you resolve or delete this.
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={addNew}
+          className="w-full rounded-lg bg-work px-4 py-2 text-[13px] font-medium text-paper-surface active:scale-95"
+        >
+          Add
+        </button>
       </div>
 
       <div className="flex gap-1.5">
@@ -140,22 +205,19 @@ export default function WaitingOnView({
                     {item.followUpDate ? ` · follow up ${item.followUpDate}` : ""}
                   </span>
                   <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onChange((w) => resolveItem(w, item.id, now))}
-                      className="text-[11px] font-medium text-sage"
-                    >
+                    <button type="button" onClick={() => resolve(item.id)} className="text-[11px] font-medium text-sage">
                       Resolved
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => onChange((w) => deleteItem(w, item.id))}
-                      className="text-[11px] text-paper-faint"
-                    >
+                    <button type="button" onClick={() => del(item.id)} className="text-[11px] text-paper-faint">
                       Delete
                     </button>
                   </div>
                 </div>
+                {item.linkedCadenceItemId && (
+                  <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-work-soft px-2 py-0.5 text-[10px] font-medium text-work">
+                    🔗 {item.department} · Cadence
+                  </span>
+                )}
               </div>
             );
           })}
@@ -187,7 +249,7 @@ export default function WaitingOnView({
               <p className="mt-0.5 text-[12px] text-paper-faint">{item.what}</p>
               <button
                 type="button"
-                onClick={() => onChange((w) => reopenItem(w, item.id))}
+                onClick={() => onChangeData((d) => ({ ...d, waitingOn: reopenItem(d.waitingOn, item.id) }))}
                 className="mt-1.5 text-[11px] text-work"
               >
                 Reopen

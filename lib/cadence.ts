@@ -44,6 +44,9 @@ export type CadenceItem = {
   frequency: CadenceFrequency;
   department: CadenceDepartment;
   order: number;
+  // Set when this item was auto-filed from a Waiting On follow-up, so the
+  // checklist can show it's tied to something she's waiting to hear back on.
+  linkedWaitingOnId?: string | null;
 };
 
 export type CadenceData = {
@@ -184,10 +187,18 @@ export function addCadenceItem(
   data: CadenceData,
   text: string,
   frequency: CadenceFrequency,
-  department: CadenceDepartment
+  department: CadenceDepartment,
+  linkedWaitingOnId: string | null = null
 ): CadenceData {
   const order = itemsFor(data, frequency, department).length;
-  const newItem: CadenceItem = { id: crypto.randomUUID(), text, frequency, department, order };
+  const newItem: CadenceItem = {
+    id: crypto.randomUUID(),
+    text,
+    frequency,
+    department,
+    order,
+    linkedWaitingOnId,
+  };
   return { ...data, items: [...data.items, newItem] };
 }
 

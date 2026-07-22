@@ -24,6 +24,7 @@ import { daysUntilDecember8 } from "@/lib/warroom";
 import { dateKey } from "@/lib/date";
 import { vocabForDate, factForDate } from "@/lib/welcome";
 import { QuestData, isQuestDone, markQuestDone, questForDate } from "@/lib/quest";
+import { openItems, overdueItems } from "@/lib/waitingon";
 import { CelebrationTier } from "@/lib/celebration";
 import { burstConfettiMedium } from "@/lib/confetti";
 import Greeting from "./Greeting";
@@ -180,6 +181,8 @@ function FrontPageBody({
   onCelebrate: (tier: CelebrationTier, message: string) => void;
 }) {
   const atRisk = habitsAtRisk(data.habits, now);
+  const waitingOnOpen = openItems(data.waitingOn);
+  const waitingOnOverdue = overdueItems(data.waitingOn, now);
   const recommendation = computeRecommendation(data, now);
   const recap = computeWeekRecap(data, now);
   const breakdown = computeLifeScoreBreakdown(data, now);
@@ -272,6 +275,40 @@ function FrontPageBody({
           {questDone ? "Done" : "Complete"}
         </button>
       </div>
+
+      {waitingOnOpen.length > 0 && (
+        <button
+          type="button"
+          onClick={() => onNavigate({ world: "work", workView: "ops", opsView: "waitingOn" })}
+          className="rounded-xl2 border border-paper-border bg-paper-surface p-4 text-left shadow-paper transition active:scale-[0.99]"
+        >
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+              Waiting On
+            </p>
+            <span className={`text-[11px] ${waitingOnOverdue.length > 0 ? "font-semibold text-[#B5574A]" : "text-paper-faint"}`}>
+              {waitingOnOverdue.length > 0 ? `${waitingOnOverdue.length} overdue` : `${waitingOnOpen.length} open`}
+            </span>
+          </div>
+          {waitingOnOverdue.length > 0 ? (
+            <ul className="flex flex-col gap-1.5">
+              {waitingOnOverdue.slice(0, 3).map((item) => (
+                <li key={item.id} className="flex items-baseline gap-1.5 text-[13px]">
+                  <span className="shrink-0 font-medium text-[#B5574A]">{item.who}</span>
+                  <span className="min-w-0 flex-1 truncate text-paper-muted">{item.what}</span>
+                </li>
+              ))}
+              {waitingOnOverdue.length > 3 && (
+                <li className="text-[11px] text-paper-faint">+{waitingOnOverdue.length - 3} more overdue</li>
+              )}
+            </ul>
+          ) : (
+            <p className="text-[13px] text-paper-muted">
+              Nothing overdue — {waitingOnOpen.length} item{waitingOnOpen.length === 1 ? "" : "s"} pending.
+            </p>
+          )}
+        </button>
+      )}
 
       <div>
         <p className="mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">

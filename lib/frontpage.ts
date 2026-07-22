@@ -16,7 +16,11 @@ import { zoneForDate, completedTaskIds } from "./home";
 import { dateKey } from "./date";
 
 export type FrontPageNavTarget =
-  | { world: "work"; workView?: "dashboard" | "backbeat" | "reference" }
+  | {
+      world: "work";
+      workView?: "dashboard" | "backbeat" | "reference" | "ops";
+      opsView?: "hub" | "waitingOn";
+    }
   | {
       world: "life";
       lifeView?:
