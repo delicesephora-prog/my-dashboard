@@ -388,6 +388,29 @@ export function habitCompletionsFor(
   return [false, false, false, false, false, false, false];
 }
 
+// Sets (not toggles) one day's completion for a habit - used both by the
+// Habits grid's own tap-to-toggle and by a linked Routine step, so a
+// routine step checked/unchecked and its matching habit cell always agree.
+export function setHabitCompletion(
+  habitsData: HabitsData,
+  weekKey: string,
+  habitId: string,
+  storageIndex: number,
+  value: boolean
+): HabitsData {
+  const week = habitsData.weeks[weekKey] ?? { completions: {} };
+  const current = week.completions[habitId] ?? [false, false, false, false, false, false, false];
+  const next = [...current];
+  next[storageIndex] = value;
+  return {
+    ...habitsData,
+    weeks: {
+      ...habitsData.weeks,
+      [weekKey]: { completions: { ...week.completions, [habitId]: next } },
+    },
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Work reference: contacts, approval chains, SOPs, meeting notes
 

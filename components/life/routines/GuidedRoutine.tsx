@@ -126,7 +126,14 @@ export default function GuidedRoutine({
           ))}
         </div>
 
-        <p className="mb-2 text-center font-serif text-[1.6rem] leading-snug text-paper-ink">{step.text}</p>
+        <p className="mb-2 text-center font-serif text-[1.6rem] leading-snug text-paper-ink">
+          {step.text}
+          {step.linkedHabitId && (
+            <span className="ml-2 align-middle text-[13px] text-paper-faint" title="Linked to a habit">
+              🔗
+            </span>
+          )}
+        </p>
 
         {(step.targetTime || duration) && (
           <p className="text-center text-sm text-paper-muted">

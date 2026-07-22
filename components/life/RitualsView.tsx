@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   RoutineKey,
+  RoutineStep,
   RoutinesData,
   ROUTINE_COLORS,
   ROUTINE_ICONS,
@@ -15,7 +16,7 @@ import {
   stepsForDate,
   toggleStepDone,
 } from "@/lib/routines";
-import { Habit, HabitsData, habitCompletionsFor } from "@/lib/types";
+import { Habit, HabitsData, habitCompletionsFor, setHabitCompletion } from "@/lib/types";
 import { weekKeyFor } from "@/lib/week";
 import { dateKey } from "@/lib/date";
 import { CelebrationTier } from "@/lib/celebration";
@@ -63,6 +64,7 @@ export default function RitualsView({
         routinesData={routinesData}
         onChange={onChangeRoutines}
         onManage={onManageRoutines}
+        onChangeHabits={onChangeHabits}
         onCelebrate={onCelebrate}
       />
       <div className="my-4 border-t border-paper-border" />
@@ -80,11 +82,13 @@ function RoutinesSection({
   routinesData,
   onChange,
   onManage,
+  onChangeHabits,
   onCelebrate,
 }: {
   routinesData: RoutinesData;
   onChange: (updater: (r: RoutinesData) => RoutinesData) => void;
   onManage: () => void;
+  onChangeHabits: (updater: (h: HabitsData) => HabitsData) => void;
   onCelebrate: (tier: CelebrationTier, message: string) => void;
 }) {
   const [guided, setGuided] = useState<RoutineKey | null>(null);
@@ -95,12 +99,19 @@ function RoutinesSection({
 
   function toggleStep(
     routineKey: RoutineKey,
-    stepId: string,
+    step: RoutineStep,
     wasDone: boolean,
     done: number,
     total: number
   ) {
-    onChange((r) => toggleStepDone(r, routineKey, stepId, now));
+    onChange((r) => toggleStepDone(r, routineKey, step.id, now));
+    if (step.linkedHabitId) {
+      const linkedHabitId = step.linkedHabitId;
+      const todayStorageIndex = now.getDay() === 0 ? 6 : now.getDay() - 1;
+      onChangeHabits((h) =>
+        setHabitCompletion(h, weekKeyFor(now), linkedHabitId, todayStorageIndex, !wasDone)
+      );
+    }
     if (!wasDone && total > 0 && done + 1 === total) {
       onCelebrate("medium", `${ROUTINE_LABELS[routineKey]} routine complete.`);
     }
@@ -180,7 +191,7 @@ function RoutinesSection({
                       <CheckCircle
                         done={doneIds.includes(step.id)}
                         onToggle={() =>
-                          toggleStep(key, step.id, doneIds.includes(step.id), done, total)
+                          toggleStep(key, step, doneIds.includes(step.id), done, total)
                         }
                         accentClass="bg-life"
                         size="sm"
@@ -193,6 +204,11 @@ function RoutinesSection({
                       >
                         {step.text}
                       </span>
+                      {step.linkedHabitId && (
+                        <span className="shrink-0 text-[10px] text-paper-faint" title="Linked to a habit">
+                          🔗
+                        </span>
+                      )}
                       {step.targetTime && (
                         <span className="shrink-0 text-[11px] text-paper-muted">{step.targetTime}</span>
                       )}
@@ -223,9 +239,10 @@ function RoutinesSection({
               routineKey={guided}
               steps={stepsForDate(routinesData.config, guided, now)}
               doneIds={guidedDoneIds}
-              onToggleStep={(stepId) =>
-                toggleStep(guided, stepId, guidedDoneIds.includes(stepId), guidedDone, guidedTotal)
-              }
+              onToggleStep={(stepId) => {
+                const step = stepsForDate(routinesData.config, guided, now).find((s) => s.id === stepId);
+                if (step) toggleStep(guided, step, guidedDoneIds.includes(stepId), guidedDone, guidedTotal);
+              }}
               onClose={() => setGuided(null)}
             />
           );
@@ -256,19 +273,7 @@ function HabitsSection({
       habitCompletionsFor(habitsData, weekKey, habitId)[storageIndex] ?? false
     );
 
-    onChange((h) => {
-      const week = h.weeks[weekKey] ?? { completions: {} };
-      const current = week.completions[habitId] ?? [false, false, false, false, false, false, false];
-      const next = [...current];
-      next[storageIndex] = !next[storageIndex];
-      return {
-        ...h,
-        weeks: {
-          ...h.weeks,
-          [weekKey]: { completions: { ...week.completions, [habitId]: next } },
-        },
-      };
-    });
+    onChange((h) => setHabitCompletion(h, weekKey, habitId, storageIndex, turningOn));
 
     if (!turningOn || habitsData.habits.length === 0) return;
 

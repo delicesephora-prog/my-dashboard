@@ -900,6 +900,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
               <ManageRoutines
                 routinesData={data.routines}
                 onChange={updateRoutines}
+                habitsData={data.habits}
                 initialRoutineKey={manageRoutinesTarget ?? undefined}
                 onBack={() => {
                   setManageRoutinesTarget(null);

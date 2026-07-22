@@ -449,6 +449,7 @@ const routineStepSchema = z.object({
   targetTime: z.string().max(10),
   durationMinutes: z.number().int().min(0).max(600).nullable(),
   order: z.number().int(),
+  linkedHabitId: z.string().nullable().optional(),
 });
 
 const routineVariantSchema = z.object({

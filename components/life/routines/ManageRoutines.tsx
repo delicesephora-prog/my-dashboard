@@ -12,15 +12,18 @@ import {
   ROUTINE_KEYS,
   ROUTINE_LABELS,
 } from "@/lib/routines";
+import { HabitsData } from "@/lib/types";
 
 export default function ManageRoutines({
   routinesData,
   onChange,
+  habitsData,
   onBack,
   initialRoutineKey,
 }: {
   routinesData: RoutinesData;
   onChange: (updater: (r: RoutinesData) => RoutinesData) => void;
+  habitsData: HabitsData;
   onBack: () => void;
   initialRoutineKey?: RoutineKey;
 }) {
@@ -54,6 +57,7 @@ export default function ManageRoutines({
       targetTime: "",
       durationMinutes: null,
       order: steps.length,
+      linkedHabitId: null,
     };
     updateSteps([...steps, step]);
   }
@@ -140,6 +144,7 @@ export default function ManageRoutines({
             <StepEditor
               key={step.id}
               step={step}
+              habitsData={habitsData}
               onUpdate={(u) => updateStep(step.id, u)}
               onDelete={() => deleteStep(step.id)}
               onMoveUp={i > 0 ? () => moveStep(step.id, -1) : undefined}
@@ -154,12 +159,14 @@ export default function ManageRoutines({
 
 function StepEditor({
   step,
+  habitsData,
   onUpdate,
   onDelete,
   onMoveUp,
   onMoveDown,
 }: {
   step: RoutineStep;
+  habitsData: HabitsData;
   onUpdate: (updater: (s: RoutineStep) => RoutineStep) => void;
   onDelete: () => void;
   onMoveUp?: () => void;
@@ -204,6 +211,30 @@ function StepEditor({
             className="w-full rounded-lg border border-paper-border bg-paper-surface2 px-2 py-1.5 text-[13px] text-paper-ink outline-none"
           />
         </div>
+      </div>
+      <div className="mb-2">
+        <p className="mb-1 text-[0.6rem] font-semibold uppercase tracking-[0.1em] text-paper-muted">
+          Linked Habit
+        </p>
+        <select
+          value={step.linkedHabitId ?? ""}
+          onChange={(e) =>
+            onUpdate((s) => ({ ...s, linkedHabitId: e.target.value === "" ? null : e.target.value }))
+          }
+          className="w-full rounded-lg border border-paper-border bg-paper-surface2 px-2.5 py-1.5 text-[13px] text-paper-ink outline-none"
+        >
+          <option value="">No linked habit</option>
+          {habitsData.habits.map((h) => (
+            <option key={h.id} value={h.id}>
+              {h.icon} {h.label}
+            </option>
+          ))}
+        </select>
+        {step.linkedHabitId && (
+          <p className="mt-1 text-[10.5px] leading-snug text-paper-faint">
+            Completing this step checks that habit for today too - never track it twice.
+          </p>
+        )}
       </div>
       <div className="flex items-center justify-between">
         <div className="flex gap-2">

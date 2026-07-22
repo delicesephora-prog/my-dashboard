@@ -33,6 +33,10 @@ export type RoutineStep = {
   targetTime: string;
   durationMinutes: number | null;
   order: number;
+  // When set, completing this step also checks the matching Habit for
+  // today (and unchecking it reverses that), so the same action never
+  // needs tracking twice - see setHabitCompletion in lib/types.ts.
+  linkedHabitId?: string | null;
 };
 
 export type RoutineVariant = {
