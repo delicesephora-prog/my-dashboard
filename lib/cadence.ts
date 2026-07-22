@@ -2,6 +2,7 @@ import { dateKey } from "./date";
 import { weekKeyFor } from "./week";
 import { monthKey } from "./finance";
 import { quarterKeyFor } from "./quarter";
+import { Department, DEPARTMENTS } from "./department";
 
 export type CadenceFrequency = "daily" | "weekly" | "monthly" | "quarterly";
 
@@ -14,29 +15,11 @@ export const CADENCE_FREQUENCY_LABELS: Record<CadenceFrequency, string> = {
   quarterly: "Quarterly",
 };
 
-// "Career" isn't one of the departments a task gets filed under, but it's
-// where "update the Accomplishment Record" lives - kept alongside the rest
-// rather than force-fitting it into an operational department.
-export type CadenceDepartment =
-  | "Clinical Operations"
-  | "Executive Support"
-  | "Investor Relations"
-  | "Finance"
-  | "Vendor"
-  | "Facilities"
-  | "Administration"
-  | "Career";
-
-export const CADENCE_DEPARTMENTS: CadenceDepartment[] = [
-  "Clinical Operations",
-  "Executive Support",
-  "Investor Relations",
-  "Finance",
-  "Vendor",
-  "Facilities",
-  "Administration",
-  "Career",
-];
+// Shared with Work's task category list (see lib/department.ts) - a
+// Cadence item filed under "Finance" and a Work task under "Finance" are
+// the same category, not two lookalike strings.
+export type CadenceDepartment = Department;
+export const CADENCE_DEPARTMENTS: CadenceDepartment[] = DEPARTMENTS;
 
 export type CadenceItem = {
   id: string;

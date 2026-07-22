@@ -1,3 +1,4 @@
+import { Department, DEPARTMENTS } from "./department";
 import { RoutinesData, emptyRoutinesData, normalizeRoutinesData, applyGlowRoutineUpdate } from "./routines";
 import { CadenceData, emptyCadenceData, normalizeCadenceData } from "./cadence";
 import { PaydayChecklistData, emptyPaydayChecklistData, seedPaydaySteps, PAYDAY_SEED_VERSION } from "./payday";
@@ -108,16 +109,10 @@ export type WorkTaskStatus =
   | "waiting"
   | "completed";
 export type WorkTaskPriority = "high" | "medium" | "low";
-export type WorkTaskCategory =
-  | "Clinical Operations"
-  | "Executive Support"
-  | "Investor Relations"
-  | "Finance"
-  | "Translation"
-  | "Vendor"
-  | "Facilities"
-  | "Regulatory"
-  | "Administration";
+// Shared with Cadence's department list (see lib/department.ts) - a task
+// filed under "Finance" and a Cadence checklist item under "Finance" are
+// the same category, not two lookalike strings.
+export type WorkTaskCategory = Department;
 
 export const WORK_TASK_STATUSES: { key: WorkTaskStatus; label: string }[] = [
   { key: "not_started", label: "Not Started" },
@@ -134,17 +129,7 @@ export const WORK_TASK_PRIORITIES: { key: WorkTaskPriority; label: string }[] = 
   { key: "low", label: "Low" },
 ];
 
-export const WORK_TASK_CATEGORIES: WorkTaskCategory[] = [
-  "Clinical Operations",
-  "Executive Support",
-  "Investor Relations",
-  "Finance",
-  "Translation",
-  "Vendor",
-  "Facilities",
-  "Regulatory",
-  "Administration",
-];
+export const WORK_TASK_CATEGORIES: WorkTaskCategory[] = DEPARTMENTS;
 
 export type WorkTaskProgressEntry = {
   date: string; // YYYY-MM-DD

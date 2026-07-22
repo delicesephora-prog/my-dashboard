@@ -63,6 +63,22 @@ const lifeWeeklySchema = z.object({
   weeks: z.record(weekDataSchema),
 });
 
+// The one shared department list for Work tasks, Cadence, and Vendors -
+// see lib/department.ts. Planner stays separate on purpose (personal,
+// user-managed categories, not business departments).
+const departmentSchema = z.enum([
+  "Clinical Operations",
+  "Executive Support",
+  "Investor Relations",
+  "Finance",
+  "Translation",
+  "Vendor",
+  "Facilities",
+  "Regulatory",
+  "Administration",
+  "Career",
+]);
+
 const workTaskProgressEntrySchema = z.object({
   date: z.string(),
   pct: z.number().min(0).max(100),
@@ -73,17 +89,7 @@ const workTaskSchema = z.object({
   title: z.string().max(300),
   status: z.enum(["not_started", "started", "urgent", "in_progress", "waiting", "completed"]),
   priority: z.enum(["high", "medium", "low"]),
-  category: z.enum([
-    "Clinical Operations",
-    "Executive Support",
-    "Investor Relations",
-    "Finance",
-    "Translation",
-    "Vendor",
-    "Facilities",
-    "Regulatory",
-    "Administration",
-  ]),
+  category: departmentSchema,
   dueDate: z.string(),
   notes: z.string().max(5000),
   topPriority: z.boolean(),
@@ -96,22 +102,11 @@ const workOpsSchema = z.object({
   tasks: z.array(workTaskSchema).max(1000),
 });
 
-const cadenceDepartmentSchema = z.enum([
-  "Clinical Operations",
-  "Executive Support",
-  "Investor Relations",
-  "Finance",
-  "Vendor",
-  "Facilities",
-  "Administration",
-  "Career",
-]);
-
 const cadenceItemSchema = z.object({
   id: z.string(),
   text: z.string().max(500),
   frequency: z.enum(["daily", "weekly", "monthly", "quarterly"]),
-  department: cadenceDepartmentSchema,
+  department: departmentSchema,
   order: z.number(),
   linkedWaitingOnId: z.string().nullable().optional(),
 });
@@ -758,7 +753,7 @@ const waitingOnItemSchema = z.object({
   followUpDate: z.string(),
   resolvedDate: z.string(),
   notes: z.string().max(5000),
-  department: cadenceDepartmentSchema.nullable().default(null),
+  department: departmentSchema.nullable().default(null),
   linkedCadenceItemId: z.string().nullable().default(null),
 });
 
@@ -769,17 +764,7 @@ const waitingOnDataSchema = z.object({
 const vendorSchema = z.object({
   id: z.string(),
   name: z.string().max(200),
-  category: z.enum([
-    "Clinical Operations",
-    "Executive Support",
-    "Investor Relations",
-    "Finance",
-    "Translation",
-    "Vendor",
-    "Facilities",
-    "Regulatory",
-    "Administration",
-  ]),
+  category: departmentSchema,
   contactName: z.string().max(200),
   email: z.string().max(200),
   phone: z.string().max(50),
