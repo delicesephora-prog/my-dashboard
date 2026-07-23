@@ -9,6 +9,7 @@ import {
 } from "./systemcheck";
 import { AppearanceData, emptyAppearanceData, normalizeAppearanceData } from "./appearance";
 import { VisionData, emptyVisionData, normalizeVisionData } from "./vision";
+import { AmbianceData, emptyAmbianceData, normalizeAmbianceData } from "./ambiance";
 import { RoutinesData, emptyRoutinesData, normalizeRoutinesData, applyGlowRoutineUpdate } from "./routines";
 import { CadenceData, emptyCadenceData, normalizeCadenceData } from "./cadence";
 import { PaydayChecklistData, emptyPaydayChecklistData, seedPaydaySteps, PAYDAY_SEED_VERSION } from "./payday";
@@ -895,6 +896,7 @@ export type DashboardData = {
   systemCheck: SystemCheckData;
   appearance: AppearanceData;
   vision: VisionData;
+  ambiance: AmbianceData;
 };
 
 export function emptyWorld(): WorldData {
@@ -960,6 +962,7 @@ export function defaultDashboardData(): DashboardData {
     systemCheck: emptySystemCheckData(),
     appearance: emptyAppearanceData(),
     vision: emptyVisionData(),
+    ambiance: emptyAmbianceData(),
   };
 }
 
@@ -1109,6 +1112,7 @@ export function normalizeDashboardData(
     systemCheck: normalizeSystemCheckData(data.systemCheck),
     appearance: normalizeAppearanceData(data.appearance),
     vision: normalizeVisionData(data.vision),
+    ambiance: normalizeAmbianceData(data.ambiance),
   };
 
   // One-time additive link: makes sure the vaults/debt this feature depends

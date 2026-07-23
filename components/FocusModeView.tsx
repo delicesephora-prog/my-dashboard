@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { FocusData, addSession, completeSession, newFocusSession, totalFocusMinutesToday } from "@/lib/focus";
 import { burstConfettiFrom } from "@/lib/confetti";
 import { playPopSound } from "@/lib/pop-sound";
+import { startAmbient, stopAmbient } from "@/lib/sound";
+import { getAmbianceSettings } from "@/lib/ambiance";
 import ProgressRing from "./ProgressRing";
 
 const DURATIONS = [15, 25, 45, 60];
@@ -47,6 +49,16 @@ export default function FocusModeView({
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage, endTime, sessionId]);
+
+  useEffect(() => {
+    const settings = getAmbianceSettings();
+    if (stage === "active" && settings.focusSoundEnabled) {
+      startAmbient(settings.focusTrack);
+    } else {
+      stopAmbient();
+    }
+    return () => stopAmbient();
+  }, [stage]);
 
   function begin() {
     const now = new Date();

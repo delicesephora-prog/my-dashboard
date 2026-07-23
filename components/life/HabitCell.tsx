@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { burstConfettiFrom } from "@/lib/confetti";
-import { playPopSound } from "@/lib/pop-sound";
+import { playCheckTick } from "@/lib/sound";
 
 export default function HabitCell({
   done,
@@ -22,7 +22,7 @@ export default function HabitCell({
   function handleClick() {
     if (!done && ref.current) {
       burstConfettiFrom(ref.current);
-      playPopSound();
+      playCheckTick();
     }
     onToggle();
   }

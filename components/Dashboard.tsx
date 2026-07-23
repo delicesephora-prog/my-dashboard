@@ -57,6 +57,7 @@ import { FocusData } from "@/lib/focus";
 import FocusModeView from "./FocusModeView";
 import { AssistantData, assistantDisplayName } from "@/lib/assistant";
 import { AppearanceData, effectiveIsEvening } from "@/lib/appearance";
+import { AmbianceData, setAmbianceSettings } from "@/lib/ambiance";
 import AssistantView from "./AssistantView";
 import { BecomingData } from "@/lib/becoming";
 import { Celebration, CelebrationTier } from "@/lib/celebration";
@@ -556,6 +557,18 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     setData((prev) => ({ ...prev, appearance: updater(prev.appearance) }));
     scheduleSave();
   }
+
+  function updateAmbiance(updater: (a: AmbianceData) => AmbianceData) {
+    setData((prev) => ({ ...prev, ambiance: updater(prev.ambiance) }));
+    scheduleSave();
+  }
+
+  // lib/sound.ts reads ambiance settings from this module-level cache
+  // rather than a prop, since check-off sound is triggered from dozens of
+  // CheckCircle/HabitCell call sites across the app.
+  useEffect(() => {
+    setAmbianceSettings(data.ambiance);
+  }, [data.ambiance]);
 
   // The Assistant's tools can touch any part of the dashboard (tasks,
   // planner, lists, health, events, meals, finance, waiting-on, Dec 8
@@ -1087,6 +1100,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           onChangeAssistant={updateAssistant}
           onChangeTabUsage={updateTabUsage}
           onChangeAppearance={updateAppearance}
+          onChangeAmbiance={updateAmbiance}
           onClose={() => setSettingsOpen(false)}
         />
       )}

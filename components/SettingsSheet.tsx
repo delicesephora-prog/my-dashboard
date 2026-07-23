@@ -13,6 +13,7 @@ import { AssistantData, currentMonthUsage } from "@/lib/assistant";
 import { BackupMeta, formatBackupSize } from "@/lib/backups";
 import { TAB_LABELS, TabUsageData, unhideTab } from "@/lib/systemcheck";
 import { AppearanceData, THEME_MODES, THEME_MODE_LABELS, ThemeMode } from "@/lib/appearance";
+import { AmbianceData, AMBIANCE_TRACKS, AMBIANCE_TRACK_LABELS } from "@/lib/ambiance";
 
 type ImportState =
   | { step: "idle" }
@@ -43,6 +44,7 @@ export default function SettingsSheet({
   onChangeAssistant,
   onChangeTabUsage,
   onChangeAppearance,
+  onChangeAmbiance,
   onClose,
 }: {
   data: DashboardData;
@@ -52,6 +54,7 @@ export default function SettingsSheet({
   onChangeAssistant: (updater: (a: AssistantData) => AssistantData) => void;
   onChangeTabUsage: (updater: (t: TabUsageData) => TabUsageData) => void;
   onChangeAppearance: (updater: (a: AppearanceData) => AppearanceData) => void;
+  onChangeAmbiance: (updater: (a: AmbianceData) => AmbianceData) => void;
   onClose: () => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -433,6 +436,58 @@ export default function SettingsSheet({
                   {data.appearance.themeMode === mode && <span className="text-[11px]">✓</span>}
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
+            <p className="mb-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+              Ambiance
+            </p>
+            <p className="mb-3 text-[13px] leading-relaxed text-paper-muted">
+              Small optional sounds - everything here is off until you turn it on.
+            </p>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[13.5px] text-paper-ink">Check-off tick</span>
+                <ToggleSwitch
+                  checked={data.ambiance.checkSoundEnabled}
+                  onChange={(v) => onChangeAmbiance((a) => ({ ...a, checkSoundEnabled: v }))}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[13.5px] text-paper-ink">Routine completion chime</span>
+                <ToggleSwitch
+                  checked={data.ambiance.chimeEnabled}
+                  onChange={(v) => onChangeAmbiance((a) => ({ ...a, chimeEnabled: v }))}
+                />
+              </div>
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-[13.5px] text-paper-ink">Focus Candle ambient sound</span>
+                  <ToggleSwitch
+                    checked={data.ambiance.focusSoundEnabled}
+                    onChange={(v) => onChangeAmbiance((a) => ({ ...a, focusSoundEnabled: v }))}
+                  />
+                </div>
+                {data.ambiance.focusSoundEnabled && (
+                  <div className="flex gap-1.5 pl-0.5">
+                    {AMBIANCE_TRACKS.map((track) => (
+                      <button
+                        key={track}
+                        type="button"
+                        onClick={() => onChangeAmbiance((a) => ({ ...a, focusTrack: track }))}
+                        className={`flex-1 rounded-lg border px-2 py-1.5 text-[12.5px] transition ${
+                          data.ambiance.focusTrack === track
+                            ? "border-work bg-work/10 font-medium text-work"
+                            : "border-paper-border text-paper-muted"
+                        }`}
+                      >
+                        {AMBIANCE_TRACK_LABELS[track]}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

@@ -1291,6 +1291,13 @@ const visionDataSchema = z.object({
   images: z.array(visionImageSchema).max(300),
 });
 
+const ambianceDataSchema = z.object({
+  checkSoundEnabled: z.boolean(),
+  chimeEnabled: z.boolean(),
+  focusSoundEnabled: z.boolean(),
+  focusTrack: z.enum(["rain", "cafe", "piano"]),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -1345,6 +1352,7 @@ const dashboardSchema = z.object({
   systemCheck: systemCheckDataSchema,
   appearance: appearanceDataSchema,
   vision: visionDataSchema,
+  ambiance: ambianceDataSchema,
 });
 
 export async function GET() {

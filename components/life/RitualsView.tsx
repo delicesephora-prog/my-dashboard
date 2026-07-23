@@ -20,6 +20,7 @@ import { Habit, HabitsData, habitCompletionsFor, setHabitCompletion } from "@/li
 import { weekKeyFor } from "@/lib/week";
 import { dateKey } from "@/lib/date";
 import { CelebrationTier } from "@/lib/celebration";
+import { playChime } from "@/lib/sound";
 import ProgressRing from "../ProgressRing";
 import CheckCircle from "../CheckCircle";
 import HabitCell from "./HabitCell";
@@ -114,6 +115,7 @@ function RoutinesSection({
     }
     if (!wasDone && total > 0 && done + 1 === total) {
       onCelebrate("medium", `${ROUTINE_LABELS[routineKey]} routine complete.`);
+      playChime();
     }
   }
 

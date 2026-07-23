@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { burstConfettiFrom } from "@/lib/confetti";
-import { playPopSound } from "@/lib/pop-sound";
+import { playCheckTick } from "@/lib/sound";
 
 export default function CheckCircle({
   done,
@@ -23,7 +23,7 @@ export default function CheckCircle({
     // Only celebrate the transition into "done" - unchecking is silent.
     if (!done && ref.current) {
       burstConfettiFrom(ref.current);
-      playPopSound();
+      playCheckTick();
     }
     onToggle();
   }
