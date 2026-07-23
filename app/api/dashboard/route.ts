@@ -1279,6 +1279,18 @@ const appearanceDataSchema = z.object({
   themeMode: z.enum(["auto", "light", "evening"]),
 });
 
+const visionImageSchema = z.object({
+  id: z.string(),
+  url: z.string().max(2000),
+  caption: z.string().max(300),
+  isCover: z.boolean(),
+  createdAt: z.string(),
+});
+
+const visionDataSchema = z.object({
+  images: z.array(visionImageSchema).max(300),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -1332,6 +1344,7 @@ const dashboardSchema = z.object({
   tabUsage: tabUsageDataSchema,
   systemCheck: systemCheckDataSchema,
   appearance: appearanceDataSchema,
+  vision: visionDataSchema,
 });
 
 export async function GET() {

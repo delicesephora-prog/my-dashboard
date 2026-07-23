@@ -69,6 +69,7 @@ function computeItemCounts(data: DashboardData, now: Date): Record<string, numbe
       data.wedding.budget.length +
       data.wedding.timeline.length,
     "life:trips": data.trips.trips.length + data.trips.savedIdeas.length,
+    "life:vision": data.vision.images.length,
   };
 }
 

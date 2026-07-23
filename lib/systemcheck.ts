@@ -27,6 +27,7 @@ export const TAB_LABELS: Record<string, string> = {
   "life:health": "Life · Health",
   "life:wedding": "Life · Wedding",
   "life:trips": "Life · Trips",
+  "life:vision": "Life · Vision",
 };
 
 export const TRACKED_TAB_KEYS = Object.keys(TAB_LABELS);

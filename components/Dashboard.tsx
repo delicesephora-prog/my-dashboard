@@ -69,6 +69,7 @@ import { BudgetData } from "@/lib/budget";
 import { TabUsageData, SystemCheckData, trackTabOpen, isTabHidden } from "@/lib/systemcheck";
 import { WeddingData } from "@/lib/wedding";
 import { TripsData } from "@/lib/trips";
+import { VisionData } from "@/lib/vision";
 import CelebrationOverlay from "./CelebrationOverlay";
 import BoardMeeting from "./BoardMeeting";
 import SystemCheckFlow from "./SystemCheckFlow";
@@ -108,6 +109,7 @@ import MemosView from "./life/MemosView";
 import HealthView from "./life/HealthView";
 import WeddingView from "./life/WeddingView";
 import TripsView from "./life/TripsView";
+import VisionView from "./life/VisionView";
 import WarRoomSection from "./life/year/WarRoomSection";
 import SaveIndicator, { SaveStatus } from "./SaveIndicator";
 import TabErrorBoundary from "./TabErrorBoundary";
@@ -149,7 +151,8 @@ type LifeView =
   | "memos"
   | "health"
   | "wedding"
-  | "trips";
+  | "trips"
+  | "vision";
 
 const SAVE_DELAY_MS = 700;
 
@@ -423,6 +426,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
 
   function updateTrips(updater: (t: TripsData) => TripsData) {
     setData((prev) => ({ ...prev, trips: updater(prev.trips) }));
+    scheduleSave();
+  }
+
+  function updateVision(updater: (v: VisionData) => VisionData) {
+    setData((prev) => ({ ...prev, vision: updater(prev.vision) }));
     scheduleSave();
   }
 
@@ -915,6 +923,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                   { key: "health", label: "Health" },
                   { key: "wedding", label: "Wedding" },
                   { key: "trips", label: "Trips" },
+                  { key: "vision", label: "Vision" },
                 ].filter((i) => !isTabHidden(data.tabUsage, `life:${i.key}`)) as { key: LifeView; label: string }[]}
                 active={lifeView}
                 onChange={(v: LifeView) => {
@@ -1039,6 +1048,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             )}
             {lifeView === "wedding" && <WeddingView wedding={data.wedding} onChange={updateWedding} />}
             {lifeView === "trips" && <TripsView trips={data.trips} onChange={updateTrips} />}
+            {lifeView === "vision" && <VisionView data={data.vision} onChange={updateVision} />}
           </>
         )}
        </TabErrorBoundary>

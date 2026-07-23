@@ -25,6 +25,7 @@ import { dateKey } from "@/lib/date";
 import { vocabForDate, factForDate } from "@/lib/welcome";
 import { QuestData, isQuestDone, markQuestDone, questForDate } from "@/lib/quest";
 import { openItems, overdueItems } from "@/lib/waitingon";
+import { coverOfTheDay } from "@/lib/vision";
 import { CelebrationTier } from "@/lib/celebration";
 import { burstConfettiMedium } from "@/lib/confetti";
 import Greeting from "./Greeting";
@@ -242,6 +243,8 @@ function FrontPageBody({
         </p>
         <p className="font-serif text-[1.05rem] leading-snug text-paper-ink">{recommendation.text}</p>
       </button>
+
+      <CoverOfTheDay data={data} now={now} onNavigate={onNavigate} />
 
       <div className="grid grid-cols-2 gap-2 lg:col-span-5">
         <div className="rounded-xl2 border border-paper-border bg-paper-surface p-3">
@@ -504,6 +507,39 @@ function FrontPageBody({
         )}
       </div>
     </>
+  );
+}
+
+function CoverOfTheDay({
+  data,
+  now,
+  onNavigate,
+}: {
+  data: DashboardData;
+  now: Date;
+  onNavigate: (target: FrontPageNavTarget) => void;
+}) {
+  const cover = coverOfTheDay(data.vision, now);
+  if (!cover) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onNavigate({ world: "life", lifeView: "vision" })}
+      className="hover-lift relative block h-48 w-full overflow-hidden rounded-xl2 shadow-paper-lg lg:col-span-12"
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={cover.url} alt={cover.caption || "Vision"} className="h-full w-full object-cover" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/5 to-transparent" />
+      <p className="absolute left-3 top-3 text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-paper-surface/80">
+        ✦ Vision
+      </p>
+      {cover.caption && (
+        <p className="absolute bottom-3 left-3 right-3 text-left font-serif text-[1rem] leading-snug text-paper-surface">
+          {cover.caption}
+        </p>
+      )}
+    </button>
   );
 }
 

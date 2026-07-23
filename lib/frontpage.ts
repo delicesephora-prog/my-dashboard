@@ -34,7 +34,8 @@ export type FrontPageNavTarget =
         | "books"
         | "bucketList"
         | "year"
-        | "verses";
+        | "verses"
+        | "vision";
       openBoardMeeting?: boolean;
     };
 

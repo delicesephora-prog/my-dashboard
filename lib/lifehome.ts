@@ -64,5 +64,6 @@ export function lifePocketTiles(data: DashboardData, now: Date = new Date()): Li
     { key: "health", icon: "➕", label: "Health", stat: `${healthUpcoming} upcoming` },
     { key: "wedding", icon: "💍", label: "Wedding", stat: weddingDays !== null ? `${weddingDays} days to go` : "Not set" },
     { key: "trips", icon: "✈️", label: "Trips", stat: `${tripsPlanned} planned` },
+    { key: "vision", icon: "🌅", label: "Vision", stat: `${data.vision.images.length} images` },
   ];
 }
