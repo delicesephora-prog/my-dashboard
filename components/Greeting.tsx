@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { greetingForHour, formatElegantDate } from "@/lib/date";
 import { DAY_TYPE_LABELS, dayTypeForDate } from "@/lib/routines";
+import { seasonalAccent } from "@/lib/seasonal";
 
 const NAME = "Sephora";
 const NBSP = "\u00A0";
@@ -34,6 +35,11 @@ export default function Greeting() {
         {now && (
           <span className="shrink-0 rounded-full border border-paper-border bg-paper-surface2 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-paper-muted">
             {DAY_TYPE_LABELS[dayTypeForDate(now)]}
+          </span>
+        )}
+        {now && (
+          <span className="shrink-0 text-[11px] text-backdrop-muted" title={seasonalAccent(now).label}>
+            {seasonalAccent(now).icon} {seasonalAccent(now).label}
           </span>
         )}
       </div>

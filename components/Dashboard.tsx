@@ -112,6 +112,7 @@ import TripsView from "./life/TripsView";
 import VisionView from "./life/VisionView";
 import WarRoomSection from "./life/year/WarRoomSection";
 import SaveIndicator, { SaveStatus } from "./SaveIndicator";
+import Monogram from "./Monogram";
 import TabErrorBoundary from "./TabErrorBoundary";
 
 type World = "front" | "work" | "planner" | "life" | "assistant";
@@ -712,16 +713,19 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     <div className="flex h-dvh flex-col overflow-hidden bg-paper-bg">
       {showWelcome && <WelcomeScreen onDone={dismissWelcome} />}
       <header className="safe-top px-5 pb-2 pt-2">
-        <div className="flex items-center justify-end gap-2">
-          <SaveIndicator status={status} lastSavedAt={lastSavedAt} onRetry={scheduleSave} />
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-            aria-label="Settings"
-            className="text-base leading-none text-paper-muted"
-          >
-            ⚙
-          </button>
+        <div className="flex items-center justify-between gap-2">
+          <Monogram />
+          <div className="flex items-center gap-2">
+            <SaveIndicator status={status} lastSavedAt={lastSavedAt} onRetry={scheduleSave} />
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Settings"
+              className="text-base leading-none text-paper-muted"
+            >
+              ⚙
+            </button>
+          </div>
         </div>
       </header>
 
