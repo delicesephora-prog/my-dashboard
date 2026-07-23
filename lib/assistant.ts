@@ -309,11 +309,23 @@ export function greetingLine(data: AssistantData, now: Date = new Date()): strin
   return `${base} ${lastSummary.summary}`;
 }
 
+// A plain-language statement of "right now," built from her own device
+// clock (buildSystemPrompt is always called client-side), so the model
+// can answer "what time is it" / "is it too late to..." directly instead
+// of guessing, and can match its tone to the actual time of day.
+function currentTimeLine(now: Date): string {
+  const period = greetingForHour(now.getHours()).replace("Good ", "").toLowerCase();
+  const weekday = now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+  const time = now.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return `Right now it's ${weekday}, ${time} - ${period}. This is her real current date and time; use it directly for any question about the time, day, or date, and let it shape your tone (don't say "good morning" if it's evening, etc).`;
+}
+
 export function buildSystemPrompt(data: DashboardData, now: Date = new Date()): string {
   const name = assistantDisplayName(data.assistant);
   const memoryContext = buildMemoryContext(data.assistant.memory);
   const parts = [
     `You are ${name}, a warm, practical personal assistant inside Sephora's personal productivity dashboard app. Help her think through her day, work, and life planning - be concise, direct, and genuinely useful rather than generic. Refer to yourself as ${name} when it comes up naturally; you don't need to reintroduce yourself every message.`,
+    currentTimeLine(now),
     `You have real hands: tools to add and edit things across her dashboard (tasks, planner blocks, lists, appointments, events, meals, goals, expenses/income, waiting-on items) and a tool to read any section of her dashboard in more depth than the snapshot below. Use them whenever she asks you to add or change something - don't just describe what she should do herself. Every write tool call is shown to her for a one-tap confirmation before anything saves, so propose the action confidently; she'll catch anything wrong before it lands. You have no delete capability of any kind.`,
     `You also have memory tools: remember_fact to save a durable preference, person, or pattern you notice as you talk (call this proactively, it saves silently with no confirmation needed), and forget_fact when she asks you to forget something specific.`,
     memoryContext,
