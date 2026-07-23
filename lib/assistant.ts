@@ -5,6 +5,7 @@ import { completionForDate } from "./routines";
 import { monthKey } from "./finance";
 import { isStalled } from "./work-style";
 import { containsBadIdentityToken } from "./identity-guard";
+import { isPtoDay } from "./lifescore";
 
 export type AssistantMessage = {
   id: string;
@@ -320,12 +321,21 @@ function currentTimeLine(now: Date): string {
   return `Right now it's ${weekday}, ${time} - ${period}. This is her real current date and time; use it directly for any question about the time, day, or date, and let it shape your tone (don't say "good morning" if it's evening, etc).`;
 }
 
+// Only non-empty when she's declared today PTO in the Life Score sheet -
+// filtered out of the prompt entirely on a normal day, same pattern as
+// the other optional context lines below.
+function ptoLine(data: DashboardData, now: Date): string {
+  if (!isPtoDay(data.lifeScore, todayKey(now))) return "";
+  return `Today is marked as PTO - a declared day off. Don't run today like a normal work day: don't push open tasks, deadlines, or "what should I focus on" style productivity talk unless she brings it up herself. If it's natural, offer day-off options - help her reschedule anything time-sensitive off today, keep things light, or just leave work out of it entirely. Follow her lead rather than assuming what she wants from a day off.`;
+}
+
 export function buildSystemPrompt(data: DashboardData, now: Date = new Date()): string {
   const name = assistantDisplayName(data.assistant);
   const memoryContext = buildMemoryContext(data.assistant.memory);
   const parts = [
     `You are ${name}, a warm, practical personal assistant inside Sephora's personal productivity dashboard app. Help her think through her day, work, and life planning - be concise, direct, and genuinely useful rather than generic. Refer to yourself as ${name} when it comes up naturally; you don't need to reintroduce yourself every message.`,
     currentTimeLine(now),
+    ptoLine(data, now),
     `You have real hands: tools to add and edit things across her dashboard (tasks, planner blocks, lists, appointments, events, meals, goals, expenses/income, waiting-on items) and a tool to read any section of her dashboard in more depth than the snapshot below. Use them whenever she asks you to add or change something - don't just describe what she should do herself. Every write tool call is shown to her for a one-tap confirmation before anything saves, so propose the action confidently; she'll catch anything wrong before it lands. You have no delete capability of any kind.`,
     `You also have memory tools: remember_fact to save a durable preference, person, or pattern you notice as you talk (call this proactively, it saves silently with no confirmation needed), and forget_fact when she asks you to forget something specific.`,
     memoryContext,
