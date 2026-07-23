@@ -315,10 +315,10 @@ function HabitsSection({
         <div className="flex items-center gap-3">
           <ProgressRing pct={pct} size={56} strokeWidth={6} color="#5B2333" />
           <div>
-            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-backdrop-muted">
               This Week&apos;s Habits
             </p>
-            <p className="font-serif text-[0.95rem] text-paper-ink">Overall</p>
+            <p className="font-serif text-[0.95rem] text-backdrop-ink">Overall</p>
           </div>
         </div>
         <button

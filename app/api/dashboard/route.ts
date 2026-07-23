@@ -614,6 +614,7 @@ const lifeScoreWeightsSchema = z.object({
 const lifeScoreDataSchema = z.object({
   weights: lifeScoreWeightsSchema,
   history: z.record(z.number().min(0).max(100)),
+  ptoLog: z.record(z.boolean()),
 });
 
 const routinesDataSchema = z.object({

@@ -22,7 +22,7 @@ export default function Greeting() {
       <h1 className="truncate font-serif text-[1.35rem] font-medium leading-tight text-backdrop-ink">
         {now ? (
           <>
-            {greetingForHour(now.getHours())}, <span className="text-work">{NAME}</span>
+            {greetingForHour(now.getHours())}, <span className="text-signature">{NAME}</span>
           </>
         ) : (
           NBSP

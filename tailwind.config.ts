@@ -63,6 +63,9 @@ const config: Config = {
           muted: "var(--backdrop-muted)",
           faint: "var(--backdrop-faint)",
         },
+        // The name in Greeting - deep plum on cream by day, glowing warm
+        // gold on the dark Evening Luxe backdrop.
+        signature: "var(--signature-color)",
       },
       borderRadius: {
         xl2: "1rem",

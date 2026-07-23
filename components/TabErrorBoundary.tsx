@@ -25,7 +25,7 @@ export default class TabErrorBoundary extends Component<
     if (this.state.error) {
       return (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-          <p className="font-serif text-lg text-paper-ink">This section hit an error</p>
+          <p className="font-serif text-lg text-backdrop-ink">This section hit an error</p>
           <p className="max-w-xs text-sm leading-relaxed text-paper-muted">
             Nothing else on your dashboard was affected, and nothing was lost. Tap below to try
             this section again, or switch to a different tab.

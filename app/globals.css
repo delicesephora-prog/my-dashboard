@@ -16,6 +16,7 @@
   --backdrop-ink: #2b1b22;
   --backdrop-muted: #9c8f94;
   --backdrop-faint: #c7b9bc;
+  --signature-color: #5b2333;
 }
 :root[data-theme="evening"] {
   --paper-bg: #241019;
@@ -27,6 +28,7 @@
   --backdrop-ink: #f3e7dd;
   --backdrop-muted: #b79aa3;
   --backdrop-faint: #8c6e79;
+  --signature-color: #e8c77e;
 }
 
 html,

@@ -90,7 +90,7 @@ export default function ManageRoutines({
         >
           ‹
         </button>
-        <p className="font-serif text-[1.05rem] text-paper-ink">Manage Routines</p>
+        <p className="font-serif text-[1.05rem] text-backdrop-ink">Manage Routines</p>
         <button
           type="button"
           onClick={addStep}

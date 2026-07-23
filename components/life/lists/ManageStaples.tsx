@@ -37,7 +37,7 @@ export default function ManageStaples({
         >
           ‹
         </button>
-        <p className="font-serif text-[1.05rem] text-paper-ink">Manage Staples</p>
+        <p className="font-serif text-[1.05rem] text-backdrop-ink">Manage Staples</p>
         <div className="w-8" />
       </div>
 

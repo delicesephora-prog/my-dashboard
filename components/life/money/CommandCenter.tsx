@@ -800,8 +800,8 @@ function Section({ title, total, children }: { title: string; total: number; chi
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">{title}</p>
-        <span className="text-[13px] text-paper-ink">{formatMoney(total)}</span>
+        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-backdrop-muted">{title}</p>
+        <span className="text-[13px] text-backdrop-ink">{formatMoney(total)}</span>
       </div>
       <div className="flex flex-col gap-2">{children}</div>
     </div>

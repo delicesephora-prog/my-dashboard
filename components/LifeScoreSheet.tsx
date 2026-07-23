@@ -5,8 +5,12 @@ import {
   LIFE_SCORE_CATEGORIES,
   LIFE_SCORE_CATEGORY_LABELS,
   LifeScoreBreakdown,
+  LifeScoreData,
   ScoreHistoryDay,
+  isPtoDay,
+  setPtoDay,
 } from "@/lib/lifescore";
+import { todayKey } from "@/lib/date";
 
 function TrendLine({ history }: { history: ScoreHistoryDay[] }) {
   const width = 320;
@@ -49,13 +53,21 @@ function TrendLine({ history }: { history: ScoreHistoryDay[] }) {
 export default function LifeScoreSheet({
   breakdown,
   history,
+  lifeScore,
+  now,
+  onChangeLifeScore,
   onClose,
 }: {
   breakdown: LifeScoreBreakdown;
   history: ScoreHistoryDay[];
+  lifeScore: LifeScoreData;
+  now: Date;
+  onChangeLifeScore: (updater: (l: LifeScoreData) => LifeScoreData) => void;
   onClose: () => void;
 }) {
   const color = LABEL_COLORS[breakdown.label] ?? "#4B5A24";
+  const today = todayKey(now);
+  const onPto = isPtoDay(lifeScore, today);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-paper-surface animate-fade-in">
@@ -76,6 +88,26 @@ export default function LifeScoreSheet({
             {breakdown.label}
           </p>
         </div>
+
+        <button
+          type="button"
+          onClick={() => onChangeLifeScore((l) => setPtoDay(l, today, !onPto))}
+          className={`mb-4 flex w-full items-center justify-between rounded-xl2 border px-4 py-3 text-left transition ${
+            onPto ? "border-sage bg-sage/10" : "border-paper-border bg-paper-surface"
+          }`}
+        >
+          <div>
+            <p className={`text-[13.5px] font-medium ${onPto ? "text-sage" : "text-paper-ink"}`}>
+              {onPto ? "Today is marked PTO" : "Mark today as PTO"}
+            </p>
+            <p className="mt-0.5 text-[11.5px] text-paper-muted">
+              A day off doesn&apos;t get judged - the label just says so.
+            </p>
+          </div>
+          <span className={`text-[11px] font-medium ${onPto ? "text-sage" : "text-paper-muted"}`}>
+            {onPto ? "Undo" : "Set"}
+          </span>
+        </button>
 
         <div className="mb-4 rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
           <p className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">

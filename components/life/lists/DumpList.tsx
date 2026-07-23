@@ -109,7 +109,7 @@ export default function DumpList({
       ) : (
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
-            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-backdrop-muted">
               {reviewItems.length} thing{reviewItems.length === 1 ? "" : "s"} to file
             </p>
             <button

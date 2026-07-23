@@ -72,10 +72,10 @@ export default function MoneyView({
   return (
     <div className="scroll-quiet safe-bottom flex-1 overflow-y-auto">
       <div className="mb-3">
-        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-backdrop-muted">
           Money
         </p>
-        <p className="font-serif text-[1.05rem] text-paper-ink">
+        <p className="font-serif text-[1.05rem] text-backdrop-ink">
           Vaults, Debt Snowball &amp; Finance Tracker
         </p>
       </div>

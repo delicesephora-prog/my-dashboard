@@ -91,7 +91,7 @@ function ChainDetail({
         <input
           value={chain.name}
           onChange={(e) => onUpdate((c) => ({ ...c, name: e.target.value }))}
-          className="min-w-0 flex-1 bg-transparent font-serif text-[1.1rem] text-paper-ink outline-none"
+          className="min-w-0 flex-1 bg-transparent font-serif text-[1.1rem] text-backdrop-ink outline-none"
         />
       </div>
 

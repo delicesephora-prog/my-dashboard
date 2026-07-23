@@ -35,10 +35,10 @@ export default function GlowUpView({
   return (
     <div className="scroll-quiet safe-bottom flex-1 overflow-y-auto">
       <div className="mb-3">
-        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-backdrop-muted">
           Glow Up
         </p>
-        <p className="font-serif text-[1.05rem] text-paper-ink">Self-Care Maintenance</p>
+        <p className="font-serif text-[1.05rem] text-backdrop-ink">Self-Care Maintenance</p>
       </div>
 
       <div className="scroll-quiet mb-3 flex gap-1.5 overflow-x-auto">

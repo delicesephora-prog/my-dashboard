@@ -744,7 +744,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
 
       {status === "error" && saveError && (
         <div className="mx-5 mb-2 rounded-xl border border-[#B5574A] bg-[#B5574A]/5 px-3 py-2">
-          <p className="text-[11px] leading-snug text-paper-ink">
+          <p className="text-[11px] leading-snug text-backdrop-ink">
             <span className="font-semibold">Save error (screenshot or copy this for support):</span>{" "}
             {saveError}
           </p>

@@ -141,12 +141,12 @@ export default function FocusModeView({
           <div ref={ringRef} className="relative">
             <ProgressRing pct={pct} size={220} strokeWidth={10} color="#5B2333" label="" />
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="font-serif text-[2.6rem] leading-none text-paper-ink">
+              <span className="font-serif text-[2.6rem] leading-none text-backdrop-ink">
                 {mm}:{ss}
               </span>
             </div>
           </div>
-          <p className="max-w-[260px] text-center font-serif text-[1.1rem] italic text-paper-ink">
+          <p className="max-w-[260px] text-center font-serif text-[1.1rem] italic text-backdrop-ink">
             {taskText.trim() || "Focused work"}
           </p>
           <button
@@ -161,7 +161,7 @@ export default function FocusModeView({
 
       {stage === "complete" && (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-7 text-center">
-          <p className="font-serif text-[1.4rem] text-paper-ink">Nice work.</p>
+          <p className="font-serif text-[1.4rem] text-backdrop-ink">Nice work.</p>
           <p className="text-[13.5px] text-paper-muted">
             {completedMinutesRef.current} focused minutes on &ldquo;{taskText.trim() || "Focused work"}&rdquo;.
           </p>

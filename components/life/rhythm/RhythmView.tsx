@@ -20,10 +20,10 @@ export default function RhythmView({
   return (
     <div className="scroll-quiet safe-bottom flex-1 overflow-y-auto">
       <div className="mb-3">
-        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-backdrop-muted">
           Rhythm
         </p>
-        <p className="font-serif text-[1.05rem] text-paper-ink">Your ideal week</p>
+        <p className="font-serif text-[1.05rem] text-backdrop-ink">Your ideal week</p>
         <p className="mt-1 text-[12px] text-paper-muted">
           Not an hourly schedule - just the anchors that hold each day together.
         </p>

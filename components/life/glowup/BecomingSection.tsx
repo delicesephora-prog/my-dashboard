@@ -92,14 +92,14 @@ function OnboardingFlow({
   return (
     <div className="flex flex-col gap-3">
       <div>
-        <h3 className="font-serif text-[1.05rem] text-paper-ink">Becoming</h3>
-        <p className="mt-0.5 text-[0.8rem] text-paper-muted">
+        <h3 className="font-serif text-[1.05rem] text-backdrop-ink">Becoming</h3>
+        <p className="mt-0.5 text-[0.8rem] text-backdrop-muted">
           A few questions to get started - what do you want to grow into?
         </p>
       </div>
 
       {error && (
-        <div className="rounded-xl border border-[#B5574A] bg-[#B5574A]/5 px-3 py-2 text-[12px] text-paper-ink">
+        <div className="rounded-xl border border-[#B5574A] bg-[#B5574A]/5 px-3 py-2 text-[12px] text-backdrop-ink">
           {error}
         </div>
       )}
@@ -203,12 +203,12 @@ function CoachHome({
   return (
     <div className="flex flex-col gap-3 pb-4">
       <div>
-        <h3 className="font-serif text-[1.05rem] text-paper-ink">Becoming</h3>
-        <p className="mt-0.5 text-[0.8rem] italic text-paper-muted">{becoming.profileSummary}</p>
+        <h3 className="font-serif text-[1.05rem] text-backdrop-ink">Becoming</h3>
+        <p className="mt-0.5 text-[0.8rem] italic text-backdrop-muted">{becoming.profileSummary}</p>
       </div>
 
       {error && (
-        <div className="rounded-xl border border-[#B5574A] bg-[#B5574A]/5 px-3 py-2 text-[12px] text-paper-ink">
+        <div className="rounded-xl border border-[#B5574A] bg-[#B5574A]/5 px-3 py-2 text-[12px] text-backdrop-ink">
           {error}
         </div>
       )}

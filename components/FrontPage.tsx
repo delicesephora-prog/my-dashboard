@@ -461,6 +461,9 @@ function FrontPageBody({
         <LifeScoreSheet
           breakdown={breakdown}
           history={last30DaysScoreHistory(data.lifeScore, now)}
+          lifeScore={data.lifeScore}
+          now={now}
+          onChangeLifeScore={onChangeLifeScore}
           onClose={() => setScoreOpen(false)}
         />
       )}

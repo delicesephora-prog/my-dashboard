@@ -180,8 +180,8 @@ export default function PlannerView({
     <div className="flex h-full flex-1 flex-col overflow-hidden">
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">Planner</p>
-          <p className="font-serif text-[1.05rem] text-paper-ink">
+          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-backdrop-muted">Planner</p>
+          <p className="font-serif text-[1.05rem] text-backdrop-ink">
             {viewMode === "day" && (isToday ? "Today" : formatDayLabel(viewingDateKey))}
             {viewMode === "week" && formatWeekRange(weekKeyFor(viewingDate))}
             {viewMode === "month" &&

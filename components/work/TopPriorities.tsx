@@ -15,7 +15,7 @@ export default function TopPriorities({
 
   return (
     <div className="mb-3">
-      <p className="mb-1.5 px-0.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+      <p className="mb-1.5 px-0.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-backdrop-muted">
         Top Priorities
       </p>
       <div className="flex flex-col gap-2">

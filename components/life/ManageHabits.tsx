@@ -77,7 +77,7 @@ export default function ManageHabits({
         >
           ‹
         </button>
-        <p className="font-serif text-[1.05rem] text-paper-ink">Manage Habits</p>
+        <p className="font-serif text-[1.05rem] text-backdrop-ink">Manage Habits</p>
         <button
           type="button"
           onClick={addHabit}

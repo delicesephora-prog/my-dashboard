@@ -174,7 +174,7 @@ export default function OpsHub({
       </div>
 
       <div>
-        <p className="mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+        <p className="mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-backdrop-muted">
           Ops Tools
         </p>
         <div className="grid grid-cols-2 gap-2">

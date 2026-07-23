@@ -27,7 +27,7 @@ export default function WeekNav({
       </button>
 
       <div className="flex flex-col items-center">
-        <span className="font-serif text-[1.05rem] text-paper-ink">{label}</span>
+        <span className="font-serif text-[1.05rem] text-backdrop-ink">{label}</span>
         {isCurrent && (
           <span className="text-[0.65rem] uppercase tracking-[0.14em] text-life">
             {currentLabel}

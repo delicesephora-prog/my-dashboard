@@ -44,7 +44,7 @@ export default function SnapshotStrip({
 
   return (
     <div className="mb-3">
-      <p className="mb-1.5 px-0.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+      <p className="mb-1.5 px-0.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-backdrop-muted">
         Today&apos;s Snapshot
       </p>
       <div className="grid grid-cols-4 gap-1.5">

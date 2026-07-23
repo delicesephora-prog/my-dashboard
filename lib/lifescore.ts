@@ -8,6 +8,7 @@ import { dateKey, daysBetween, todayKey } from "./date";
 import { weekKeyFor } from "./week";
 import { todayHabitProgress } from "./frontpage";
 import { ROUTINE_KEYS, completionForDate } from "./routines";
+import { isEveningNow } from "./appearance";
 import { currentPeriodKey, isPeriodComplete } from "./payday";
 
 export type LifeScoreCategory =
@@ -46,10 +47,14 @@ export type LifeScoreData = {
   weights: LifeScoreWeights;
   // Date -> score (0-100), one snapshot per day.
   history: Record<string, number>;
+  // Date -> true if that day was declared PTO/a day off - the score still
+  // computes normally underneath (for her own curiosity later), but the
+  // label never judges a day she deliberately stepped away from.
+  ptoLog: Record<string, boolean>;
 };
 
 export function emptyLifeScoreData(): LifeScoreData {
-  return { weights: defaultLifeScoreWeights(), history: {} };
+  return { weights: defaultLifeScoreWeights(), history: {}, ptoLog: {} };
 }
 
 export function normalizeLifeScoreData(
@@ -59,7 +64,16 @@ export function normalizeLifeScoreData(
   return {
     weights: { ...fallback.weights, ...partial?.weights },
     history: partial?.history ?? {},
+    ptoLog: partial?.ptoLog ?? {},
   };
+}
+
+export function isPtoDay(lifeScore: LifeScoreData, key: string): boolean {
+  return !!lifeScore.ptoLog[key];
+}
+
+export function setPtoDay(lifeScore: LifeScoreData, key: string, value: boolean): LifeScoreData {
+  return { ...lifeScore, ptoLog: { ...lifeScore.ptoLog, [key]: value } };
 }
 
 export type CategoryResult = { included: boolean; score: number; detail: string };
@@ -146,25 +160,33 @@ const RESULT_FNS: Record<LifeScoreCategory, (data: DashboardData, now: Date) => 
   payday: paydayResult,
 };
 
+// "Quiet Day" (never a harsher word than that) is the bottom of the plain
+// score ladder - used as-is for historical days (Year in Pixels). Today's
+// own live label goes through resolveTodayLabel below first, which can
+// soften a would-be "Quiet Day" into something gentler before it's ever
+// shown, without changing how past days are labeled.
 const LABEL_THRESHOLDS: { min: number; label: string }[] = [
   { min: 85, label: "Aligned" },
   { min: 65, label: "Steady" },
   { min: 40, label: "Drifting" },
-  { min: 0, label: "Off Track" },
+  { min: 0, label: "Quiet Day" },
 ];
 
 export function labelForScore(score: number): string {
   for (const t of LABEL_THRESHOLDS) {
     if (score >= t.min) return t.label;
   }
-  return "Off Track";
+  return "Quiet Day";
 }
 
 export const LABEL_COLORS: Record<string, string> = {
   Aligned: "#4B5A24",
   Steady: "#C7A46B",
   Drifting: "#C1815F",
-  "Off Track": "#B5574A",
+  "Quiet Day": "#BE8A3D",
+  "Still Unfolding": "#B08B4F",
+  "Gentle Day": "#9B7B94",
+  PTO: "#8FA37E",
 };
 
 export type LifeScoreBreakdown = {
@@ -172,6 +194,28 @@ export type LifeScoreBreakdown = {
   label: string;
   categories: Record<LifeScoreCategory, CategoryResult & { weight: number }>;
 };
+
+// Today's label is never just the raw threshold: a declared PTO day always
+// wins outright, and a would-be "Quiet Day" gets one more chance to be
+// read kindly - as the day still being underway, or as a low-capacity day
+// she already told the Daily Review about - before it's shown as a verdict
+// at all.
+function resolveTodayLabel(data: DashboardData, score: number, now: Date): string {
+  const today = todayKey(now);
+  if (isPtoDay(data.lifeScore, today)) return "PTO";
+
+  const baseline = labelForScore(score);
+  if (baseline !== "Quiet Day") return baseline;
+
+  const entry = dailyReviewEntryFor(data.dailyReview, today);
+  const lowCapacity =
+    entry.mood === "low" || entry.mood === "rough" || entry.energy === "low" || entry.energy === "drained";
+  if (lowCapacity) return "Gentle Day";
+
+  if (!isEveningNow(now)) return "Still Unfolding";
+
+  return "Quiet Day";
+}
 
 export function computeLifeScoreBreakdown(
   data: DashboardData,
@@ -192,7 +236,7 @@ export function computeLifeScoreBreakdown(
   }
 
   const score = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
-  return { score, label: labelForScore(score), categories };
+  return { score, label: resolveTodayLabel(data, score, now), categories };
 }
 
 export function recordTodayScore(

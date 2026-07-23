@@ -118,10 +118,10 @@ export default function HomeView({
   return (
     <div className="scroll-quiet safe-bottom flex-1 overflow-y-auto">
       <div className="mb-3">
-        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-backdrop-muted">
           Home
         </p>
-        <p className="font-serif text-[1.05rem] text-paper-ink">Daily Reset, Zones &amp; Monthly</p>
+        <p className="font-serif text-[1.05rem] text-backdrop-ink">Daily Reset, Zones &amp; Monthly</p>
       </div>
 
       <div className="flex flex-col gap-3">

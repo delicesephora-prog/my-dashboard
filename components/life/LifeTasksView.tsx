@@ -64,8 +64,8 @@ export default function LifeTasksView({
   return (
     <div className="scroll-quiet safe-bottom flex-1 overflow-y-auto">
       <div className="mb-3">
-        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">Life</p>
-        <p className="font-serif text-[1.05rem] text-paper-ink">Tasks</p>
+        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-backdrop-muted">Life</p>
+        <p className="font-serif text-[1.05rem] text-backdrop-ink">Tasks</p>
       </div>
 
       <div className="mb-3 flex gap-2">

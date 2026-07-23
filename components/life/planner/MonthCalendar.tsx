@@ -52,7 +52,9 @@ export default function MonthCalendar({
                   {visible.map((b) => (
                     <span
                       key={b.id}
-                      className="truncate rounded-[3px] px-[3px] py-[1px] text-[8.5px] leading-tight text-paper-ink"
+                      className={`truncate rounded-[3px] px-[3px] py-[1px] text-[8.5px] leading-tight ${
+                        isToday ? "text-backdrop-ink" : "text-paper-ink"
+                      }`}
                       style={{ backgroundColor: `${categoryColor(data.categories, b.category)}33` }}
                     >
                       {b.title}
