@@ -4,6 +4,7 @@ import { openItems } from "./waitingon";
 import { completionForDate } from "./routines";
 import { monthKey } from "./finance";
 import { isStalled } from "./work-style";
+import { containsBadIdentityToken } from "./identity-guard";
 
 export type AssistantMessage = {
   id: string;
@@ -83,13 +84,16 @@ export function emptyAssistantData(): AssistantData {
 export function normalizeAssistantData(
   partial: Partial<AssistantData> | null | undefined
 ): AssistantData {
+  const facts = (partial?.memory?.facts ?? []).filter(
+    (f) => !(typeof f?.text === "string" && containsBadIdentityToken(f.text))
+  );
+  const summaries = (partial?.memory?.summaries ?? []).filter(
+    (s) => !(typeof s?.summary === "string" && containsBadIdentityToken(s.summary))
+  );
   return {
     messages: Array.isArray(partial?.messages) ? partial.messages : [],
     name: partial?.name ?? "",
-    memory: {
-      facts: partial?.memory?.facts ?? [],
-      summaries: partial?.memory?.summaries ?? [],
-    },
+    memory: { facts, summaries },
     usage: {
       monthlySpendCapUsd: partial?.usage?.monthlySpendCapUsd ?? null,
       log: partial?.usage?.log ?? [],

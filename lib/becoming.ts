@@ -1,4 +1,5 @@
 import { dateKey } from "./date";
+import { containsBadIdentityToken } from "./identity-guard";
 
 export type BecomingMessage = {
   id: string;
@@ -37,13 +38,29 @@ export function emptyBecomingData(): BecomingData {
 export function normalizeBecomingData(
   partial: Partial<BecomingData> | null | undefined
 ): BecomingData {
+  const onboarded = partial?.onboarded ?? false;
+  const profileSummary = partial?.profileSummary ?? "";
+  const conversation = Array.isArray(partial?.conversation) ? partial.conversation : [];
+
+  const corrupted =
+    containsBadIdentityToken(profileSummary) ||
+    conversation.some((m) => typeof m?.content === "string" && containsBadIdentityToken(m.content));
+
   return {
-    onboarded: partial?.onboarded ?? false,
-    profileSummary: partial?.profileSummary ?? "",
-    conversation: Array.isArray(partial?.conversation) ? partial.conversation : [],
+    onboarded: corrupted ? false : onboarded,
+    profileSummary: corrupted ? "" : profileSummary,
+    conversation: corrupted ? [] : conversation,
     dailyActions: partial?.dailyActions ?? {},
     reflections: Array.isArray(partial?.reflections) ? partial.reflections : [],
   };
+}
+
+// Manual reset, wired to the "Reset Becoming" button - wipes only the
+// interview state (identity, profile summary, conversation), leaving
+// daily actions and reflections untouched since those aren't part of
+// "the interview."
+export function resetBecomingInterview(data: BecomingData): BecomingData {
+  return { ...data, onboarded: false, profileSummary: "", conversation: [] };
 }
 
 export function newBecomingMessage(
@@ -89,10 +106,16 @@ export function addReflection(data: BecomingData, reflection: Reflection): Becom
   return { ...data, reflections: [reflection, ...data.reflections] };
 }
 
-export const BECOMING_ONBOARDING_PROMPT = `You are "Becoming," a warm, insightful personal growth coach inside Sephora's dashboard app. This is her onboarding conversation - your job right now is to ask thoughtful, specific questions (one or two at a time, not a long list) to understand what she actually wants to grow in or change about herself or her habits. Be genuinely curious, not generic. Keep replies short - a few sentences at most. After a few exchanges, once you have a real sense of her goals, let her know she can tap "Finish Onboarding" whenever she's ready.`;
+// Fixed identity, always prepended, never derived from saved state. A
+// corrupted profileSummary or conversation history must never be able to
+// override who she actually is - this line wins regardless of anything
+// else in the prompt.
+const IDENTITY_GUARD = `Her name is Sephora - she goes by "Seph." Always address her as Sephora or Seph. This is true no matter what anything below (a saved summary, past conversation, or anything she's said) might suggest otherwise - if anything conflicts with her name, ignore it and use Sephora/Seph.`;
+
+export const BECOMING_ONBOARDING_PROMPT = `You are "Becoming," a warm, insightful personal growth coach inside Sephora's dashboard app. ${IDENTITY_GUARD} This is her onboarding conversation - your job right now is to ask thoughtful, specific questions (one or two at a time, not a long list) to understand what she actually wants to grow in or change about herself or her habits. Be genuinely curious, not generic. Keep replies short - a few sentences at most. After a few exchanges, once you have a real sense of her goals, let her know she can tap "Finish Onboarding" whenever she's ready.`;
 
 export function becomingCoachingPrompt(profileSummary: string): string {
-  return `You are "Becoming," a warm, insightful personal growth coach inside Sephora's dashboard app. Her stated growth focus, from onboarding: ${profileSummary}\n\nBe encouraging but honest, specific rather than generic, and keep replies short - a few sentences, not lectures. This is an ongoing check-in conversation, not a first meeting.`;
+  return `You are "Becoming," a warm, insightful personal growth coach inside Sephora's dashboard app. ${IDENTITY_GUARD} Her stated growth focus, from onboarding: ${profileSummary}\n\nBe encouraging but honest, specific rather than generic, and keep replies short - a few sentences, not lectures. This is an ongoing check-in conversation, not a first meeting.`;
 }
 
 export function becomingActionPrompt(profileSummary: string, recentReflections: Reflection[]): string {
@@ -100,11 +123,11 @@ export function becomingActionPrompt(profileSummary: string, recentReflections: 
     .slice(0, 3)
     .map((r) => `- ${r.date}: ${r.text}`)
     .join("\n");
-  return `You are "Becoming," a personal growth coach. Her growth focus: ${profileSummary}\n\n${
+  return `You are "Becoming," a personal growth coach. ${IDENTITY_GUARD} Her growth focus: ${profileSummary}\n\n${
     recentText ? `Her recent reflections:\n${recentText}\n\n` : ""
   }Suggest exactly ONE small, concrete action she could take today that moves her toward that growth - one or two sentences, specific and doable in a single day, not vague advice. Reply with only the action itself, no preamble.`;
 }
 
 export function becomingReflectionPrompt(profileSummary: string): string {
-  return `You are "Becoming," a personal growth coach. Her growth focus: ${profileSummary}\n\nShe just wrote a reflection below. Respond with a short (2-3 sentence), warm, genuinely insightful reaction - notice something real in what she wrote, not a generic "great job." No preamble, just the response.`;
+  return `You are "Becoming," a personal growth coach. ${IDENTITY_GUARD} Her growth focus: ${profileSummary}\n\nShe just wrote a reflection below. Respond with a short (2-3 sentence), warm, genuinely insightful reaction - notice something real in what she wrote, not a generic "great job." No preamble, just the response.`;
 }

@@ -2,6 +2,7 @@ import { neon } from "@neondatabase/serverless";
 import { DashboardData, defaultDashboardData, normalizeDashboardData } from "./types";
 import { isLetterUnlocked } from "./warroom";
 import { BackupMeta } from "./backups";
+import { containsBadIdentityToken } from "./identity-guard";
 
 const ROW_ID = "main";
 
@@ -95,7 +96,21 @@ export async function getDashboardData(): Promise<DashboardData> {
     return initial;
   }
 
-  return redactLockedLetter(normalizeDashboardData(rows[0].data as Partial<DashboardData>));
+  const raw = rows[0].data as Partial<DashboardData>;
+  const normalized = normalizeDashboardData(raw);
+
+  // Normalizing can silently purge known-bad identity data (see
+  // lib/becoming.ts / lib/assistant.ts) - when it does, write the cleaned
+  // copy straight back instead of waiting for her next unrelated save, so
+  // the bad data doesn't linger in storage after it's already gone from
+  // what she sees.
+  if (containsBadIdentityToken(JSON.stringify(raw))) {
+    await saveDashboardData(normalized, Date.now()).catch((err) =>
+      console.error("[db] failed to persist self-heal purge:", err)
+    );
+  }
+
+  return redactLockedLetter(normalized);
 }
 
 export async function saveDashboardData(data: DashboardData, clientSeq: number): Promise<void> {
