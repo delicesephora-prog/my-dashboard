@@ -549,6 +549,7 @@ export type MoneyData = {
   debts: Debt[];
   seedVersion: number;
   debtSeedVersion: number;
+  vaultSeedVersion: number;
 };
 
 // Bump whenever the seed content below changes and existing saved vaults/
@@ -561,11 +562,32 @@ export const MONEY_SEED_VERSION = 1;
 // carry real saved balances by the time this ships).
 export const DEBT_SEED_VERSION = 2;
 
+// Separate again from DEBT_SEED_VERSION so her real SoFi vault balances can
+// replace the old generic placeholders in their own one-time correction,
+// independent of any future debt-only migration.
+export const VAULT_SEED_VERSION = 2;
+
+function vault(name: string, currentAmount: number, goalAmount = 0): Vault {
+  return { id: crypto.randomUUID(), name, currentAmount, goalAmount };
+}
+
+// Her real SoFi vaults, replacing the old generic placeholders (see
+// VAULT_SEED_VERSION). Order matches how she listed them - kept as the
+// display order. No goals set except where she gave one.
 function seedVaults(): Vault[] {
   return [
-    { id: crypto.randomUUID(), name: "Emergency Fund", currentAmount: 0, goalAmount: 1000 },
-    { id: crypto.randomUUID(), name: "Jamaica Trip", currentAmount: 0, goalAmount: 1500 },
-    { id: crypto.randomUUID(), name: "Personal Spending", currentAmount: 0, goalAmount: 300 },
+    vault("Emergency Fund", 3000),
+    vault("Jamaica", 1500),
+    vault("Upcoming Short Travels", 700.62),
+    vault("Rent", 1005.55),
+    vault("Sefi Stash", 260.93),
+    vault("Dates", 194.23),
+    vault("Seph Debt", 159.27),
+    vault("Groceries/PSEG/WiFi", 137.7),
+    vault("Sephora Splurging", 100.49),
+    vault("Gifts/Family", 6.62),
+    vault("Sòl", 1.75),
+    vault("Home Renovations", 0.17),
   ];
 }
 
@@ -613,27 +635,43 @@ function seedDebts(): Debt[] {
 }
 
 export function emptyMoneyData(): MoneyData {
-  return { vaults: seedVaults(), debts: seedDebts(), seedVersion: MONEY_SEED_VERSION, debtSeedVersion: DEBT_SEED_VERSION };
+  return {
+    vaults: seedVaults(),
+    debts: seedDebts(),
+    seedVersion: MONEY_SEED_VERSION,
+    debtSeedVersion: DEBT_SEED_VERSION,
+    vaultSeedVersion: VAULT_SEED_VERSION,
+  };
 }
 
-// Vaults and debts migrate independently: vaults only ever reseed on the
-// original MONEY_SEED_VERSION gate (untouched here), while debts get a
-// one-time correction to her real numbers via DEBT_SEED_VERSION - once
-// applied, her own edits from then on always win, same as any other
-// seed-version migration in this file.
+// Vaults and debts migrate independently, each on its own version gate, so
+// a future one-time correction to either never touches the other or
+// clobbers edits made after the last correction landed - her own edits
+// from then on always win, same as any other seed-version migration in
+// this file.
 function correctedMoneyData(raw: Partial<MoneyData> | null | undefined): MoneyData {
   const seedVersion = raw?.seedVersion ?? 0;
-  const base: MoneyData =
+  let base: MoneyData =
     seedVersion < MONEY_SEED_VERSION
-      ? { vaults: seedVaults(), debts: seedDebts(), seedVersion: MONEY_SEED_VERSION, debtSeedVersion: DEBT_SEED_VERSION }
+      ? {
+          vaults: seedVaults(),
+          debts: seedDebts(),
+          seedVersion: MONEY_SEED_VERSION,
+          debtSeedVersion: DEBT_SEED_VERSION,
+          vaultSeedVersion: VAULT_SEED_VERSION,
+        }
       : {
           vaults: raw?.vaults ?? [],
           debts: raw?.debts ?? [],
           seedVersion: raw?.seedVersion ?? MONEY_SEED_VERSION,
           debtSeedVersion: raw?.debtSeedVersion ?? 0,
+          vaultSeedVersion: raw?.vaultSeedVersion ?? 0,
         };
   if (base.debtSeedVersion < DEBT_SEED_VERSION) {
-    return { ...base, debts: seedDebts(), debtSeedVersion: DEBT_SEED_VERSION };
+    base = { ...base, debts: seedDebts(), debtSeedVersion: DEBT_SEED_VERSION };
+  }
+  if (base.vaultSeedVersion < VAULT_SEED_VERSION) {
+    base = { ...base, vaults: seedVaults(), vaultSeedVersion: VAULT_SEED_VERSION };
   }
   return base;
 }

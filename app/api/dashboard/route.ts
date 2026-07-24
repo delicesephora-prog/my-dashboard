@@ -282,6 +282,7 @@ const moneyDataSchema = z.object({
   debts: z.array(debtSchema).max(200),
   seedVersion: z.number().int(),
   debtSeedVersion: z.number().int(),
+  vaultSeedVersion: z.number().int(),
 });
 
 const paydayStepSchema = z.object({

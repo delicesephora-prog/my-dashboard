@@ -53,6 +53,17 @@ function findLinkedDebt(debts: MoneyData["debts"], debtName: string) {
   );
 }
 
+// Same fuzzy soft-link as findLinkedDebt, so a rename on either side (e.g.
+// her real vault "Jamaica" vs. this recurring transfer's "Jamaica Trip")
+// doesn't silently break the checkoff-to-balance link.
+function findLinkedVault(vaults: MoneyData["vaults"], vaultName: string) {
+  const needle = vaultName.trim().toLowerCase();
+  return (
+    vaults.find((v) => v.name.trim().toLowerCase() === needle) ??
+    vaults.find((v) => v.name.trim().toLowerCase().includes(needle) || needle.includes(v.name.trim().toLowerCase()))
+  );
+}
+
 function convertSchedule(kind: PaymentSchedule["kind"], monthlyAmount: number): PaymentSchedule {
   if (kind === "dueDay") return { kind: "dueDay", day: 1 };
   if (kind === "paydaySplit") return { kind: "paydaySplit", firstAmount: monthlyAmount / 2, secondAmount: monthlyAmount / 2 };
@@ -171,18 +182,20 @@ export default function CommandCenter({
       const planned = plannedAmount(item.schedule, item.monthlyAmount, slot);
       const amount = actualAmount(itemState, slot, planned);
       const delta = wasDone ? -amount : amount;
+      const linkedVault = findLinkedVault(money.vaults, item.vaultName);
 
-      onChangeMoney((m) => ({
-        ...m,
-        vaults: m.vaults.map((v) =>
-          v.name.trim().toLowerCase() === item.vaultName.trim().toLowerCase()
-            ? { ...v, currentAmount: Math.max(0, v.currentAmount + delta) }
-            : v
-        ),
-      }));
+      if (linkedVault) {
+        const vaultId = linkedVault.id;
+        onChangeMoney((m) => ({
+          ...m,
+          vaults: m.vaults.map((v) =>
+            v.id === vaultId ? { ...v, currentAmount: Math.max(0, v.currentAmount + delta) } : v
+          ),
+        }));
+      }
       updateVaultState(item.id, (s) => toggleSlot(slot, s));
 
-      if (!wasDone && amount > 0) {
+      if (!wasDone && amount > 0 && linkedVault) {
         onChangeBudget((b) =>
           addWin(b, { date: dateKey(realNow), kind: "vaultGrowth", name: item.vaultName, amount, note: "Payday transfer" })
         );

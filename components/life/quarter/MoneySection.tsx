@@ -6,6 +6,13 @@ function formatMoney(n: number): string {
   return n.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 }
 
+// Her real vault balances carry meaningful cents (e.g. $700.62) - the
+// rounded formatMoney above is only for the debt summary line, which was
+// always whole-dollar.
+function formatMoneyCents(n: number): string {
+  return n.toLocaleString(undefined, { style: "currency", currency: "USD" });
+}
+
 function InlineAmount({
   value,
   onChange,
@@ -35,6 +42,18 @@ export default function MoneySection({
     onChange((m) => ({ ...m, vaults: [...m.vaults, vault] }));
   }
 
+  function moveVault(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= money.vaults.length) return;
+    onChange((m) => {
+      const vaults = [...m.vaults];
+      [vaults[index], vaults[target]] = [vaults[target], vaults[index]];
+      return { ...m, vaults };
+    });
+  }
+
+  const vaultTotal = money.vaults.reduce((sum, v) => sum + v.currentAmount, 0);
+
   function addDebt() {
     const debt: Debt = {
       id: crypto.randomUUID(),
@@ -63,7 +82,7 @@ export default function MoneySection({
   return (
     <div className="flex flex-col gap-3">
       <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-1 flex items-center justify-between">
           <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
             Vaults
           </p>
@@ -75,16 +94,38 @@ export default function MoneySection({
             + Add Vault
           </button>
         </div>
+        <p className="mb-3 font-serif text-2xl text-paper-ink">{formatMoneyCents(vaultTotal)}</p>
 
         {money.vaults.length === 0 ? (
           <p className="py-2 text-center text-xs italic text-paper-muted">No vaults yet.</p>
         ) : (
           <div className="flex flex-col gap-3">
-            {money.vaults.map((vault) => {
-              const pct = vault.goalAmount > 0 ? Math.min(100, (vault.currentAmount / vault.goalAmount) * 100) : 0;
+            {money.vaults.map((vault, index) => {
+              const hasGoal = vault.goalAmount > 0;
+              const pct = hasGoal ? Math.min(100, (vault.currentAmount / vault.goalAmount) * 100) : 0;
               return (
                 <div key={vault.id}>
-                  <div className="mb-1 flex items-center justify-between gap-2">
+                  <div className="mb-1 flex items-center gap-2">
+                    <div className="flex shrink-0 flex-col">
+                      <button
+                        type="button"
+                        aria-label="Move vault up"
+                        disabled={index === 0}
+                        onClick={() => moveVault(index, -1)}
+                        className="leading-none text-paper-faint disabled:opacity-25"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Move vault down"
+                        disabled={index === money.vaults.length - 1}
+                        onClick={() => moveVault(index, 1)}
+                        className="leading-none text-paper-faint disabled:opacity-25"
+                      >
+                        ▼
+                      </button>
+                    </div>
                     <input
                       value={vault.name}
                       onChange={(e) =>
@@ -110,16 +151,19 @@ export default function MoneySection({
                         }
                       />
                       <span>/</span>
-                      <InlineAmount
-                        value={vault.goalAmount}
-                        onChange={(n) =>
+                      <input
+                        type="number"
+                        value={vault.goalAmount || ""}
+                        placeholder="goal"
+                        onChange={(e) =>
                           onChange((m) => ({
                             ...m,
                             vaults: m.vaults.map((v) =>
-                              v.id === vault.id ? { ...v, goalAmount: n } : v
+                              v.id === vault.id ? { ...v, goalAmount: Number(e.target.value) || 0 } : v
                             ),
                           }))
                         }
+                        className="w-16 rounded-md border border-transparent bg-transparent px-1 text-right font-serif text-[15px] text-paper-ink outline-none placeholder:font-sans placeholder:text-[11px] placeholder:italic placeholder:text-paper-faint transition-colors focus:border-paper-border focus:bg-paper-surface2"
                       />
                       <button
                         type="button"
@@ -133,9 +177,11 @@ export default function MoneySection({
                       </button>
                     </div>
                   </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-paper-surface2">
-                    <div className="h-full rounded-full bg-gold transition-all" style={{ width: `${pct}%` }} />
-                  </div>
+                  {hasGoal && (
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-paper-surface2">
+                      <div className="h-full rounded-full bg-gold transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                  )}
                 </div>
               );
             })}
