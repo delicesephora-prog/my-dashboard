@@ -13,7 +13,11 @@ const MODEL = "claude-sonnet-5";
 const contentBlockSchema = z.record(z.any());
 
 const requestSchema = z.object({
-  system: z.string().max(12000).optional(),
+  // Cher's system prompt now covers the full app (routines, habits, glow
+  // up, knowledge, rhythm, budgeting, meal prep) plus her live memory
+  // context, so the old 12000 cap left no headroom once real facts/
+  // summaries/at-risk habits are in play - raised with real margin.
+  system: z.string().max(24000).optional(),
   messages: z
     .array(
       z.object({
@@ -64,7 +68,7 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 1536,
+        max_tokens: 2048,
         system: parsed.data.system ?? "",
         messages: parsed.data.messages,
         ...(parsed.data.useTools !== false ? { tools: toolDefinitionsForApi() } : {}),

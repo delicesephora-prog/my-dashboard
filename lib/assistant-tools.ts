@@ -1,5 +1,7 @@
 import {
   DashboardData,
+  Habit,
+  habitCompletionsFor,
   TRANSFORMATION_CATEGORIES,
   TransformationCategoryKey,
   TransformationGoal,
@@ -37,6 +39,11 @@ import {
 } from "./budget";
 import { currentPeriodKey, completedStepIdsFor } from "./payday";
 import { addRecipe, Recipe } from "./recipes";
+import { completionForDate, stepsForDate, ROUTINE_KEYS, ROUTINE_LABELS } from "./routines";
+import { weekKeyFor } from "./week";
+import { dailyProgress, weeklyProgress, monthlyProgress, weeklyStreak, isOverdueForWarning } from "./glowup";
+import { computeMastery, dueCardsAcrossSubjects, unaskedQuestions, MASTERY_LABELS } from "./knowledge";
+import { todayRhythm, anchorsForDate, RHYTHM_DAY_LABELS, dayKeyForDate } from "./rhythm";
 import {
   survivalNumberForSlot,
   survivalNumberMonthly,
@@ -1515,6 +1522,11 @@ const READABLE_SECTIONS = [
   "groceryList",
   "dec8",
   "cadence",
+  "routines",
+  "habits",
+  "glowUp",
+  "knowledge",
+  "rhythm",
   "frontPage",
 ] as const;
 
@@ -1716,13 +1728,95 @@ function readSection(data: DashboardData, section: string, now: Date): unknown {
       return Object.fromEntries(
         Object.entries(data.year.transformations).map(([cat, goals]) => [
           cat,
-          { done: goals.filter((g) => g.done).length, total: goals.length },
+          {
+            done: goals.filter((g) => g.done).length,
+            total: goals.length,
+            goals: goals.map((g) => ({ text: g.text, done: g.done })),
+          },
         ])
       );
     case "cadence":
       return {
         items: data.cadence.items.map((i) => ({ text: i.text, frequency: i.frequency, department: i.department })),
       };
+    case "routines": {
+      // Her daily skincare/self-care rhythm (morning/day/night step
+      // checklists) - distinct from the Rhythm anchors below, which are
+      // the actual shape of her week, and from Habits, which are
+      // weekly-goal trackers. All three make up "Rituals" in the UI.
+      const routines = ROUTINE_KEYS.map((key) => {
+        const summary = completionForDate(data.routines.config, data.routines, key, now);
+        const steps = stepsForDate(data.routines.config, key, now);
+        return {
+          key,
+          label: ROUTINE_LABELS[key],
+          done: summary.done,
+          total: summary.total,
+          steps: steps.map((s) => s.text),
+        };
+      });
+      return { today: routines };
+    }
+    case "habits": {
+      const weekKey = weekKeyFor(now);
+      return {
+        thisWeek: data.habits.habits.map((h: Habit) => ({
+          label: h.label,
+          section: h.section,
+          weeklyGoal: h.weeklyGoal,
+          doneCount: habitCompletionsFor(data.habits, weekKey, h.id).filter(Boolean).length,
+        })),
+        atRisk: habitsAtRisk(data.habits, now).map((r) => `${r.habit.label} (${r.doneCount}/${r.habit.weeklyGoal} so far this week)`),
+      };
+    }
+    case "glowUp": {
+      const daily = dailyProgress(data.glowUp, now);
+      const weekly = weeklyProgress(data.glowUp, now);
+      const monthly = monthlyProgress(data.glowUp, now);
+      const overdueMonthly = data.glowUp.monthlyItems.filter((i) => isOverdueForWarning(i, now)).map((i) => i.text);
+      return {
+        daily: { done: daily.done, total: daily.total },
+        weekly: { done: weekly.done, total: weekly.total },
+        monthly: { done: monthly.done, total: monthly.total },
+        weeklyStreak: weeklyStreak(data.glowUp, now),
+        overdueMonthlyItems: overdueMonthly,
+        scentNote: data.glowUp.scentNote,
+      };
+    }
+    case "knowledge": {
+      return {
+        scholarStreak: data.knowledge.scholarStreak.current,
+        subjects: data.knowledge.subjects.map((s) => {
+          const mastery = computeMastery(s.id, data.knowledge);
+          return { name: s.name, pitch: s.pitch, masteryLevel: MASTERY_LABELS[mastery.level], masteryScore: mastery.score };
+        }),
+        dueFlashcards: dueCardsAcrossSubjects(data.knowledge.cards, now, 10).length,
+        openQuestionsToAsk: unaskedQuestions(data.knowledge)
+          .slice(0, 10)
+          .map((q) => ({ text: q.question, angle: q.angle })),
+      };
+    }
+    case "rhythm": {
+      // The actual shape of her week - anchor points per weekday (payday
+      // checklist, board meeting, prep night, etc), separate from the
+      // Planner's real time-blocked calendar. Good for "what's tomorrow
+      // shaped like" or weaving her real rhythm into a day plan.
+      const paydayAnchor = data.lifeQuarterly.paydayChecklist.anchorDate;
+      const todayInfo = todayRhythm(data.rhythm, paydayAnchor, now);
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowAnchors = anchorsForDate(data.rhythm, paydayAnchor, tomorrow);
+      return {
+        today: {
+          dayLabel: RHYTHM_DAY_LABELS[dayKeyForDate(now)],
+          anchors: todayInfo.anchors.map((a) => ({ text: a.anchor.text, state: a.state })),
+        },
+        tomorrow: {
+          dayLabel: RHYTHM_DAY_LABELS[dayKeyForDate(tomorrow)],
+          anchors: tomorrowAnchors.map((a) => a.text),
+        },
+      };
+    }
     case "frontPage": {
       const oneThing = data.oneThing.date === todayKey(now) ? data.oneThing.text : "";
       const recommendation = computeRecommendation(data, now);

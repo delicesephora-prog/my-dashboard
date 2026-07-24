@@ -273,7 +273,10 @@ export default function AssistantView({
       </div>
 
       {error && (
-        <div className="rounded-xl border border-[#B5574A] bg-[#B5574A]/5 px-3 py-2 text-[12px] text-paper-ink">
+        <div
+          className="rounded-xl border border-paper-border bg-paper-surface px-3 py-2 text-[12px] text-paper-ink shadow-paper"
+          style={{ borderLeft: "3px solid #B5574A" }}
+        >
           {error}
         </div>
       )}
