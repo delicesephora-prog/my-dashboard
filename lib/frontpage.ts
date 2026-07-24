@@ -14,11 +14,12 @@ import { completionForDate } from "./routines";
 import { weeklyProgress } from "./glowup";
 import { zoneForDate, completedTaskIds } from "./home";
 import { dateKey } from "./date";
+import { todaysSessionStatus, dueCardsAcrossSubjects } from "./knowledge";
 
 export type FrontPageNavTarget =
   | {
       world: "work";
-      workView?: "dashboard" | "backbeat" | "reference" | "ops";
+      workView?: "dashboard" | "backbeat" | "reference" | "ops" | "knowledge";
       opsView?: "hub" | "waitingOn";
     }
   | {
@@ -127,9 +128,15 @@ export function computeRecommendation(
   const morning = completionForDate(data.routines.config, data.routines, "morning", now);
   const dayRoutine = completionForDate(data.routines.config, data.routines, "day", now);
   const night = completionForDate(data.routines.config, data.routines, "night", now);
+  const knowledgeSession = todaysSessionStatus(data.knowledge, now);
+  const knowledgeDue = dueCardsAcrossSubjects(data.knowledge.cards, now, 1).length > 0;
 
   if (hour < 11 && morning.total > 0 && morning.done < morning.total) {
     return { text: "Morning routine", target: { world: "life", lifeView: "rituals" } };
+  }
+
+  if (hour < 14 && !knowledgeSession.morningDone && knowledgeDue) {
+    return { text: "Morning Knowledge session — a few quick questions", target: { world: "work", workView: "knowledge" } };
   }
 
   if (jsDay === 0 && hour >= 11) {
@@ -145,6 +152,10 @@ export function computeRecommendation(
 
   if (hour >= 20 && night.total > 0 && night.done < night.total) {
     return { text: "Night routine", target: { world: "life", lifeView: "rituals" } };
+  }
+
+  if (hour >= 20 && !knowledgeSession.nightDone && knowledgeDue) {
+    return { text: "Night Knowledge session — a few quick questions", target: { world: "work", workView: "knowledge" } };
   }
 
   const zone = zoneForDate(data.homeZones, now);

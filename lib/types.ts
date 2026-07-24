@@ -37,6 +37,7 @@ import { EventsData, emptyEventsData, normalizeEventsData } from "./events";
 import { FocusData, emptyFocusData, normalizeFocusData } from "./focus";
 import { AssistantData, emptyAssistantData, normalizeAssistantData } from "./assistant";
 import { BecomingData, emptyBecomingData, normalizeBecomingData } from "./becoming";
+import { KnowledgeData, defaultKnowledgeData, normalizeKnowledgeData } from "./knowledge";
 import { QuestData, emptyQuestData, normalizeQuestData } from "./quest";
 import { MemosData, emptyMemosData, normalizeMemosData } from "./memos";
 import { HealthData, emptyHealthData, normalizeHealthData } from "./health";
@@ -897,6 +898,7 @@ export type DashboardData = {
   appearance: AppearanceData;
   vision: VisionData;
   ambiance: AmbianceData;
+  knowledge: KnowledgeData;
 };
 
 export function emptyWorld(): WorldData {
@@ -963,6 +965,7 @@ export function defaultDashboardData(): DashboardData {
     appearance: emptyAppearanceData(),
     vision: emptyVisionData(),
     ambiance: emptyAmbianceData(),
+    knowledge: defaultKnowledgeData(),
   };
 }
 
@@ -1113,6 +1116,10 @@ export function normalizeDashboardData(
     appearance: normalizeAppearanceData(data.appearance),
     vision: normalizeVisionData(data.vision),
     ambiance: normalizeAmbianceData(data.ambiance),
+    // Seeded once, the first time this field has never been saved before
+    // (an account that predates the Knowledge tab) - after that, her real
+    // progress always wins and this never re-seeds.
+    knowledge: data.knowledge === undefined ? defaultKnowledgeData() : normalizeKnowledgeData(data.knowledge),
   };
 
   // One-time additive link: makes sure the vaults/debt this feature depends

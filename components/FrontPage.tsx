@@ -21,7 +21,15 @@ import { RhythmData } from "@/lib/rhythm";
 import { HomeZonesData, completedTaskIds, toggleZoneTask, zoneForDate } from "@/lib/home";
 import { completionForDate } from "@/lib/routines";
 import { daysUntilDecember8 } from "@/lib/warroom";
-import { dateKey } from "@/lib/date";
+import { dateKey, todayKey } from "@/lib/date";
+import {
+  KnowledgeData,
+  Flashcard,
+  dailyUnlockCard,
+  isDailyUnlockDoneToday,
+  completeDailyUnlock,
+  answerCard,
+} from "@/lib/knowledge";
 import { vocabForDate, factForDate } from "@/lib/welcome";
 import { QuestData, isQuestDone, markQuestDone, questForDate } from "@/lib/quest";
 import { openItems, overdueItems } from "@/lib/waitingon";
@@ -56,6 +64,7 @@ export default function FrontPage({
   onToggleFocusTask,
   onChangeHomeZones,
   onChangeQuest,
+  onChangeKnowledge,
   onCelebrate,
 }: {
   data: DashboardData;
@@ -69,6 +78,7 @@ export default function FrontPage({
   onToggleFocusTask: (item: TodayFocusItem) => void;
   onChangeHomeZones: (updater: (h: HomeZonesData) => HomeZonesData) => void;
   onChangeQuest: (updater: (q: QuestData) => QuestData) => void;
+  onChangeKnowledge: (updater: (k: KnowledgeData) => KnowledgeData) => void;
   onCelebrate: (tier: CelebrationTier, message: string) => void;
 }) {
   // Deferred to the client, same as Greeting - the recommendation, "today"
@@ -127,6 +137,7 @@ export default function FrontPage({
               onToggleFocusTask={onToggleFocusTask}
               onChangeHomeZones={onChangeHomeZones}
               onChangeQuest={onChangeQuest}
+              onChangeKnowledge={onChangeKnowledge}
               onCelebrate={onCelebrate}
             />
           )}
@@ -180,6 +191,7 @@ function FrontPageBody({
   onToggleFocusTask,
   onChangeHomeZones,
   onChangeQuest,
+  onChangeKnowledge,
   onCelebrate,
 }: {
   data: DashboardData;
@@ -191,6 +203,7 @@ function FrontPageBody({
   onToggleFocusTask: (item: TodayFocusItem) => void;
   onChangeHomeZones: (updater: (h: HomeZonesData) => HomeZonesData) => void;
   onChangeQuest: (updater: (q: QuestData) => QuestData) => void;
+  onChangeKnowledge: (updater: (k: KnowledgeData) => KnowledgeData) => void;
   onCelebrate: (tier: CelebrationTier, message: string) => void;
 }) {
   const atRisk = habitsAtRisk(data.habits, now);
@@ -290,6 +303,8 @@ function FrontPageBody({
           {questDone ? "Done" : "Complete"}
         </button>
       </div>
+
+      <ScholarCard knowledge={data.knowledge} now={now} onChange={onChangeKnowledge} onNavigate={onNavigate} onCelebrate={onCelebrate} />
 
       {waitingOnOpen.length > 0 && (
         <button
@@ -543,6 +558,129 @@ function CoverOfTheDay({
         </p>
       )}
     </button>
+  );
+}
+
+function isCorrectGuess(card: Flashcard, guess: string): boolean {
+  if (card.type === "fill_blank") {
+    const g = guess.trim().toLowerCase();
+    const a = card.answer.trim().toLowerCase();
+    return g === a || (g.length > 2 && a.includes(g));
+  }
+  return guess === card.answer;
+}
+
+// The Daily Unlock - one quick question, right on the Front Page. Answering
+// it completes the day's Scholar habit and builds the streak; it never
+// blocks anything else, and once done today it just shows the streak
+// instead of nagging again.
+function ScholarCard({
+  knowledge,
+  now,
+  onChange,
+  onNavigate,
+  onCelebrate,
+}: {
+  knowledge: KnowledgeData;
+  now: Date;
+  onChange: (updater: (k: KnowledgeData) => KnowledgeData) => void;
+  onNavigate: (target: FrontPageNavTarget) => void;
+  onCelebrate: (tier: CelebrationTier, message: string) => void;
+}) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState(false);
+
+  const doneToday = isDailyUnlockDoneToday(knowledge, now);
+  const card = dailyUnlockCard(knowledge, now);
+
+  if (!card) return null;
+
+  function submit() {
+    if (!selected) return;
+    const correct = isCorrectGuess(card!, selected);
+    onChange((k) => completeDailyUnlock({ ...k, cards: answerCard(k.cards, card!.id, correct, now) }, now));
+    setRevealed(true);
+    if (cardRef.current) burstConfettiMedium(cardRef.current);
+    const wasAlreadyToday = knowledge.scholarStreak.lastCompletedDate === todayKey(now);
+    const nextStreak = wasAlreadyToday ? knowledge.scholarStreak.current : knowledge.scholarStreak.current + 1;
+    if (!wasAlreadyToday && nextStreak > 0 && nextStreak % 7 === 0) {
+      onCelebrate("medium", `${nextStreak}-day Scholar streak!`);
+    }
+  }
+
+  if (doneToday) {
+    return (
+      <button
+        type="button"
+        onClick={() => onNavigate({ world: "work", workView: "knowledge" })}
+        className="hover-lift rounded-xl2 border border-paper-border bg-paper-surface p-4 text-left shadow-paper transition active:scale-[0.99] lg:col-span-5"
+      >
+        <p className="mb-1 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-gold">🎓 Scholar</p>
+        <p className="font-serif text-[1rem] text-paper-ink">
+          {knowledge.scholarStreak.current}-day streak
+        </p>
+        <p className="mt-0.5 text-[12px] text-paper-muted">
+          Today&apos;s question answered - open Knowledge for a full session.
+        </p>
+      </button>
+    );
+  }
+
+  const choices = card.type === "true_false" ? ["True", "False"] : card.type === "multiple_choice" ? card.choices : [];
+
+  return (
+    <div ref={cardRef} className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper lg:col-span-5">
+      <p className="mb-1 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-gold">🎓 Scholar</p>
+      <p className="font-serif text-[13.5px] leading-snug text-paper-ink">{card.prompt}</p>
+      {choices.length > 0 ? (
+        <div className="mt-2.5 flex flex-col gap-1.5">
+          {choices.map((c) => {
+            const isAnswer = c === card.answer;
+            const isSelected = c === selected;
+            return (
+              <button
+                key={c}
+                type="button"
+                disabled={revealed}
+                onClick={() => setSelected(c)}
+                className={`rounded-lg border px-2.5 py-2 text-left text-[12.5px] transition ${
+                  revealed && isAnswer
+                    ? "border-sage bg-sage-soft text-[#3E4F31]"
+                    : revealed && isSelected && !isAnswer
+                      ? "border-[#B5574A] bg-[#B5574A]/10 text-[#8A3F35]"
+                      : isSelected
+                        ? "border-work bg-work-soft text-work"
+                        : "border-paper-border bg-paper-surface2 text-paper-ink"
+                }`}
+              >
+                {c}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <input
+          value={selected ?? ""}
+          onChange={(e) => setSelected(e.target.value)}
+          disabled={revealed}
+          placeholder="Type the term…"
+          className="mt-2.5 w-full rounded-lg border border-paper-border bg-paper-surface2 px-2.5 py-2 text-[12.5px] text-paper-ink outline-none focus:border-work"
+        />
+      )}
+      {!revealed ? (
+        <button
+          type="button"
+          onClick={submit}
+          disabled={!selected}
+          className="mt-2.5 w-full rounded-xl bg-work py-2 text-center text-[12.5px] font-medium text-paper-surface active:scale-[0.98] disabled:opacity-40"
+        >
+          Answer
+        </button>
+      ) : (
+        <p className="mt-2.5 text-[11.5px] text-paper-muted">Answer: {card.answer} · streak building…</p>
+      )}
+    </div>
   );
 }
 

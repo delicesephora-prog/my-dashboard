@@ -71,6 +71,8 @@ import { TabUsageData, SystemCheckData, trackTabOpen, isTabHidden } from "@/lib/
 import { WeddingData } from "@/lib/wedding";
 import { TripsData } from "@/lib/trips";
 import { VisionData } from "@/lib/vision";
+import { KnowledgeData } from "@/lib/knowledge";
+import KnowledgeView from "./work/knowledge/KnowledgeView";
 import CelebrationOverlay from "./CelebrationOverlay";
 import BoardMeeting from "./BoardMeeting";
 import SystemCheckFlow from "./SystemCheckFlow";
@@ -117,7 +119,7 @@ import Monogram from "./Monogram";
 import TabErrorBoundary from "./TabErrorBoundary";
 
 type World = "front" | "work" | "planner" | "life" | "assistant";
-type WorkView = "dashboard" | "cadence" | "backbeat" | "ops" | "reference";
+type WorkView = "dashboard" | "cadence" | "backbeat" | "ops" | "knowledge" | "reference";
 type OpsSubView =
   | "hub"
   | "waitingOn"
@@ -433,6 +435,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
 
   function updateVision(updater: (v: VisionData) => VisionData) {
     setData((prev) => ({ ...prev, vision: updater(prev.vision) }));
+    scheduleSave();
+  }
+
+  function updateKnowledge(updater: (k: KnowledgeData) => KnowledgeData) {
+    setData((prev) => ({ ...prev, knowledge: updater(prev.knowledge) }));
     scheduleSave();
   }
 
@@ -781,6 +788,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             onToggleFocusTask={toggleTodayFocusTask}
             onChangeHomeZones={updateHomeZones}
             onChangeQuest={updateQuest}
+            onChangeKnowledge={updateKnowledge}
             onCelebrate={triggerCelebration}
           />
         ) : world === "work" ? (
@@ -791,6 +799,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 { key: "cadence", label: "Cadence" },
                 { key: "backbeat", label: "BackBeat" },
                 { key: "ops", label: "Ops" },
+                { key: "knowledge", label: "Knowledge" },
                 { key: "reference", label: "Reference" },
               ].filter((i) => !isTabHidden(data.tabUsage, `work:${i.key}`)) as { key: WorkView; label: string }[]}
               active={workView}
@@ -897,6 +906,9 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 onChange={updateEvents}
                 onBack={() => setOpsView("hub")}
               />
+            )}
+            {workView === "knowledge" && (
+              <KnowledgeView knowledge={data.knowledge} onChange={updateKnowledge} onCelebrate={triggerCelebration} />
             )}
             {workView === "reference" && (
               <Reference reference={data.reference} onChange={updateReference} />

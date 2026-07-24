@@ -997,6 +997,97 @@ const memosDataSchema = z.object({
   entries: z.record(z.string().max(20000)),
 });
 
+const twoLayerBlockSchema = z.object({
+  id: z.string(),
+  heading: z.string().max(200),
+  realWords: z.string().max(4000),
+  plainEnglish: z.string().max(4000),
+});
+
+const masteryLevelSchema = z.enum(["novice", "learning", "conversant", "fluent", "expert"]);
+
+const knowledgeSubjectSchema = z.object({
+  id: z.string(),
+  name: z.string().max(200),
+  pitch: z.string().max(2000),
+  blocks: z.array(twoLayerBlockSchema).max(40),
+  createdAt: z.string(),
+  celebratedLevel: masteryLevelSchema.nullable(),
+});
+
+const cardTypeSchema = z.enum(["multiple_choice", "fill_blank", "true_false", "explain"]);
+
+const flashcardSchema = z.object({
+  id: z.string(),
+  subjectId: z.string(),
+  sourceBlockId: z.string().nullable(),
+  type: cardTypeSchema,
+  prompt: z.string().max(2000),
+  answer: z.string().max(2000),
+  choices: z.array(z.string().max(500)).max(8),
+  interval: z.number(),
+  dueDate: z.string(),
+  easeFactor: z.number(),
+  reviewCount: z.number(),
+  correctCount: z.number(),
+  lastResult: z.enum(["correct", "incorrect"]).nullable(),
+  createdAt: z.string(),
+});
+
+const silasTestAttemptSchema = z.object({
+  id: z.string(),
+  subjectId: z.string(),
+  date: z.string(),
+  prompt: z.string().max(2000),
+  response: z.string().max(8000),
+  score: z.number(),
+  nailed: z.array(z.string().max(500)).max(20),
+  missed: z.array(z.string().max(500)).max(20),
+  modelAnswer: z.string().max(4000),
+});
+
+const askDeeperCitationSchema = z.object({ title: z.string().max(300), url: z.string().max(1000) });
+
+const askDeeperMessageSchema = z.object({
+  id: z.string(),
+  role: z.enum(["user", "assistant"]),
+  content: z.string().max(8000),
+  citations: z.array(askDeeperCitationSchema).max(10),
+  createdAt: z.string(),
+});
+
+const questionAngleSchema = z.enum(["clinical", "commercial", "trial", "competitive"]);
+
+const questionToAskSchema = z.object({
+  id: z.string(),
+  subjectId: z.string(),
+  question: z.string().max(1000),
+  angle: questionAngleSchema,
+  whyGood: z.string().max(1000),
+  whatYoullLearn: z.string().max(1000),
+  asked: z.boolean(),
+  answerLogged: z.string().max(4000),
+  createdAt: z.string(),
+});
+
+const scholarStreakDataSchema = z.object({
+  current: z.number(),
+  longest: z.number(),
+  lastCompletedDate: z.string(),
+});
+
+const dailySessionLogSchema = z.object({ morningDone: z.boolean(), nightDone: z.boolean() });
+
+const knowledgeDataSchema = z.object({
+  subjects: z.array(knowledgeSubjectSchema).max(100),
+  cards: z.array(flashcardSchema).max(5000),
+  silasTests: z.array(silasTestAttemptSchema).max(1000),
+  askDeeperChats: z.record(z.array(askDeeperMessageSchema).max(200)),
+  questions: z.array(questionToAskSchema).max(1000),
+  scholarStreak: scholarStreakDataSchema,
+  dailyLog: z.record(dailySessionLogSchema),
+});
+
 const appointmentSchema = z.object({
   id: z.string(),
   provider: z.string().max(200),
@@ -1354,6 +1445,7 @@ const dashboardSchema = z.object({
   appearance: appearanceDataSchema,
   vision: visionDataSchema,
   ambiance: ambianceDataSchema,
+  knowledge: knowledgeDataSchema,
 });
 
 export async function GET() {
