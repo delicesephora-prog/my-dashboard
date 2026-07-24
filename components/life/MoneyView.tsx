@@ -6,6 +6,8 @@ import { PaydayChecklistData } from "@/lib/payday";
 import { Account, Budget, FinanceData, Transaction } from "@/lib/finance";
 import { BudgetData } from "@/lib/budget";
 import { CelebrationTier } from "@/lib/celebration";
+import { MilestoneData } from "@/lib/milestones";
+import { RewardsData } from "@/lib/rewards";
 import MoneySection from "./quarter/MoneySection";
 import PaydayChecklistSection from "./quarter/PaydayChecklistSection";
 import AccountsTab from "./finance/AccountsTab";
@@ -14,8 +16,9 @@ import BudgetsTab from "./finance/BudgetsTab";
 import TrendsTab from "./finance/TrendsTab";
 import CommandCenter from "./money/CommandCenter";
 import CalendarTab from "./money/CalendarTab";
+import RewardsView from "./money/RewardsView";
 
-type Tab = "command" | "overview" | "accounts" | "transactions" | "budgets" | "trends" | "calendar";
+type Tab = "command" | "overview" | "accounts" | "transactions" | "budgets" | "trends" | "calendar" | "rewards";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "command", label: "Command Center" },
@@ -25,6 +28,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "budgets", label: "Budgets" },
   { key: "trends", label: "Trends" },
   { key: "calendar", label: "Calendar" },
+  { key: "rewards", label: "Rewards" },
 ];
 
 export default function MoneyView({
@@ -34,6 +38,11 @@ export default function MoneyView({
   onChangeFinance,
   budget,
   onChangeBudget,
+  milestones,
+  rewards,
+  onChangeRewards,
+  scholarStreakCurrent,
+  appOpenDateKeys,
   onCelebrate,
 }: {
   lifeQuarterly: LifeQuarterly;
@@ -42,6 +51,11 @@ export default function MoneyView({
   onChangeFinance: (updater: (f: FinanceData) => FinanceData) => void;
   budget: BudgetData;
   onChangeBudget: (updater: (b: BudgetData) => BudgetData) => void;
+  milestones: MilestoneData;
+  rewards: RewardsData;
+  onChangeRewards: (updater: (r: RewardsData) => RewardsData) => void;
+  scholarStreakCurrent: number;
+  appOpenDateKeys: string[];
   onCelebrate: (tier: CelebrationTier, message: string) => void;
 }) {
   const [tab, setTab] = useState<Tab>("command");
@@ -164,6 +178,20 @@ export default function MoneyView({
       {tab === "trends" && <TrendsTab transactions={finance.transactions} />}
 
       {tab === "calendar" && <CalendarTab budget={budget} money={lifeQuarterly.money} />}
+
+      {tab === "rewards" && (
+        <RewardsView
+          rewards={rewards}
+          onChangeRewards={onChangeRewards}
+          milestones={milestones}
+          money={lifeQuarterly.money}
+          budget={budget}
+          onChangeBudget={onChangeBudget}
+          scholarStreakCurrent={scholarStreakCurrent}
+          appOpenDateKeys={appOpenDateKeys}
+          onCelebrate={onCelebrate}
+        />
+      )}
     </div>
   );
 }

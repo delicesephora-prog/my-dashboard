@@ -1390,6 +1390,46 @@ const ambianceDataSchema = z.object({
   focusTrack: z.enum(["rain", "cafe", "piano"]),
 });
 
+const milestoneTrackerSchema = z.object({
+  id: z.string(),
+  name: z.string().max(200),
+  icon: z.string().max(10),
+  color: z.string().max(20),
+  type: z.enum(["daily", "count"]),
+  order: z.number(),
+  celebratedThresholds: z.array(z.number()).max(20),
+});
+
+const milestoneDataSchema = z.object({
+  trackers: z.array(milestoneTrackerSchema).max(200),
+  entries: z.record(z.record(z.number())),
+});
+
+const rewardTriggerSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("trackerStreak"), trackerId: z.string(), days: z.number() }),
+  z.object({ kind: z.literal("trackerMonthlyCount"), trackerId: z.string(), count: z.number() }),
+  z.object({ kind: z.literal("debtPaidOff"), debtId: z.string() }),
+  z.object({ kind: z.literal("scholarStreak"), days: z.number() }),
+  z.object({ kind: z.literal("appOpenStreak"), days: z.number() }),
+  z.object({ kind: z.literal("manual") }),
+]);
+
+const rewardSchema = z.object({
+  id: z.string(),
+  name: z.string().max(200),
+  costEstimate: z.number(),
+  spendingCategoryId: z.string(),
+  trigger: rewardTriggerSchema,
+  status: z.enum(["active", "readyToClaim", "claimed"]),
+  earnedAt: z.string(),
+  claimedAt: z.string(),
+  order: z.number(),
+});
+
+const rewardsDataSchema = z.object({
+  rewards: z.array(rewardSchema).max(500),
+});
+
 const dashboardSchema = z.object({
   version: z.literal(1),
   work: worldSchema,
@@ -1446,6 +1486,8 @@ const dashboardSchema = z.object({
   vision: visionDataSchema,
   ambiance: ambianceDataSchema,
   knowledge: knowledgeDataSchema,
+  milestones: milestoneDataSchema,
+  rewards: rewardsDataSchema,
 });
 
 export async function GET() {

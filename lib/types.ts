@@ -46,6 +46,8 @@ import { WeddingData, emptyWeddingData, normalizeWeddingData } from "./wedding";
 import { TripsData, emptyTripsData, normalizeTripsData } from "./trips";
 import { BudgetData, emptyBudgetData, normalizeBudgetData, ensureLinkedMoneyEntities } from "./budget";
 import { MealPlanData, emptyMealPlanData, normalizeMealPlanData } from "./mealplan";
+import { MilestoneData, defaultMilestoneData, normalizeMilestoneData } from "./milestones";
+import { RewardsData, emptyRewardsData, normalizeRewardsData } from "./rewards";
 
 export type TaskItem = {
   id: string;
@@ -899,6 +901,8 @@ export type DashboardData = {
   vision: VisionData;
   ambiance: AmbianceData;
   knowledge: KnowledgeData;
+  milestones: MilestoneData;
+  rewards: RewardsData;
 };
 
 export function emptyWorld(): WorldData {
@@ -966,6 +970,8 @@ export function defaultDashboardData(): DashboardData {
     vision: emptyVisionData(),
     ambiance: emptyAmbianceData(),
     knowledge: defaultKnowledgeData(),
+    milestones: defaultMilestoneData(),
+    rewards: emptyRewardsData(),
   };
 }
 
@@ -1120,6 +1126,11 @@ export function normalizeDashboardData(
     // (an account that predates the Knowledge tab) - after that, her real
     // progress always wins and this never re-seeds.
     knowledge: data.knowledge === undefined ? defaultKnowledgeData() : normalizeKnowledgeData(data.knowledge),
+    // Seeded once, the first time this field has never been saved before
+    // (an account that predates Milestones) - after that, her real
+    // trackers always win, even if she deletes both starter trackers.
+    milestones: data.milestones === undefined ? defaultMilestoneData() : normalizeMilestoneData(data.milestones),
+    rewards: normalizeRewardsData(data.rewards),
   };
 
   // One-time additive link: makes sure the vaults/debt this feature depends

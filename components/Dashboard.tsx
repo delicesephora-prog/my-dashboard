@@ -71,6 +71,8 @@ import { TabUsageData, SystemCheckData, trackTabOpen, isTabHidden } from "@/lib/
 import { WeddingData } from "@/lib/wedding";
 import { TripsData } from "@/lib/trips";
 import { VisionData } from "@/lib/vision";
+import { MilestoneData } from "@/lib/milestones";
+import { RewardsData, evaluateRewardTriggers } from "@/lib/rewards";
 import { KnowledgeData } from "@/lib/knowledge";
 import KnowledgeView from "./work/knowledge/KnowledgeView";
 import CelebrationOverlay from "./CelebrationOverlay";
@@ -443,6 +445,16 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     scheduleSave();
   }
 
+  function updateMilestones(updater: (m: MilestoneData) => MilestoneData) {
+    setData((prev) => ({ ...prev, milestones: updater(prev.milestones) }));
+    scheduleSave();
+  }
+
+  function updateRewards(updater: (r: RewardsData) => RewardsData) {
+    setData((prev) => ({ ...prev, rewards: updater(prev.rewards) }));
+    scheduleSave();
+  }
+
   function updateWelcome(updater: (w: WelcomeData) => WelcomeData) {
     setData((prev) => ({ ...prev, welcome: updater(prev.welcome) }));
     scheduleSave();
@@ -576,6 +588,38 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   useEffect(() => {
     setAmbianceSettings(data.ambiance);
   }, [data.ambiance]);
+
+  // Re-checks every reward's trigger whenever anything it could depend on
+  // changes (a milestone log, a debt payment, a Scholar streak, opening the
+  // app on a new day). evaluateRewardTriggers only ever moves "active"
+  // rewards forward to "readyToClaim" and never re-touches one that's
+  // already left "active", so re-running this after our own setData below
+  // is always a no-op the second time - safe to keep rewards.rewards itself
+  // in the dependency list (needed to catch a brand-new reward whose
+  // trigger is already met the moment she creates it).
+  useEffect(() => {
+    const now = new Date();
+    const result = evaluateRewardTriggers(data.rewards.rewards, {
+      now,
+      milestoneEntries: data.milestones.entries,
+      debts: data.lifeQuarterly.money.debts,
+      scholarStreakCurrent: data.knowledge.scholarStreak.current,
+      appOpenDateKeys: Object.keys(data.lifeScore.history),
+    });
+    if (!result.changed) return;
+    setData((prev) => ({ ...prev, rewards: { ...prev.rewards, rewards: result.rewards } }));
+    scheduleSave();
+    if (result.newlyReady.length > 0) {
+      triggerCelebration("big", `🎁 ${result.newlyReady[0].name} is ready to claim!`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    data.rewards.rewards,
+    data.milestones.entries,
+    data.lifeQuarterly.money.debts,
+    data.knowledge.scholarStreak.current,
+    data.lifeScore.history,
+  ]);
 
   // The Assistant's tools can touch any part of the dashboard (tasks,
   // planner, lists, health, events, meals, finance, waiting-on, Dec 8
@@ -1011,6 +1055,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 onChangeFinance={updateFinance}
                 budget={data.budget}
                 onChangeBudget={updateBudget}
+                milestones={data.milestones}
+                rewards={data.rewards}
+                onChangeRewards={updateRewards}
+                scholarStreakCurrent={data.knowledge.scholarStreak.current}
+                appOpenDateKeys={Object.keys(data.lifeScore.history)}
                 onCelebrate={triggerCelebration}
               />
             )}
@@ -1053,7 +1102,15 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             {lifeView === "bucketList" && (
               <BucketListView bucketList={data.bucketList} onChange={updateBucketList} />
             )}
-            {lifeView === "year" && <YearView year={data.year} onChange={updateYear} />}
+            {lifeView === "year" && (
+              <YearView
+                year={data.year}
+                onChange={updateYear}
+                milestones={data.milestones}
+                onChangeMilestones={updateMilestones}
+                onCelebrate={triggerCelebration}
+              />
+            )}
             {lifeView === "dec8" && (
               <WarRoomSection
                 transformations={data.year.transformations}
