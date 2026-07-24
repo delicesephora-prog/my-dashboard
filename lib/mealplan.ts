@@ -11,12 +11,22 @@ export const MEAL_SLOT_LABELS: Record<MealSlot, string> = {
   snack: "Snack",
 };
 
+// How a planned meal gets made: a big Wednesday-prep-night batch that
+// reheats over several days, a fast weeknight cook, or something plated
+// fresh from already-prepped components. "" means not set (a plain
+// freeform entry with no prep plan attached).
+export type PrepStyle = "batch-cook" | "quick" | "assemble" | "";
+
 export type MealEntry = {
   id: string;
   date: string; // YYYY-MM-DD
   slot: MealSlot;
   text: string;
   notes: string;
+  calories: number; // estimated per-serving calories, 0 = not estimated
+  ingredients: string[]; // grocery-ready lines, e.g. "2 lbs chicken thighs"
+  prepStyle: PrepStyle;
+  recipeId: string; // links back to lib/recipes.ts's bank, "" if freeform
 };
 
 export type MealPlanData = {
@@ -28,11 +38,20 @@ export function emptyMealPlanData(): MealPlanData {
 }
 
 export function normalizeMealPlanData(partial: Partial<MealPlanData> | null | undefined): MealPlanData {
-  return { meals: Array.isArray(partial?.meals) ? partial.meals : [] };
+  const meals = Array.isArray(partial?.meals) ? partial.meals : [];
+  return {
+    meals: meals.map((m) => ({
+      ...m,
+      calories: typeof m.calories === "number" ? m.calories : 0,
+      ingredients: Array.isArray(m.ingredients) ? m.ingredients : [],
+      prepStyle: m.prepStyle ?? "",
+      recipeId: m.recipeId ?? "",
+    })),
+  };
 }
 
 export function newMeal(date: string, slot: MealSlot, text: string): MealEntry {
-  return { id: crypto.randomUUID(), date, slot, text, notes: "" };
+  return { id: crypto.randomUUID(), date, slot, text, notes: "", calories: 0, ingredients: [], prepStyle: "", recipeId: "" };
 }
 
 export function addMeal(data: MealPlanData, meal: MealEntry): MealPlanData {

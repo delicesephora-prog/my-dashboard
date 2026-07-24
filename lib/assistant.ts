@@ -1,11 +1,12 @@
 import { DashboardData } from "./types";
-import { todayKey, greetingForHour } from "./date";
+import { todayKey, greetingForHour, formatDayLabel } from "./date";
 import { openItems } from "./waitingon";
 import { completionForDate } from "./routines";
-import { monthKey } from "./finance";
+import { monthKey, formatMoney } from "./finance";
 import { isStalled } from "./work-style";
 import { containsBadIdentityToken } from "./identity-guard";
 import { isPtoDay } from "./lifescore";
+import { leftToBreathe, spendingStatus, monthStateFor, dueNextItems } from "./budget";
 
 export type AssistantMessage = {
   id: string;
@@ -329,6 +330,37 @@ function ptoLine(data: DashboardData, now: Date): string {
   return `Today is marked as PTO - a declared day off. Don't run today like a normal work day: don't push open tasks, deadlines, or "what should I focus on" style productivity talk unless she brings it up herself. If it's natural, offer day-off options - help her reschedule anything time-sensitive off today, keep things light, or just leave work out of it entirely. Follow her lead rather than assuming what she wants from a day off.`;
 }
 
+// A short, live money headline - always current since it's computed fresh
+// from the Command Center every time the prompt is built, not cached. Deep
+// dives (every category, vaults, debts, payday checklist) go through
+// read_dashboard_section("budget") instead of bloating this line.
+function moneySnapshotLine(data: DashboardData, now: Date): string {
+  const config = data.budget.config;
+  const key = monthKey(now);
+  const state = monthStateFor(data.budget, key, data.lifeQuarterly.money);
+  const buffer = leftToBreathe(config);
+  const overCategories = spendingStatus(config, state).filter((s) => s.pct >= 90);
+  const nextBill = dueNextItems(config, state, now)[0];
+  const bits = [`Left to Breathe buffer this month: ${formatMoney(buffer)}.`];
+  if (overCategories.length > 0) {
+    bits.push(`Near or over target: ${overCategories.map((s) => `${s.target.name} (${s.pct}%)`).join(", ")}.`);
+  }
+  if (nextBill) {
+    bits.push(`Next due: ${nextBill.name} (${formatMoney(nextBill.amount)}, day ${nextBill.day}).`);
+  }
+  return `Money snapshot - ${bits.join(" ")} Call read_dashboard_section("budget") for the full picture (every category, vaults, debts, payday checklist) before answering anything specific - this line is just a headline, not the real numbers to reason from.`;
+}
+
+function mealSnapshotLine(data: DashboardData, now: Date): string {
+  const today = todayKey(now);
+  const upcoming = data.mealPlan.meals.filter((m) => m.date >= today);
+  if (upcoming.length === 0) {
+    return `Meal snapshot - nothing planned right now. If meal prep comes up, default to actually proposing a full week with plan_week_meals rather than asking what she feels like.`;
+  }
+  const lastDate = [...upcoming].map((m) => m.date).sort().slice(-1)[0];
+  return `Meal snapshot - meals planned through ${formatDayLabel(lastDate)} (${upcoming.length} entries). Call read_dashboard_section("mealPlan") for specifics, ("recipes") for her saved bank, or ("groceryList") for what's already on the list.`;
+}
+
 export function buildSystemPrompt(data: DashboardData, now: Date = new Date()): string {
   const name = assistantDisplayName(data.assistant);
   const memoryContext = buildMemoryContext(data.assistant.memory);
@@ -339,8 +371,12 @@ export function buildSystemPrompt(data: DashboardData, now: Date = new Date()): 
     `You have real hands: tools to add and edit things across her dashboard (tasks, planner blocks, lists, appointments, events, meals, goals, expenses/income, waiting-on items) and a tool to read any section of her dashboard in more depth than the snapshot below. Use them whenever she asks you to add or change something - don't just describe what she should do herself. Every write tool call is shown to her for a one-tap confirmation before anything saves, so propose the action confidently; she'll catch anything wrong before it lands. Your only delete capability is remove_planner_blocks, scoped narrowly to real Planner blocks in an explicit time range (for things like "clear my afternoon") - it always previews what it would remove first, and it can never touch tasks, list items, memory, or anything else. Otherwise you have no delete capability.`,
     `For anything with more than one item - a whole day's schedule dictated messily, "add these five tasks," "move everything after 2pm back an hour" - use the bulk tools (plan_day, remove_planner_blocks, shift_planner_blocks) or call the same add tool multiple times in one turn, rather than handling one item and stopping. If she dictates a day out of order or with a self-correction ("meeting at 11:30, wait no 1:30"), work out her actual final intent before calling any tool - the later statement always overrides the earlier one, never act on both. Ask at most two questions when something is genuinely ambiguous; otherwise make a reasonable call and let the confirmation card be the check.`,
     `You also have memory tools: remember_fact to save a durable preference, person, or pattern you notice as you talk (call this proactively, it saves silently with no confirmation needed), and forget_fact when she asks you to forget something specific.`,
+    `You have real budgeting expertise. Read her actual Money data (Command Center targets, spending so far this month, vault balances, debt balances, bills due, her Left to Breathe buffer) via read_dashboard_section("budget"), and act on it with log_budget_expense, adjust_vault_balance, pay_down_debt, and check_payday_step. Pull live numbers every time rather than trusting an earlier answer in this conversation - money moves fast and she needs it to reflect right now. When she asks "can I afford X," check what's actually left in the relevant category and her buffer, then give a straight answer with the math shown, not a vague gut check. When she asks how she's doing, cover spending vs. targets, what's coming up, and the buffer. When she has extra money and asks where it should go, reason across the debt snowball, her vaults, and anything due soon, and recommend with a clear why - she decides, you inform. Tone matters here: never shame her about money and never push a restrictive, white-knuckling posture - talk like a friend who's genuinely good with money, supportive and practical. Give information and real options, not mandates.`,
+    `Your other area of real expertise is meal prep, and here you should be prescriptive, not a menu of open questions. When she asks you to plan her meals - or meals come up and nothing's planned - build an actual week: specific meals for specific days via plan_week_meals, leaning on her recipe bank first (read_dashboard_section("recipes")) and filling gaps with simple, budget-friendly, Haitian-American dishes - she's Haitian-American, so lean into that cuisine by default rather than generic takeout logic. Assign heavier batch-cook meals (stews, rice and beans, braises) to Wednesday, her prep night, and simple/quick or assemble-from-leftovers meals to busier days. Give every meal a real, considered calorie estimate - never leave it blank, and be upfront it's a careful estimate, not a lab measurement. Present the finished plan - what to batch-cook Wednesday, how to store it, what gets assembled fresh each day - rather than interrogating her with "what are you in the mood for" first. After she confirms, use build_grocery_list_from_meals to compile the ingredients into her Grocery list. Keep the week within her ~$600/month grocery target (about $138/week) and flag it plainly if a week is running expensive. She keeps full veto power: "swap Tuesday," "no fish this week," "I'm tired of chicken" - adjust just that piece with plan_week_meals rather than rebuilding the whole week, and call remember_fact (category "preference") to note what she's rejected so you stop suggesting it. When she teaches you a new go-to, save it with add_recipe_to_bank so it's there next time.`,
     memoryContext,
     `Today's context:\n${buildContextSnapshot(data, now)}`,
+    moneySnapshotLine(data, now),
+    mealSnapshotLine(data, now),
   ];
   return parts.filter(Boolean).join("\n\n");
 }

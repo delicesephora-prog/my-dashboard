@@ -48,6 +48,7 @@ import { BudgetData, emptyBudgetData, normalizeBudgetData, ensureLinkedMoneyEnti
 import { MealPlanData, emptyMealPlanData, normalizeMealPlanData } from "./mealplan";
 import { MilestoneData, defaultMilestoneData, normalizeMilestoneData } from "./milestones";
 import { RewardsData, emptyRewardsData, normalizeRewardsData } from "./rewards";
+import { RecipeBankData, defaultRecipeBankData, normalizeRecipeBankData } from "./recipes";
 
 export type TaskItem = {
   id: string;
@@ -903,6 +904,7 @@ export type DashboardData = {
   knowledge: KnowledgeData;
   milestones: MilestoneData;
   rewards: RewardsData;
+  recipes: RecipeBankData;
 };
 
 export function emptyWorld(): WorldData {
@@ -972,6 +974,7 @@ export function defaultDashboardData(): DashboardData {
     knowledge: defaultKnowledgeData(),
     milestones: defaultMilestoneData(),
     rewards: emptyRewardsData(),
+    recipes: defaultRecipeBankData(),
   };
 }
 
@@ -1131,6 +1134,10 @@ export function normalizeDashboardData(
     // trackers always win, even if she deletes both starter trackers.
     milestones: data.milestones === undefined ? defaultMilestoneData() : normalizeMilestoneData(data.milestones),
     rewards: normalizeRewardsData(data.rewards),
+    // Seeded once, the first time this field has never been saved before
+    // (an account that predates the recipe bank) - after that, her real
+    // saved recipes always win, even if she deletes every seed recipe.
+    recipes: data.recipes === undefined ? defaultRecipeBankData() : normalizeRecipeBankData(data.recipes),
   };
 
   // One-time additive link: makes sure the vaults/debt this feature depends

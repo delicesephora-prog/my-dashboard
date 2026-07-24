@@ -1130,6 +1130,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 onChange={updateHealth}
                 mealPlan={data.mealPlan}
                 onChangeMealPlan={updateMealPlan}
+                recipes={data.recipes}
               />
             )}
             {lifeView === "wedding" && <WeddingView wedding={data.wedding} onChange={updateWedding} />}

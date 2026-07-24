@@ -11,18 +11,31 @@ import {
   WorkTaskPriority,
   WorkTaskStatus,
 } from "./types";
-import { todayKey, formatDayLabel } from "./date";
-import { Account, TRANSACTION_CATEGORIES, Transaction, monthKey } from "./finance";
+import { todayKey, formatDayLabel, dateKey } from "./date";
+import { Account, TRANSACTION_CATEGORIES, Transaction, monthKey, formatMoney } from "./finance";
 import { PlannerBlock, blocksForDate, routineGhostBlocksForDate, sortedCategories, timeToMinutes, minutesToTime } from "./planner";
 import { GroceryItem, GROCERY_CATEGORIES, GroceryCategory, StapleItem, guessGroceryCategory } from "./lists";
 import { Appointment } from "./health";
 import { newEvent, WorkEvent } from "./events";
-import { MealSlot, MEAL_SLOTS, newMeal } from "./mealplan";
+import { MealSlot, MEAL_SLOTS, MEAL_SLOT_LABELS, MealEntry, PrepStyle, newMeal } from "./mealplan";
 import { newWaitingOnItem } from "./waitingon";
 import { addMemoryFact, forgetFactsMatching, MemoryFactCategory, MEMORY_FACT_CATEGORIES } from "./assistant";
 import { computeRecommendation, computeWeekRecap, habitsAtRisk } from "./frontpage";
 import { computeLifeScoreBreakdown } from "./lifescore";
 import { questForDate, isQuestDone } from "./quest";
+import {
+  SpendingTarget,
+  monthStateFor,
+  updateMonthState,
+  spendingStatus,
+  dueNextItems,
+  buildingUpSummary,
+  moneyOutSummary,
+  leftToBreathe,
+  expectedMonthlyIncome,
+} from "./budget";
+import { currentPeriodKey, completedStepIdsFor } from "./payday";
+import { addRecipe, Recipe } from "./recipes";
 
 // A tool call falls into one of three lanes:
 // - "write": mutates the dashboard - shown to Sephora as a one-tap
@@ -876,6 +889,412 @@ const logIncomeTool: AssistantTool = {
   apply: (data, input, now) => applyTransaction(data, input, now, 1),
 };
 
+// ---------------------------------------------------------------------------
+// Budgeting (Money Command Center)
+
+function resolveSpendingCategory(data: DashboardData, wanted: string): SpendingTarget | undefined {
+  const needle = wanted.trim().toLowerCase();
+  if (!needle) return undefined;
+  return (
+    data.budget.config.spendingTargets.find((t) => t.name.toLowerCase() === needle) ??
+    data.budget.config.spendingTargets.find(
+      (t) => t.name.toLowerCase().includes(needle) || needle.includes(t.name.toLowerCase())
+    )
+  );
+}
+
+function findVault(data: DashboardData, wanted: string) {
+  const needle = wanted.trim().toLowerCase();
+  return data.lifeQuarterly.money.vaults.find((v) => v.name.toLowerCase().includes(needle));
+}
+
+function findDebt(data: DashboardData, wanted: string) {
+  const needle = wanted.trim().toLowerCase();
+  return data.lifeQuarterly.money.debts.find((d) => d.name.toLowerCase().includes(needle));
+}
+
+const logBudgetExpenseTool: AssistantTool = {
+  name: "log_budget_expense",
+  description:
+    "Log real spending against one of her Command Center monthly spending categories (Hair & Beauty, Shopping/Amazon, Eating Out/Dates, Medical/Copays, Household/Misc, or whatever she's renamed/added) - this is what actually moves 'what's left' in that category for the month, matching what the Command Center itself shows. Match category by name; if she doesn't specify one, ask rather than guessing.",
+  input_schema: {
+    type: "object",
+    properties: {
+      category: { type: "string" },
+      amount: { type: "number", description: "Positive dollar amount spent" },
+      date: { type: "string", description: "YYYY-MM-DD, optional - defaults to today, determines which month it lands in" },
+    },
+    required: ["category", "amount"],
+  },
+  kind: "write",
+  describe: (input, data) => {
+    const target = resolveSpendingCategory(data, str(input.category));
+    if (!target) return `No spending category found matching "${str(input.category)}".`;
+    const dateStr = str(input.date) || todayKey(new Date());
+    const key = monthKey(dateFromKey(dateStr));
+    const state = monthStateFor(data.budget, key, data.lifeQuarterly.money);
+    const spentSoFar = state.spendingLogged[target.id] ?? 0;
+    const amt = Math.abs(num(input.amount));
+    const remainingBefore = target.monthlyAmount - spentSoFar;
+    const remainingAfter = remainingBefore - amt;
+    return `Logging ${formatMoney(amt)} to "${target.name}": ${formatMoney(remainingBefore)} left this month -> ${formatMoney(remainingAfter)} left${remainingAfter < 0 ? " (over target)" : ""}.`;
+  },
+  apply: (data, input, now) => {
+    const target = resolveSpendingCategory(data, str(input.category));
+    if (!target) return { data, resultText: `No spending category found matching "${str(input.category)}".` };
+    const dateStr = str(input.date) || todayKey(now);
+    const key = monthKey(dateFromKey(dateStr));
+    const amt = Math.abs(num(input.amount));
+    const budget = updateMonthState(data.budget, key, data.lifeQuarterly.money, (s) => ({
+      ...s,
+      spendingLogged: { ...s.spendingLogged, [target.id]: (s.spendingLogged[target.id] ?? 0) + amt },
+    }));
+    return { data: { ...data, budget }, resultText: `Logged ${formatMoney(amt)} to ${target.name}.` };
+  },
+};
+
+const adjustVaultBalanceTool: AssistantTool = {
+  name: "adjust_vault_balance",
+  description:
+    "Move money into or out of one of her savings vaults (Emergency Fund, Jamaica Trip, Vacation Fund, etc). Positive amount adds to it, negative takes away - use this for 'put my extra $200 toward Emergency Fund' or correcting a vault balance.",
+  input_schema: {
+    type: "object",
+    properties: {
+      vaultName: { type: "string" },
+      amount: { type: "number", description: "Signed dollar amount - positive adds, negative removes" },
+    },
+    required: ["vaultName", "amount"],
+  },
+  kind: "write",
+  describe: (input, data) => {
+    const vault = findVault(data, str(input.vaultName));
+    if (!vault) return `No vault found matching "${str(input.vaultName)}".`;
+    const amt = num(input.amount);
+    const after = Math.max(0, vault.currentAmount + amt);
+    return `${amt >= 0 ? "Adding" : "Removing"} ${formatMoney(Math.abs(amt))} ${amt >= 0 ? "to" : "from"} "${vault.name}": ${formatMoney(vault.currentAmount)} -> ${formatMoney(after)}.`;
+  },
+  apply: (data, input) => {
+    const vault = findVault(data, str(input.vaultName));
+    if (!vault) return { data, resultText: `No vault found matching "${str(input.vaultName)}".` };
+    const amt = num(input.amount);
+    const newAmount = Math.max(0, vault.currentAmount + amt);
+    return {
+      data: {
+        ...data,
+        lifeQuarterly: {
+          ...data.lifeQuarterly,
+          money: {
+            ...data.lifeQuarterly.money,
+            vaults: data.lifeQuarterly.money.vaults.map((v) => (v.id === vault.id ? { ...v, currentAmount: newAmount } : v)),
+          },
+        },
+      },
+      resultText: `${vault.name} is now ${formatMoney(newAmount)}.`,
+    };
+  },
+};
+
+const payDownDebtTool: AssistantTool = {
+  name: "pay_down_debt",
+  description: "Apply a payment toward one of her debts (part of the snowball) - reduces its current balance.",
+  input_schema: {
+    type: "object",
+    properties: {
+      debtName: { type: "string" },
+      amount: { type: "number", description: "Positive dollar amount being paid" },
+    },
+    required: ["debtName", "amount"],
+  },
+  kind: "write",
+  describe: (input, data) => {
+    const debt = findDebt(data, str(input.debtName));
+    if (!debt) return `No debt found matching "${str(input.debtName)}".`;
+    const amt = Math.abs(num(input.amount));
+    const after = Math.max(0, debt.currentBalance - amt);
+    return `Paying ${formatMoney(amt)} toward "${debt.name}": ${formatMoney(debt.currentBalance)} -> ${formatMoney(after)}${after === 0 ? " - PAID OFF 🎉" : ""}.`;
+  },
+  apply: (data, input) => {
+    const debt = findDebt(data, str(input.debtName));
+    if (!debt) return { data, resultText: `No debt found matching "${str(input.debtName)}".` };
+    const amt = Math.abs(num(input.amount));
+    const newBalance = Math.max(0, debt.currentBalance - amt);
+    return {
+      data: {
+        ...data,
+        lifeQuarterly: {
+          ...data.lifeQuarterly,
+          money: {
+            ...data.lifeQuarterly.money,
+            debts: data.lifeQuarterly.money.debts.map((d) => (d.id === debt.id ? { ...d, currentBalance: newBalance } : d)),
+          },
+        },
+      },
+      resultText:
+        newBalance === 0
+          ? `${debt.name} is PAID OFF - debt-free on this one, forever off the list. 🎉`
+          : `${debt.name} is now ${formatMoney(newBalance)}.`,
+    };
+  },
+};
+
+const checkPaydayStepTool: AssistantTool = {
+  name: "check_payday_step",
+  description: "Check or uncheck a step on her Payday Checklist for the current pay period. Match the step by its text.",
+  input_schema: {
+    type: "object",
+    properties: {
+      stepText: { type: "string" },
+      done: { type: "boolean" },
+    },
+    required: ["stepText", "done"],
+  },
+  kind: "write",
+  describe: (input, data) => {
+    const checklist = data.lifeQuarterly.paydayChecklist;
+    if (!checklist.anchorDate) return "No payday date is set up yet - set it in the Payday Checklist first.";
+    const step = checklist.steps.find((s) => s.text.toLowerCase().includes(str(input.stepText).toLowerCase()));
+    if (!step) return `No payday step found matching "${str(input.stepText)}".`;
+    return `${input.done ? "Checking off" : "Unchecking"}: "${step.text}"`;
+  },
+  apply: (data, input, now) => {
+    const checklist = data.lifeQuarterly.paydayChecklist;
+    if (!checklist.anchorDate) {
+      return { data, resultText: "No payday date is set up yet - set it in the Payday Checklist first." };
+    }
+    const step = checklist.steps.find((s) => s.text.toLowerCase().includes(str(input.stepText).toLowerCase()));
+    if (!step) return { data, resultText: `No payday step found matching "${str(input.stepText)}".` };
+    const periodKey = currentPeriodKey(checklist.anchorDate, now);
+    const current = new Set(completedStepIdsFor(checklist, periodKey));
+    if (input.done) current.add(step.id);
+    else current.delete(step.id);
+    return {
+      data: {
+        ...data,
+        lifeQuarterly: {
+          ...data.lifeQuarterly,
+          paydayChecklist: { ...checklist, periods: { ...checklist.periods, [periodKey]: [...current] } },
+        },
+      },
+      resultText: `${input.done ? "Checked off" : "Unchecked"} "${step.text}".`,
+    };
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Meal prep
+
+function findRecipeById(data: DashboardData, id: string): Recipe | undefined {
+  return data.recipes.recipes.find((r) => r.id === id);
+}
+
+type MealPlanItemInput = {
+  date: string;
+  slot: MealSlot;
+  title: string;
+  calories: number;
+  ingredients: string[];
+  prepStyle: PrepStyle;
+  notes: string;
+  recipeId: string;
+};
+
+function resolveMealPlanItems(rawMeals: unknown, data: DashboardData): MealPlanItemInput[] {
+  const list = Array.isArray(rawMeals) ? rawMeals : [];
+  return list
+    .map((raw): MealPlanItemInput | null => {
+      const r = raw as Record<string, unknown>;
+      const date = str(r.date);
+      const title = str(r.title);
+      if (!date || !title) return null;
+      const slot = MEAL_SLOTS.includes(r.slot as MealSlot) ? (r.slot as MealSlot) : "dinner";
+      const prepStyle = ["batch-cook", "quick", "assemble"].includes(r.prepStyle as string) ? (r.prepStyle as PrepStyle) : "";
+      const recipeId = str(r.recipeId);
+      const linkedRecipe = recipeId ? findRecipeById(data, recipeId) : undefined;
+      return {
+        date,
+        slot,
+        title,
+        calories: num(r.calories) || linkedRecipe?.caloriesPerServing || 0,
+        ingredients: Array.isArray(r.ingredients) ? (r.ingredients as unknown[]).map((i) => str(i)) : linkedRecipe?.ingredients ?? [],
+        prepStyle: prepStyle || linkedRecipe?.prepStyle || "",
+        notes: str(r.notes),
+        recipeId,
+      };
+    })
+    .filter((m): m is MealPlanItemInput => m !== null)
+    .sort((a, b) => (a.date === b.date ? a.slot.localeCompare(b.slot) : a.date.localeCompare(b.date)));
+}
+
+function buildWeekPlanPreview(input: Record<string, unknown>, data: DashboardData, now: Date): string {
+  const items = resolveMealPlanItems(input.meals, data);
+  if (items.length === 0) return "No valid meals in this plan - each one needs at least a date and a title.";
+
+  const lines = items.map((m) => {
+    const cal = m.calories ? ` (~${m.calories} cal)` : "";
+    return `${formatDayLabel(m.date)} ${MEAL_SLOT_LABELS[m.slot]}: ${m.title}${cal}`;
+  });
+
+  const prepNight = items.filter((m) => m.prepStyle === "batch-cook");
+  const parts = [`Week plan - ${items.length} meal${items.length === 1 ? "" : "s"}:`, lines.join("\n")];
+
+  if (prepNight.length > 0) {
+    parts.push("🔪 Prep night batch-cook: " + prepNight.map((m) => m.title).join(", "));
+  }
+
+  const withCost = items.filter((m) => m.recipeId && findRecipeById(data, m.recipeId));
+  if (withCost.length > 0) {
+    const estCost = withCost.reduce((sum, m) => sum + (findRecipeById(data, m.recipeId)?.estCostPerServing ?? 0), 0);
+    const groceryBill = data.budget.config.bills.find((b) => /grocer/i.test(b.name));
+    const monthlyTarget = groceryBill?.monthlyAmount ?? 600;
+    const weeklyGuide = monthlyTarget / 4.33;
+    const pct = Math.round((estCost / weeklyGuide) * 100);
+    let costLine = `Est. cost for ${withCost.length} of ${items.length} meals: ~$${estCost.toFixed(0)} (~${pct}% of your ~$${weeklyGuide.toFixed(0)}/week grocery guide, from the $${monthlyTarget}/mo target).`;
+    if (estCost > weeklyGuide) costLine += " ⚠ Running expensive for the week.";
+    parts.push(costLine);
+  }
+
+  return parts.join("\n\n");
+}
+
+const planWeekMealsTool: AssistantTool = {
+  name: "plan_week_meals",
+  description:
+    "Build or adjust her meal plan - the primary way to prescriptively plan a week: propose specific meals (not open questions), assign heavier batch-cook meals to Wednesday (her prep night) and simple/quick ones to busy days, and present the whole thing as a plan. Works for a full week at once, or a single swap ('swap Tuesday' -> call with just that one day). Each meal upserts by date+slot: calling it again for a date/slot that already has a meal replaces that meal only, everything else stays untouched. Prefer recipes from read_dashboard_section('recipes') first, filling any gaps with simple budget-friendly options; check remembered facts for dislikes/staples before suggesting anything (never re-suggest something she's rejected). Give every meal a considered calorie estimate - never leave it blank.",
+  input_schema: {
+    type: "object",
+    properties: {
+      meals: {
+        type: "array",
+        description: "Every meal being set, in any order.",
+        items: {
+          type: "object",
+          properties: {
+            date: { type: "string", description: "YYYY-MM-DD" },
+            slot: { type: "string", enum: MEAL_SLOTS },
+            title: { type: "string" },
+            calories: { type: "number", description: "Estimated calories per serving - always give a real number" },
+            ingredients: { type: "array", items: { type: "string" }, description: "Grocery-ready lines, e.g. '2 lbs chicken thighs'" },
+            prepStyle: { type: "string", enum: ["batch-cook", "quick", "assemble"] },
+            notes: { type: "string", description: "How to store/reheat/assemble" },
+            recipeId: { type: "string", description: "Matching id from the recipe bank, if this came from there" },
+          },
+          required: ["date", "slot", "title"],
+        },
+      },
+    },
+    required: ["meals"],
+  },
+  kind: "write",
+  describe: (input, data) => buildWeekPlanPreview(input, data, new Date()),
+  apply: (data, input, now) => {
+    const items = resolveMealPlanItems(input.meals, data);
+    if (items.length === 0) return { data, resultText: "No meals were set - nothing valid in the plan." };
+
+    let meals = data.mealPlan.meals;
+    for (const item of items) {
+      const existing = meals.find((m) => m.date === item.date && m.slot === item.slot);
+      const entry: MealEntry = {
+        id: existing?.id ?? crypto.randomUUID(),
+        date: item.date,
+        slot: item.slot,
+        text: item.title,
+        notes: item.notes,
+        calories: item.calories,
+        ingredients: item.ingredients,
+        prepStyle: item.prepStyle,
+        recipeId: item.recipeId,
+      };
+      meals = existing ? meals.map((m) => (m.id === existing.id ? entry : m)) : [...meals, entry];
+    }
+
+    return {
+      data: { ...data, mealPlan: { ...data.mealPlan, meals } },
+      resultText: `Set ${items.length} meal${items.length === 1 ? "" : "s"} in the plan.`,
+    };
+  },
+};
+
+const buildGroceryListFromMealsTool: AssistantTool = {
+  name: "build_grocery_list_from_meals",
+  description:
+    "Compile a consolidated, deduplicated ingredient list (from meals you just planned, or from reading the meal plan) and add it to her Grocery list. Combine duplicate ingredients across meals into one line before calling this - don't call it once per meal.",
+  input_schema: {
+    type: "object",
+    properties: {
+      ingredients: { type: "array", items: { type: "string" }, description: "Deduplicated, grocery-ready lines" },
+    },
+    required: ["ingredients"],
+  },
+  kind: "write",
+  describe: (input, data) => {
+    const ingredients = Array.isArray(input.ingredients) ? (input.ingredients as unknown[]).map((i) => str(i)).filter(Boolean) : [];
+    if (ingredients.length === 0) return "No ingredients given.";
+    const openTexts = new Set(data.lists.grocery.items.filter((i) => !i.done).map((i) => i.text.toLowerCase()));
+    const toAdd = ingredients.filter((i) => !openTexts.has(i.toLowerCase()));
+    const skipped = ingredients.length - toAdd.length;
+    const parts = [`Adding ${toAdd.length} item${toAdd.length === 1 ? "" : "s"} to the grocery list:`, toAdd.join("\n") || "(none)"];
+    if (skipped > 0) parts.push(`Already on the list, skipping ${skipped}.`);
+    return parts.join("\n\n");
+  },
+  apply: (data, input, now) => {
+    const ingredients = Array.isArray(input.ingredients) ? (input.ingredients as unknown[]).map((i) => str(i)).filter(Boolean) : [];
+    const openTexts = new Set(data.lists.grocery.items.filter((i) => !i.done).map((i) => i.text.toLowerCase()));
+    const toAdd = ingredients.filter((i) => !openTexts.has(i.toLowerCase()));
+    if (toAdd.length === 0) return { data, resultText: "Nothing new to add - already on the list." };
+    const newItems: GroceryItem[] = toAdd.map((text) => ({
+      id: crypto.randomUUID(),
+      text,
+      category: guessGroceryCategory(text),
+      done: false,
+      createdAt: now.toISOString(),
+    }));
+    return {
+      data: { ...data, lists: { ...data.lists, grocery: { ...data.lists.grocery, items: [...data.lists.grocery.items, ...newItems] } } },
+      resultText: `Added ${newItems.length} item${newItems.length === 1 ? "" : "s"} to the grocery list.`,
+    };
+  },
+};
+
+const addRecipeToBankTool: AssistantTool = {
+  name: "add_recipe_to_bank",
+  description: "Save a new recipe to her recipe bank so it can be suggested again later.",
+  input_schema: {
+    type: "object",
+    properties: {
+      name: { type: "string" },
+      cuisine: { type: "string" },
+      caloriesPerServing: { type: "number" },
+      servings: { type: "number" },
+      ingredients: { type: "array", items: { type: "string" } },
+      prepStyle: { type: "string", enum: ["batch-cook", "quick", "assemble"] },
+      estCostPerServing: { type: "number" },
+      tags: { type: "array", items: { type: "string" } },
+      notes: { type: "string" },
+    },
+    required: ["name", "caloriesPerServing", "ingredients", "prepStyle"],
+  },
+  kind: "write",
+  describe: (input) => `Saving recipe: "${str(input.name)}" (~${num(input.caloriesPerServing)} cal/serving)`,
+  apply: (data, input, now) => {
+    const recipes = addRecipe(
+      data.recipes,
+      {
+        name: str(input.name),
+        cuisine: str(input.cuisine) || "Haitian-American",
+        caloriesPerServing: num(input.caloriesPerServing),
+        servings: num(input.servings) || 4,
+        ingredients: Array.isArray(input.ingredients) ? (input.ingredients as unknown[]).map((i) => str(i)) : [],
+        prepStyle: (input.prepStyle as PrepStyle) || "quick",
+        estCostPerServing: num(input.estCostPerServing),
+        tags: Array.isArray(input.tags) ? (input.tags as unknown[]).map((t) => str(t)) : [],
+        notes: str(input.notes),
+      },
+      now
+    );
+    return { data: { ...data, recipes }, resultText: `Saved "${str(input.name)}" to the recipe bank.` };
+  },
+};
+
 const addWaitingOnTool: AssistantTool = {
   name: "add_waiting_on",
   description: "Add a Waiting On item - something she's waiting to hear back about from someone.",
@@ -910,6 +1329,8 @@ const READABLE_SECTIONS = [
   "health",
   "events",
   "mealPlan",
+  "recipes",
+  "groceryList",
   "dec8",
   "cadence",
   "frontPage",
@@ -955,13 +1376,52 @@ function readSection(data: DashboardData, section: string, now: Date): unknown {
         .filter((i) => !i.resolvedDate)
         .map((i) => ({ who: i.who, what: i.what, askedDate: i.askedDate, followUpDate: i.followUpDate }));
     case "budget": {
+      // The real numbers she actually looks at (Money > Command Center) -
+      // not the separate legacy Accounts/Transactions ledger, which is
+      // kept underneath as personalLedger for completeness only.
       const key = monthKey(now);
+      const money = data.lifeQuarterly.money;
+      const config = data.budget.config;
+      const state = monthStateFor(data.budget, key, money);
+      const spendStatus = spendingStatus(config, state);
+      const buildingUp = buildingUpSummary(money, state);
+      const groceryBill = config.bills.find((b) => /grocer/i.test(b.name));
+      const paydayAnchor = data.lifeQuarterly.paydayChecklist.anchorDate;
+      const periodKey = currentPeriodKey(paydayAnchor, now);
+      const doneStepIds = new Set(completedStepIdsFor(data.lifeQuarterly.paydayChecklist, periodKey));
+
       const monthTx = data.finance.transactions.filter((t) => t.date.slice(0, 7) === key);
+
       return {
-        totalBalance: data.finance.accounts.reduce((s, a) => s + a.balance, 0),
-        monthIncome: monthTx.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0),
-        monthExpense: Math.abs(monthTx.filter((t) => t.amount < 0).reduce((s, t) => s + t.amount, 0)),
-        budgets: data.finance.budgets,
+        expectedMonthlyIncome: expectedMonthlyIncome(config),
+        leftToBreatheBuffer: leftToBreathe(config),
+        billsDebtsVaultsThisMonth: moneyOutSummary(config, state),
+        dueSoon: dueNextItems(config, state, now)
+          .slice(0, 8)
+          .map((d) => ({ name: d.name, amount: d.amount, dueDay: d.day, kind: d.kind })),
+        spendingCategories: spendStatus.map((s) => ({
+          name: s.target.name,
+          monthlyTarget: s.target.monthlyAmount,
+          spentSoFar: s.spent,
+          remaining: s.target.monthlyAmount - s.spent,
+          pctUsed: s.pct,
+        })),
+        vaults: money.vaults.map((v) => ({ name: v.name, current: v.currentAmount, goal: v.goalAmount })),
+        debts: money.debts.map((d) => ({ name: d.name, currentBalance: d.currentBalance, startingBalance: d.startingBalance })),
+        vaultTotal: buildingUp.vaultTotal,
+        debtPaidOffTotal: buildingUp.debtPaidOff,
+        groceryMonthlyTarget: groceryBill?.monthlyAmount ?? 600,
+        paydayChecklist: paydayAnchor
+          ? {
+              currentPeriod: periodKey,
+              steps: data.lifeQuarterly.paydayChecklist.steps.map((s) => ({ text: s.text, done: doneStepIds.has(s.id) })),
+            }
+          : { note: "No payday date set up yet." },
+        personalLedger: {
+          totalBalance: data.finance.accounts.reduce((s, a) => s + a.balance, 0),
+          monthIncome: monthTx.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0),
+          monthExpense: Math.abs(monthTx.filter((t) => t.amount < 0).reduce((s, t) => s + t.amount, 0)),
+        },
       };
     }
     case "health":
@@ -972,7 +1432,36 @@ function readSection(data: DashboardData, section: string, now: Date): unknown {
     case "events":
       return data.events.events.filter((e) => !e.archived && e.date >= todayKey(now)).slice(0, 20);
     case "mealPlan":
-      return data.mealPlan.meals.filter((m) => m.date >= todayKey(now)).slice(0, 20);
+      return data.mealPlan.meals
+        .filter((m) => m.date >= todayKey(now))
+        .slice(0, 30)
+        .map((m) => ({
+          date: m.date,
+          slot: m.slot,
+          text: m.text,
+          calories: m.calories || null,
+          ingredients: m.ingredients,
+          prepStyle: m.prepStyle || null,
+          notes: m.notes,
+        }));
+    case "recipes":
+      return data.recipes.recipes.map((r) => ({
+        id: r.id,
+        name: r.name,
+        cuisine: r.cuisine,
+        caloriesPerServing: r.caloriesPerServing,
+        servings: r.servings,
+        ingredients: r.ingredients,
+        prepStyle: r.prepStyle,
+        estCostPerServing: r.estCostPerServing,
+        tags: r.tags,
+        notes: r.notes,
+      }));
+    case "groceryList":
+      return {
+        openItems: data.lists.grocery.items.filter((i) => !i.done).map((i) => ({ text: i.text, category: i.category })),
+        staples: data.lists.grocery.staples.map((s) => ({ text: s.text, category: s.category })),
+      };
     case "dec8":
       return Object.fromEntries(
         Object.entries(data.year.transformations).map(([cat, goals]) => [
@@ -1089,9 +1578,16 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
   addHealthAppointmentTool,
   addWorkEventTool,
   addMealTool,
+  planWeekMealsTool,
+  buildGroceryListFromMealsTool,
+  addRecipeToBankTool,
   addDec8GoalTool,
   logExpenseTool,
   logIncomeTool,
+  logBudgetExpenseTool,
+  adjustVaultBalanceTool,
+  payDownDebtTool,
+  checkPaydayStepTool,
   addWaitingOnTool,
   readDashboardSectionTool,
   rememberFactTool,

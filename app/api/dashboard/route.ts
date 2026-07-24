@@ -1119,16 +1119,40 @@ const healthDataSchema = z.object({
   notes: z.array(healthNoteSchema),
 });
 
+const prepStyleSchema = z.enum(["batch-cook", "quick", "assemble", ""]);
+
 const mealEntrySchema = z.object({
   id: z.string(),
   date: z.string(),
   slot: z.enum(["breakfast", "lunch", "dinner", "snack"]),
   text: z.string().max(500),
   notes: z.string().max(2000),
+  calories: z.number(),
+  ingredients: z.array(z.string().max(200)).max(60),
+  prepStyle: prepStyleSchema,
+  recipeId: z.string(),
 });
 
 const mealPlanDataSchema = z.object({
   meals: z.array(mealEntrySchema).max(2000),
+});
+
+const recipeSchema = z.object({
+  id: z.string(),
+  name: z.string().max(200),
+  cuisine: z.string().max(100),
+  caloriesPerServing: z.number(),
+  servings: z.number(),
+  ingredients: z.array(z.string().max(200)).max(60),
+  prepStyle: prepStyleSchema,
+  estCostPerServing: z.number(),
+  tags: z.array(z.string().max(50)).max(30),
+  notes: z.string().max(2000),
+  createdAt: z.string(),
+});
+
+const recipeBankDataSchema = z.object({
+  recipes: z.array(recipeSchema).max(500),
 });
 
 const transactionCategorySchema = z.enum([
@@ -1488,6 +1512,7 @@ const dashboardSchema = z.object({
   knowledge: knowledgeDataSchema,
   milestones: milestoneDataSchema,
   rewards: rewardsDataSchema,
+  recipes: recipeBankDataSchema,
 });
 
 export async function GET() {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Appointment, HealthData, HealthNote, Medication } from "@/lib/health";
 import { MealEntry, MealPlanData, addMeal, deleteMeal, updateMeal } from "@/lib/mealplan";
+import { RecipeBankData } from "@/lib/recipes";
 import { todayKey } from "@/lib/date";
 import AppointmentsTab from "./health/AppointmentsTab";
 import MedicationsTab from "./health/MedicationsTab";
@@ -23,11 +24,13 @@ export default function HealthView({
   onChange,
   mealPlan,
   onChangeMealPlan,
+  recipes,
 }: {
   health: HealthData;
   onChange: (updater: (h: HealthData) => HealthData) => void;
   mealPlan: MealPlanData;
   onChangeMealPlan: (updater: (m: MealPlanData) => MealPlanData) => void;
+  recipes: RecipeBankData;
 }) {
   const [tab, setTab] = useState<Tab>("appointments");
 
@@ -130,6 +133,7 @@ export default function HealthView({
       {tab === "meals" && (
         <MealsTab
           mealPlan={mealPlan}
+          recipes={recipes}
           onAdd={(meal: MealEntry) => onChangeMealPlan((m) => addMeal(m, meal))}
           onUpdate={(id, updater) => onChangeMealPlan((m) => updateMeal(m, id, updater))}
           onDelete={(id) => onChangeMealPlan((m) => deleteMeal(m, id))}
