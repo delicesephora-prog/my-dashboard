@@ -11,9 +11,9 @@ import {
   WorkTaskPriority,
   WorkTaskStatus,
 } from "./types";
-import { todayKey } from "./date";
+import { todayKey, formatDayLabel } from "./date";
 import { Account, TRANSACTION_CATEGORIES, Transaction, monthKey } from "./finance";
-import { PlannerBlock, blocksForDate, routineGhostBlocksForDate, sortedCategories, timeToMinutes } from "./planner";
+import { PlannerBlock, blocksForDate, routineGhostBlocksForDate, sortedCategories, timeToMinutes, minutesToTime } from "./planner";
 import { GroceryItem, GROCERY_CATEGORIES, GroceryCategory, StapleItem, guessGroceryCategory } from "./lists";
 import { Appointment } from "./health";
 import { newEvent, WorkEvent } from "./events";
@@ -228,6 +228,366 @@ const addLifeTaskTool: AssistantTool = {
 
 // ---------------------------------------------------------------------------
 // Planner
+
+function formatClock(min: number): string {
+  const wrapped = ((min % 1440) + 1440) % 1440;
+  const h = Math.floor(wrapped / 60);
+  const m = wrapped % 60;
+  const period = h < 12 ? "AM" : "PM";
+  const display = h % 12 === 0 ? 12 : h % 12;
+  return m === 0 ? `${display}${period}` : `${display}:${String(m).padStart(2, "0")}${period}`;
+}
+
+function dateFromKey(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
+function resolvePlannerCategory(data: DashboardData, wanted: string): { id: string; label: string } {
+  const sorted = sortedCategories(data.planner.categories);
+  const needle = wanted.toLowerCase();
+  const matched = sorted.find((c) => c.label.toLowerCase() === needle);
+  if (matched) return { id: matched.id, label: matched.label };
+  const fallback = sorted[0];
+  return { id: fallback?.id ?? "work", label: fallback?.label ?? "Other" };
+}
+
+function rangesOverlap(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
+  return aStart < bEnd && bStart < aEnd;
+}
+
+type ResolvedDayBlock = {
+  title: string;
+  category: string;
+  categoryLabel: string;
+  startTime: string;
+  endTime: string;
+  startMin: number;
+  endMin: number;
+  notes: string;
+};
+
+function resolveDayPlanBlocks(rawBlocks: unknown, data: DashboardData): ResolvedDayBlock[] {
+  const list = Array.isArray(rawBlocks) ? rawBlocks : [];
+  return list
+    .map((raw): ResolvedDayBlock | null => {
+      const r = raw as Record<string, unknown>;
+      const title = str(r.title);
+      const startTime = str(r.startTime);
+      if (!title || !startTime) return null;
+      const startMin = timeToMinutes(startTime);
+      const endTimeRaw = str(r.endTime);
+      // No end time given - a reasonable default duration (30 min) rather
+      // than blocking on it; the model is told to infer a real one when it
+      // can, this is just the mechanical safety net for when it can't.
+      const endMin = endTimeRaw ? timeToMinutes(endTimeRaw) : startMin + 30;
+      const endTime = endTimeRaw || minutesToTime(startMin + 30);
+      const { id: category, label: categoryLabel } = resolvePlannerCategory(data, str(r.category));
+      return { title, category, categoryLabel, startTime, endTime, startMin, endMin, notes: str(r.notes) };
+    })
+    .filter((b): b is ResolvedDayBlock => b !== null)
+    .sort((a, b) => a.startMin - b.startMin);
+}
+
+type DayPlanConflict = { block: ResolvedDayBlock; against: string };
+
+// Checked against three things: other new blocks in the same plan, blocks
+// that already exist that day, and her routine-derived ghost blocks
+// (morning/day/night steps) - never silently dropped, always surfaced in
+// the preview so she decides what to do about it.
+function dayPlanConflicts(blocks: ResolvedDayBlock[], data: DashboardData, dateObj: Date): DayPlanConflict[] {
+  const existing = blocksForDate(data.planner, dateObj);
+  const ghosts = routineGhostBlocksForDate(data.routines.config, data.planner.routineOverrides, dateObj);
+  const conflicts: DayPlanConflict[] = [];
+
+  blocks.forEach((b, i) => {
+    blocks.forEach((other, j) => {
+      if (j <= i) return;
+      if (rangesOverlap(b.startMin, b.endMin, other.startMin, other.endMin)) {
+        conflicts.push({ block: b, against: `"${other.title}" (${formatClock(other.startMin)}-${formatClock(other.endMin)})` });
+      }
+    });
+    for (const e of existing) {
+      const eStart = timeToMinutes(e.startTime);
+      const eEnd = timeToMinutes(e.endTime);
+      if (rangesOverlap(b.startMin, b.endMin, eStart, eEnd)) {
+        conflicts.push({ block: b, against: `her existing "${e.title}" (${formatClock(eStart)}-${formatClock(eEnd)})` });
+      }
+    }
+    for (const g of ghosts) {
+      const gStart = timeToMinutes(g.startTime);
+      const gEnd = gStart + g.durationMinutes;
+      if (rangesOverlap(b.startMin, b.endMin, gStart, gEnd)) {
+        conflicts.push({ block: b, against: `her ${g.title} routine step (${formatClock(gStart)})` });
+      }
+    }
+  });
+  return conflicts;
+}
+
+function dayPlanGapNotes(blocks: ResolvedDayBlock[]): string[] {
+  const notes: string[] = [];
+  for (let i = 0; i < blocks.length - 1; i++) {
+    const a = blocks[i];
+    const b = blocks[i + 1];
+    if (b.startMin === a.endMin) {
+      notes.push(`No gap between "${a.title}" and "${b.title}" - back to back at ${formatClock(a.endMin)}.`);
+    }
+  }
+  return notes;
+}
+
+function buildDayPlanPreview(input: Record<string, unknown>, data: DashboardData): string {
+  const dateStr = str(input.date) || todayKey(new Date());
+  const blocks = resolveDayPlanBlocks(input.blocks, data);
+  if (blocks.length === 0) return "No valid blocks in this plan - each one needs at least a title and a start time.";
+
+  const dateObj = dateFromKey(dateStr);
+  const lines = blocks.map((b) => `${formatClock(b.startMin)}-${formatClock(b.endMin)}  ${b.title} · ${b.categoryLabel}`);
+  const conflicts = dayPlanConflicts(blocks, data, dateObj);
+  const gapNotes = dayPlanGapNotes(blocks);
+
+  const parts = [`Plan for ${formatDayLabel(dateStr)} — ${blocks.length} block${blocks.length === 1 ? "" : "s"}:`, lines.join("\n")];
+  if (conflicts.length > 0) {
+    parts.push(
+      "⚠ Conflicts:\n" +
+        conflicts.map((c) => `"${c.block.title}" (${formatClock(c.block.startMin)}) overlaps ${c.against}`).join("\n")
+    );
+  }
+  if (gapNotes.length > 0) {
+    parts.push("⚠ " + gapNotes.join("\n⚠ "));
+  }
+  return parts.join("\n\n");
+}
+
+const planDayTool: AssistantTool = {
+  name: "plan_day",
+  description:
+    "Create MULTIPLE Planner blocks for a single day at once - this is the primary way to build out a whole day's schedule from a description, and should always be preferred over calling add_planner_block repeatedly for anything with more than one block. When she dictates a messy, out-of-order, or self-correcting description of her day (e.g. \"meeting at 11:30, wait no 1:30\"), resolve it to her actual final intent first - the LATER statement about any given commitment always overrides an earlier one, never include both. Give every block a startTime; give an endTime when you can reasonably infer one (from context or typical duration for that kind of thing), otherwise a short default is applied automatically. Don't schedule anything on top of her morning/day/night Routine blocks - work around them. This tool shows her the full proposed day and flags any conflicts or back-to-back gaps before anything is created - nothing is added until she confirms.",
+  input_schema: {
+    type: "object",
+    properties: {
+      date: { type: "string", description: "YYYY-MM-DD - defaults to today if omitted" },
+      blocks: {
+        type: "array",
+        description: "Every block for the day, in any order - they're sorted and checked for conflicts automatically.",
+        items: {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            category: { type: "string", description: "One of her existing Planner category names (Work, Life, Faith, Fitness, Admin, ...)" },
+            startTime: { type: "string", description: "HH:MM, 24-hour" },
+            endTime: { type: "string", description: "HH:MM, 24-hour - infer a reasonable duration if she didn't give one" },
+            notes: { type: "string" },
+          },
+          required: ["title", "startTime"],
+        },
+      },
+    },
+    required: ["blocks"],
+  },
+  kind: "write",
+  describe: (input, data) => buildDayPlanPreview(input, data),
+  apply: (data, input, now) => {
+    const dateStr = str(input.date) || todayKey(now);
+    const resolved = resolveDayPlanBlocks(input.blocks, data);
+    if (resolved.length === 0) {
+      return { data, resultText: "No blocks were added - nothing valid in the plan." };
+    }
+    const newBlocks: PlannerBlock[] = resolved.map((b) => ({
+      id: crypto.randomUUID(),
+      title: b.title,
+      category: b.category,
+      notes: b.notes,
+      startTime: b.startTime,
+      endTime: b.endTime,
+      repeatDays: [],
+      date: dateStr,
+    }));
+    return {
+      data: { ...data, planner: { ...data.planner, blocks: [...data.planner.blocks, ...newBlocks] } },
+      resultText: `Added ${newBlocks.length} planner block${newBlocks.length === 1 ? "" : "s"} for ${dateStr}.`,
+    };
+  },
+};
+
+function findOneOffBlock(data: DashboardData, dateStr: string, matchTime: string): PlannerBlock | undefined {
+  return data.planner.blocks.find((b) => b.date === dateStr && b.startTime === matchTime);
+}
+
+const editPlannerBlockTool: AssistantTool = {
+  name: "edit_planner_block",
+  description:
+    "Edit ONE existing Planner block without touching anything else on the day - use this for a follow-up like \"change the 12:30 block to X\" after a day is already planned. Match the block by its date and its CURRENT start time.",
+  input_schema: {
+    type: "object",
+    properties: {
+      date: { type: "string", description: "YYYY-MM-DD - defaults to today if omitted" },
+      matchTime: { type: "string", description: "HH:MM, 24-hour - the block's current start time" },
+      newTitle: { type: "string" },
+      newCategory: { type: "string" },
+      newStartTime: { type: "string", description: "HH:MM, 24-hour" },
+      newEndTime: { type: "string", description: "HH:MM, 24-hour" },
+      newNotes: { type: "string" },
+    },
+    required: ["matchTime"],
+  },
+  kind: "write",
+  describe: (input, data) => {
+    const dateStr = str(input.date) || todayKey(new Date());
+    const block = findOneOffBlock(data, dateStr, str(input.matchTime));
+    if (!block) return `No block found at ${str(input.matchTime)} on ${dateStr}.`;
+    const changes: string[] = [];
+    if (input.newTitle) changes.push(`title -> "${str(input.newTitle)}"`);
+    if (input.newCategory) changes.push(`category -> ${str(input.newCategory)}`);
+    if (input.newStartTime) changes.push(`start -> ${str(input.newStartTime)}`);
+    if (input.newEndTime) changes.push(`end -> ${str(input.newEndTime)}`);
+    return `Editing "${block.title}" (${block.startTime}): ${changes.join(", ") || "no changes given"}`;
+  },
+  apply: (data, input, now) => {
+    const dateStr = str(input.date) || todayKey(now);
+    const block = findOneOffBlock(data, dateStr, str(input.matchTime));
+    if (!block) {
+      return { data, resultText: `No block found at ${str(input.matchTime)} on ${dateStr}.` };
+    }
+    const updated: PlannerBlock = {
+      ...block,
+      title: typeof input.newTitle === "string" && input.newTitle ? input.newTitle : block.title,
+      category: typeof input.newCategory === "string" && input.newCategory
+        ? resolvePlannerCategory(data, input.newCategory).id
+        : block.category,
+      startTime: typeof input.newStartTime === "string" && input.newStartTime ? input.newStartTime : block.startTime,
+      endTime: typeof input.newEndTime === "string" && input.newEndTime ? input.newEndTime : block.endTime,
+      notes: typeof input.newNotes === "string" ? input.newNotes : block.notes,
+    };
+    return {
+      data: { ...data, planner: { ...data.planner, blocks: data.planner.blocks.map((b) => (b.id === block.id ? updated : b)) } },
+      resultText: `Updated "${updated.title}" on ${dateStr}.`,
+    };
+  },
+};
+
+function blocksInRange(data: DashboardData, dateStr: string, fromMin: number, toMin: number): PlannerBlock[] {
+  const dateObj = dateFromKey(dateStr);
+  return blocksForDate(data.planner, dateObj).filter((b) => {
+    const start = timeToMinutes(b.startTime);
+    return start >= fromMin && start < toMin;
+  });
+}
+
+const removePlannerBlocksTool: AssistantTool = {
+  name: "remove_planner_blocks",
+  description:
+    "Remove Planner blocks in a time range on one day - use for things like \"clear my afternoon\" or \"clear everything after 6pm.\" This is the ONLY thing you can delete - it never touches tasks, list items, memory, or anything else, and only real Planner blocks (never a Routine block). Always shows exactly what will be removed before anything is deleted.",
+  input_schema: {
+    type: "object",
+    properties: {
+      date: { type: "string", description: "YYYY-MM-DD - defaults to today if omitted" },
+      fromTime: { type: "string", description: "HH:MM, 24-hour - start of the range to clear" },
+      toTime: { type: "string", description: "HH:MM, 24-hour - end of the range to clear, e.g. 23:59 for 'the rest of the day'" },
+    },
+    required: ["fromTime", "toTime"],
+  },
+  kind: "write",
+  describe: (input, data) => {
+    const dateStr = str(input.date) || todayKey(new Date());
+    const matches = blocksInRange(data, dateStr, timeToMinutes(str(input.fromTime)), timeToMinutes(str(input.toTime)));
+    if (matches.length === 0) return `Nothing to remove between ${str(input.fromTime)} and ${str(input.toTime)} on ${dateStr}.`;
+    const lines = matches.map((b) => `${b.startTime}-${b.endTime}  ${b.title}`);
+    return `Removing ${matches.length} block${matches.length === 1 ? "" : "s"} on ${formatDayLabel(dateStr)}:\n${lines.join("\n")}`;
+  },
+  apply: (data, input, now) => {
+    const dateStr = str(input.date) || todayKey(now);
+    const matches = blocksInRange(data, dateStr, timeToMinutes(str(input.fromTime)), timeToMinutes(str(input.toTime)));
+    if (matches.length === 0) {
+      return { data, resultText: `Nothing to remove between ${str(input.fromTime)} and ${str(input.toTime)} on ${dateStr}.` };
+    }
+    const removeIds = new Set(matches.map((b) => b.id));
+    return {
+      data: { ...data, planner: { ...data.planner, blocks: data.planner.blocks.filter((b) => !removeIds.has(b.id)) } },
+      resultText: `Removed ${matches.length} block${matches.length === 1 ? "" : "s"} on ${dateStr}.`,
+    };
+  },
+};
+
+const shiftPlannerBlocksTool: AssistantTool = {
+  name: "shift_planner_blocks",
+  description:
+    "Move every Planner block on one day that starts at or after a cutoff time, by a fixed amount - use for things like \"move everything after 2pm back an hour\" (deltaMinutes: +60, delaying them) or \"move my afternoon up 30 minutes\" (deltaMinutes: -30, earlier). Positive deltaMinutes pushes blocks later; negative pulls them earlier. Shows the before/after for every affected block, and flags any new conflicts the shift would create, before anything moves.",
+  input_schema: {
+    type: "object",
+    properties: {
+      date: { type: "string", description: "YYYY-MM-DD - defaults to today if omitted" },
+      afterTime: { type: "string", description: "HH:MM, 24-hour - blocks starting at or after this time are shifted" },
+      deltaMinutes: { type: "number", description: "Positive = later, negative = earlier" },
+    },
+    required: ["afterTime", "deltaMinutes"],
+  },
+  kind: "write",
+  describe: (input, data) => {
+    const dateStr = str(input.date) || todayKey(new Date());
+    const cutoff = timeToMinutes(str(input.afterTime));
+    const delta = num(input.deltaMinutes);
+    const dateObj = dateFromKey(dateStr);
+    const affected = blocksForDate(data.planner, dateObj).filter((b) => timeToMinutes(b.startTime) >= cutoff);
+    if (affected.length === 0) return `No blocks at or after ${str(input.afterTime)} on ${dateStr} to move.`;
+
+    const shifted = affected.map((b) => ({
+      title: b.title,
+      oldStart: timeToMinutes(b.startTime),
+      oldEnd: timeToMinutes(b.endTime),
+      newStart: timeToMinutes(b.startTime) + delta,
+      newEnd: timeToMinutes(b.endTime) + delta,
+    }));
+    const lines = shifted.map((s) => `"${s.title}": ${formatClock(s.oldStart)} -> ${formatClock(s.newStart)}`);
+
+    const unaffectedIds = new Set(affected.map((b) => b.id));
+    const stillFixed = blocksForDate(data.planner, dateObj).filter((b) => !unaffectedIds.has(b.id));
+    const ghosts = routineGhostBlocksForDate(data.routines.config, data.planner.routineOverrides, dateObj);
+    const conflicts: string[] = [];
+    for (const s of shifted) {
+      for (const f of stillFixed) {
+        const fStart = timeToMinutes(f.startTime);
+        const fEnd = timeToMinutes(f.endTime);
+        if (rangesOverlap(s.newStart, s.newEnd, fStart, fEnd)) {
+          conflicts.push(`"${s.title}" would overlap "${f.title}" (${formatClock(fStart)}-${formatClock(fEnd)})`);
+        }
+      }
+      for (const g of ghosts) {
+        const gStart = timeToMinutes(g.startTime);
+        const gEnd = gStart + g.durationMinutes;
+        if (rangesOverlap(s.newStart, s.newEnd, gStart, gEnd)) {
+          conflicts.push(`"${s.title}" would overlap her ${g.title} routine step (${formatClock(gStart)})`);
+        }
+      }
+    }
+
+    const parts = [`Moving ${affected.length} block${affected.length === 1 ? "" : "s"} on ${formatDayLabel(dateStr)} by ${delta > 0 ? "+" : ""}${delta} min:`, lines.join("\n")];
+    if (conflicts.length > 0) parts.push("⚠ Conflicts:\n" + conflicts.join("\n"));
+    return parts.join("\n\n");
+  },
+  apply: (data, input, now) => {
+    const dateStr = str(input.date) || todayKey(now);
+    const cutoff = timeToMinutes(str(input.afterTime));
+    const delta = num(input.deltaMinutes);
+    const affectedIds = new Set(blocksForDate(data.planner, dateFromKey(dateStr)).filter((b) => timeToMinutes(b.startTime) >= cutoff).map((b) => b.id));
+    if (affectedIds.size === 0) {
+      return { data, resultText: `No blocks at or after ${str(input.afterTime)} on ${dateStr} to move.` };
+    }
+    const blocks = data.planner.blocks.map((b) => {
+      if (!affectedIds.has(b.id)) return b;
+      return {
+        ...b,
+        startTime: minutesToTime(timeToMinutes(b.startTime) + delta),
+        endTime: minutesToTime(timeToMinutes(b.endTime) + delta),
+      };
+    });
+    return {
+      data: { ...data, planner: { ...data.planner, blocks } },
+      resultText: `Moved ${affectedIds.size} block${affectedIds.size === 1 ? "" : "s"} on ${dateStr} by ${delta > 0 ? "+" : ""}${delta} min.`,
+    };
+  },
+};
 
 const addPlannerBlockTool: AssistantTool = {
   name: "add_planner_block",
@@ -721,6 +1081,10 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
   completeWorkTaskTool,
   addLifeTaskTool,
   addPlannerBlockTool,
+  planDayTool,
+  editPlannerBlockTool,
+  removePlannerBlocksTool,
+  shiftPlannerBlocksTool,
   addListItemTool,
   addHealthAppointmentTool,
   addWorkEventTool,
