@@ -57,7 +57,7 @@ export default function AssistantView({
   }
 
   async function callApi(messages: ApiMessage[], useTools: boolean): Promise<
-    { content: AnthropicBlock[]; usage: { inputTokens: number; outputTokens: number } } | null
+    { content: AnthropicBlock[]; usage: { inputTokens: number; outputTokens: number }; stopReason: string | null } | null
   > {
     const now = new Date();
     const monthUsage = currentMonthUsage(dataRef.current.assistant, now);
@@ -78,71 +78,108 @@ export default function AssistantView({
       return null;
     }
     updateAssistantData((a) => recordUsage(a, json.usage.inputTokens ?? 0, json.usage.outputTokens ?? 0, now));
-    return { content: json.content ?? [], usage: json.usage ?? { inputTokens: 0, outputTokens: 0 } };
+    return {
+      content: json.content ?? [],
+      usage: json.usage ?? { inputTokens: 0, outputTokens: 0 },
+      stopReason: json.stopReason ?? null,
+    };
   }
 
+  // A crash anywhere in this turn (a bad tool call, an unexpected shape
+  // from the API) must never leave her stuck mid-"Thinking..." with no
+  // explanation - the outer try/catch is the last line of defense so
+  // there's always a plain-English message and loading always clears.
   async function runTurn() {
     setLoading(true);
     setError(null);
-    const result = await callApi(historyRef.current, true);
-    if (!result) {
-      setLoading(false);
-      return;
-    }
-    historyRef.current = [...historyRef.current, { role: "assistant", content: result.content }];
-
-    const textBlock = result.content
-      .filter((b) => b.type === "text")
-      .map((b) => String(b.text ?? ""))
-      .join("\n\n")
-      .trim();
-    if (textBlock) {
-      updateAssistantData((a) => addMessage(a, newMessage("assistant", textBlock, new Date())));
-    }
-
-    const toolUses = result.content.filter((b) => b.type === "tool_use") as (AnthropicBlock & {
-      id: string;
-      name: string;
-      input: Record<string, unknown>;
-    })[];
-
-    if (toolUses.length === 0) {
-      setLoading(false);
-      return;
-    }
-
-    const autoResults: ResolvedResult[] = [];
-    const newPending: PendingAction[] = [];
-    for (const block of toolUses) {
-      const tool = findAssistantTool(block.name);
-      if (!tool) {
-        autoResults.push({ id: block.id, text: `Unknown tool "${block.name}".` });
-        continue;
+    try {
+      const result = await callApi(historyRef.current, true);
+      if (!result) {
+        setLoading(false);
+        return;
       }
-      if (tool.kind === "write") {
-        newPending.push({
-          id: block.id,
-          name: block.name,
-          input: block.input,
-          describeText: tool.describe(block.input, dataRef.current),
-        });
-      } else {
-        const { data: nextData, resultText } = tool.apply(dataRef.current, block.input, new Date());
-        dataRef.current = nextData;
-        onChangeData(() => nextData);
-        autoResults.push({ id: block.id, text: resultText });
+      historyRef.current = [...historyRef.current, { role: "assistant", content: result.content }];
+
+      const textBlock = result.content
+        .filter((b) => b.type === "text")
+        .map((b) => String(b.text ?? ""))
+        .join("\n\n")
+        .trim();
+      if (textBlock) {
+        updateAssistantData((a) => addMessage(a, newMessage("assistant", textBlock, new Date())));
       }
-    }
 
-    if (newPending.length > 0) {
-      autoResultsRef.current = autoResults;
-      resolvedRef.current = [];
-      setPending(newPending);
+      const toolUses = result.content.filter((b) => b.type === "tool_use") as (AnthropicBlock & {
+        id: string;
+        name: string;
+        input: Record<string, unknown>;
+      })[];
+
+      if (toolUses.length === 0) {
+        if (result.stopReason === "max_tokens") {
+          setError(
+            "That was a lot to take in at once and her reply got cut off. Try asking again, maybe in a couple of smaller messages."
+          );
+        }
+        setLoading(false);
+        return;
+      }
+
+      const autoResults: ResolvedResult[] = [];
+      const newPending: PendingAction[] = [];
+      for (const block of toolUses) {
+        const tool = findAssistantTool(block.name);
+        if (!tool) {
+          autoResults.push({ id: block.id, text: `Unknown tool "${block.name}".` });
+          continue;
+        }
+        try {
+          if (tool.kind === "write") {
+            newPending.push({
+              id: block.id,
+              name: block.name,
+              input: block.input,
+              describeText: tool.describe(block.input, dataRef.current),
+            });
+          } else {
+            const { data: nextData, resultText } = tool.apply(dataRef.current, block.input, new Date());
+            dataRef.current = nextData;
+            onChangeData(() => nextData);
+            autoResults.push({ id: block.id, text: resultText });
+          }
+        } catch (err) {
+          // One malformed tool call shouldn't take the whole turn down -
+          // tell her plainly and let the rest still go through.
+          autoResults.push({
+            id: block.id,
+            text: `Couldn't complete that one ("${block.name}"): ${err instanceof Error ? err.message : "something went wrong"}.`,
+          });
+        }
+      }
+
+      if (result.stopReason === "max_tokens") {
+        setError(
+          "Her reply got cut off partway through - there was a lot in that one message. What went through is shown below; ask again for anything that's missing."
+        );
+      }
+
+      if (newPending.length > 0) {
+        autoResultsRef.current = autoResults;
+        resolvedRef.current = [];
+        setPending(newPending);
+        setLoading(false);
+        return;
+      }
+
+      await finishToolTurn(autoResults);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? `Something went wrong and she didn't finish responding: ${err.message}`
+          : "Something went wrong and she didn't finish responding - try again."
+      );
       setLoading(false);
-      return;
     }
-
-    await finishToolTurn(autoResults);
   }
 
   async function finishToolTurn(allResults: ResolvedResult[]) {
@@ -157,8 +194,18 @@ export default function AssistantView({
   }
 
   function applyTool(tool: AssistantTool, action: PendingAction, baseData: DashboardData): { data: DashboardData; result: ResolvedResult } {
-    const { data: nextData, resultText } = tool.apply(baseData, action.input, new Date());
-    return { data: nextData, result: { id: action.id, text: resultText } };
+    // A confirmed action failing should never wedge the confirm button or
+    // silently drop the change - fall back to the data as it was, and say
+    // plainly what happened instead of throwing through the click handler.
+    try {
+      const { data: nextData, resultText } = tool.apply(baseData, action.input, new Date());
+      return { data: nextData, result: { id: action.id, text: resultText } };
+    } catch (err) {
+      return {
+        data: baseData,
+        result: { id: action.id, text: `Couldn't complete that: ${err instanceof Error ? err.message : "something went wrong"}.` },
+      };
+    }
   }
 
   function resolveAction(action: PendingAction, confirmed: boolean) {
@@ -228,21 +275,28 @@ export default function AssistantView({
   async function handleNewConversation() {
     if (assistant.messages.length > 0) {
       setLoading(true);
-      const summaryMessages: ApiMessage[] = [
-        ...historyRef.current,
-        {
-          role: "user",
-          content:
-            'Summarize this conversation in one or two sentences, written for your own future reference (e.g. "We discussed X and decided Y"). Reply with only the summary, nothing else.',
-        },
-      ];
-      const result = await callApi(summaryMessages, false);
-      const summary = result?.content.find((b) => b.type === "text")?.text;
-      updateAssistantData((a) => {
-        const withSummary = typeof summary === "string" && summary.trim() ? addConversationSummary(a, summary) : a;
-        return clearMessages(withSummary);
-      });
-      setLoading(false);
+      try {
+        const summaryMessages: ApiMessage[] = [
+          ...historyRef.current,
+          {
+            role: "user",
+            content:
+              'Summarize this conversation in one or two sentences, written for your own future reference (e.g. "We discussed X and decided Y"). Reply with only the summary, nothing else.',
+          },
+        ];
+        const result = await callApi(summaryMessages, false);
+        const summary = result?.content.find((b) => b.type === "text")?.text;
+        updateAssistantData((a) => {
+          const withSummary = typeof summary === "string" && summary.trim() ? addConversationSummary(a, summary) : a;
+          return clearMessages(withSummary);
+        });
+      } catch {
+        // Losing the summary isn't worth blocking a fresh start over - the
+        // conversation still clears below either way.
+        updateAssistantData((a) => clearMessages(a));
+      } finally {
+        setLoading(false);
+      }
     }
     historyRef.current = [];
     autoResultsRef.current = [];

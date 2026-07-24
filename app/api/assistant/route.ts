@@ -68,7 +68,11 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 2048,
+        // Messy multi-part requests ("plan tomorrow, pay the aunt, meal
+        // prep for two, what's my budget") can legitimately need 8-10+
+        // tool calls in one turn - 2048 was tight enough to truncate mid-
+        // response and leave the UI stuck with nothing to show.
+        max_tokens: 4096,
         system: parsed.data.system ?? "",
         messages: parsed.data.messages,
         ...(parsed.data.useTools !== false ? { tools: toolDefinitionsForApi() } : {}),
