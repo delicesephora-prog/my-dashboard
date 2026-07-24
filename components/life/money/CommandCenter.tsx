@@ -11,6 +11,7 @@ import {
   VaultTransferItem,
   SpendingTarget,
   actualAmount,
+  addWin,
   buildingUpSummary,
   dateForMonthKey,
   dueNextItems,
@@ -39,6 +40,18 @@ import {
 import BudgetItemRow, { Slot } from "./BudgetItemRow";
 import CheckCircle from "../../CheckCircle";
 import { PaymentSchedule } from "@/lib/budget";
+import { dateKey } from "@/lib/date";
+
+// Fuzzy rather than exact so a recurring payment line survives the debt
+// it's linked to being renamed (e.g. "Capital One" -> "Capital One
+// Quicksilver") without silently losing its balance link.
+function findLinkedDebt(debts: MoneyData["debts"], debtName: string) {
+  const needle = debtName.trim().toLowerCase();
+  return (
+    debts.find((d) => d.name.trim().toLowerCase() === needle) ??
+    debts.find((d) => d.name.trim().toLowerCase().includes(needle) || needle.includes(d.name.trim().toLowerCase()))
+  );
+}
 
 function convertSchedule(kind: PaymentSchedule["kind"], monthlyAmount: number): PaymentSchedule {
   if (kind === "dueDay") return { kind: "dueDay", day: 1 };
@@ -168,6 +181,12 @@ export default function CommandCenter({
         ),
       }));
       updateVaultState(item.id, (s) => toggleSlot(slot, s));
+
+      if (!wasDone && amount > 0) {
+        onChangeBudget((b) =>
+          addWin(b, { date: dateKey(realNow), kind: "vaultGrowth", name: item.vaultName, amount, note: "Payday transfer" })
+        );
+      }
     };
   }
 
@@ -177,22 +196,32 @@ export default function CommandCenter({
       const wasDone = isDone(itemState, slot);
       const planned = plannedAmount(item.schedule, item.monthlyAmount, slot);
       const amount = actualAmount(itemState, slot, planned);
-      const linkedDebt = money.debts.find(
-        (d) => d.name.trim().toLowerCase() === item.debtName.trim().toLowerCase()
-      );
+      const linkedDebt = findLinkedDebt(money.debts, item.debtName);
 
-      onChangeMoney((m) => ({
-        ...m,
-        debts: m.debts.map((d) => {
-          if (d.name.trim().toLowerCase() !== item.debtName.trim().toLowerCase()) return d;
-          return { ...d, currentBalance: Math.max(0, d.currentBalance + (wasDone ? amount : -amount)) };
-        }),
-      }));
+      if (linkedDebt) {
+        const debtId = linkedDebt.id;
+        onChangeMoney((m) => ({
+          ...m,
+          debts: m.debts.map((d) =>
+            d.id === debtId ? { ...d, currentBalance: Math.max(0, d.currentBalance + (wasDone ? amount : -amount)) } : d
+          ),
+        }));
+      }
       updateDebtState(item.id, (s) => toggleSlot(slot, s));
 
-      if (!wasDone && item.isFinalPayment && linkedDebt) {
+      if (!wasDone && amount > 0 && linkedDebt) {
         const newBalance = Math.max(0, linkedDebt.currentBalance - amount);
-        if (newBalance <= 0 && linkedDebt.currentBalance > 0) {
+        const paidOff = newBalance <= 0 && linkedDebt.currentBalance > 0;
+        onChangeBudget((b) =>
+          addWin(b, {
+            date: dateKey(realNow),
+            kind: paidOff ? "debtPaidOff" : "debtPayment",
+            name: item.debtName,
+            amount,
+            note: "",
+          })
+        );
+        if (item.isFinalPayment && paidOff) {
           onCelebrate("big", `${item.debtName} is PAID OFF. Debt-free on this one - forever off the list. 🎉`);
         }
       }
@@ -458,9 +487,7 @@ export default function CommandCenter({
           {config.debtPayments
             .filter((d) => {
               if (d.schedule.kind !== "dueDay") return false;
-              const linked = money.debts.find(
-                (x) => x.name.trim().toLowerCase() === d.debtName.trim().toLowerCase()
-              );
+              const linked = findLinkedDebt(money.debts, d.debtName);
               if (linked && linked.currentBalance <= 0) return false;
               const inFirstWindow = d.schedule.day <= 15;
               return paydayTab === "first" ? inFirstWindow : !inFirstWindow;
@@ -523,7 +550,7 @@ export default function CommandCenter({
       {/* DEBT PAYMENTS */}
       <Section title="Debt Payments" total={totalMonthlyDebts(config)}>
         {config.debtPayments.map((d) => {
-          const linked = money.debts.find((x) => x.name.trim().toLowerCase() === d.debtName.trim().toLowerCase());
+          const linked = findLinkedDebt(money.debts, d.debtName);
           if (linked && linked.currentBalance <= 0) return null;
           return (
             <BudgetItemRow

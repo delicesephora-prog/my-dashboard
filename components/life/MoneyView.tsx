@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { LifeQuarterly, MoneyData } from "@/lib/types";
+import { Debt, LifeQuarterly, MoneyData } from "@/lib/types";
 import { PaydayChecklistData } from "@/lib/payday";
 import { Account, Budget, FinanceData, Transaction } from "@/lib/finance";
 import { BudgetData } from "@/lib/budget";
+import { PaycheckPlanData } from "@/lib/paycheckplan";
 import { CelebrationTier } from "@/lib/celebration";
 import { MilestoneData } from "@/lib/milestones";
 import { RewardsData } from "@/lib/rewards";
@@ -17,10 +18,27 @@ import TrendsTab from "./finance/TrendsTab";
 import CommandCenter from "./money/CommandCenter";
 import CalendarTab from "./money/CalendarTab";
 import RewardsView from "./money/RewardsView";
+import PaycheckFlowView from "./money/PaycheckFlowView";
+import DebtsView from "./money/DebtsView";
+import ProgressView from "./money/ProgressView";
 
-type Tab = "command" | "overview" | "accounts" | "transactions" | "budgets" | "trends" | "calendar" | "rewards";
+type Tab =
+  | "paycheck"
+  | "debts"
+  | "progress"
+  | "command"
+  | "overview"
+  | "accounts"
+  | "transactions"
+  | "budgets"
+  | "trends"
+  | "calendar"
+  | "rewards";
 
 const TABS: { key: Tab; label: string }[] = [
+  { key: "paycheck", label: "Paycheck Plan" },
+  { key: "debts", label: "Debts" },
+  { key: "progress", label: "Progress" },
   { key: "command", label: "Command Center" },
   { key: "overview", label: "Vaults & Debts" },
   { key: "accounts", label: "Accounts" },
@@ -38,6 +56,8 @@ export default function MoneyView({
   onChangeFinance,
   budget,
   onChangeBudget,
+  paycheckPlans,
+  onChangePaycheckPlans,
   milestones,
   rewards,
   onChangeRewards,
@@ -51,6 +71,8 @@ export default function MoneyView({
   onChangeFinance: (updater: (f: FinanceData) => FinanceData) => void;
   budget: BudgetData;
   onChangeBudget: (updater: (b: BudgetData) => BudgetData) => void;
+  paycheckPlans: PaycheckPlanData;
+  onChangePaycheckPlans: (updater: (p: PaycheckPlanData) => PaycheckPlanData) => void;
   milestones: MilestoneData;
   rewards: RewardsData;
   onChangeRewards: (updater: (r: RewardsData) => RewardsData) => void;
@@ -58,10 +80,14 @@ export default function MoneyView({
   appOpenDateKeys: string[];
   onCelebrate: (tier: CelebrationTier, message: string) => void;
 }) {
-  const [tab, setTab] = useState<Tab>("command");
+  const [tab, setTab] = useState<Tab>("paycheck");
 
   function updateMoney(updater: (m: MoneyData) => MoneyData) {
     onChange((lq) => ({ ...lq, money: updater(lq.money) }));
+  }
+
+  function updateDebts(updater: (d: Debt[]) => Debt[]) {
+    updateMoney((m) => ({ ...m, debts: updater(m.debts) }));
   }
 
   function updatePaydayChecklist(updater: (p: PaydayChecklistData) => PaydayChecklistData) {
@@ -110,6 +136,22 @@ export default function MoneyView({
           </button>
         ))}
       </div>
+
+      {tab === "paycheck" && (
+        <PaycheckFlowView
+          paycheckPlans={paycheckPlans}
+          onChange={onChangePaycheckPlans}
+          config={budget.config}
+          debts={lifeQuarterly.money.debts}
+          onCelebrate={onCelebrate}
+        />
+      )}
+
+      {tab === "debts" && (
+        <DebtsView debts={lifeQuarterly.money.debts} config={budget.config} onChangeDebts={updateDebts} />
+      )}
+
+      {tab === "progress" && <ProgressView budget={budget} money={lifeQuarterly.money} />}
 
       {tab === "command" && (
         <CommandCenter

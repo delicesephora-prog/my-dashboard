@@ -17,7 +17,7 @@ import { WarRoomData, emptyWarRoomData, normalizeWarRoomData } from "./warroom";
 import { LifeScoreData, emptyLifeScoreData, normalizeLifeScoreData } from "./lifescore";
 import { BoardMeetingData, emptyBoardMeetingData, normalizeBoardMeetingData } from "./boardmeeting";
 import { ListsData, emptyListsData, normalizeListsData, ensureGrocerySeedItems } from "./lists";
-import { RhythmData, emptyRhythmData, normalizeRhythmData } from "./rhythm";
+import { RhythmData, emptyRhythmData, normalizeRhythmData, applyRhythmAddOns } from "./rhythm";
 import { GlowUpData, emptyGlowUpData, normalizeGlowUpData, applyGlowUpContentUpdate } from "./glowup";
 import { TextAlertsData, emptyTextAlertsData, normalizeTextAlertsData } from "./textalerts";
 import { PlannerData, emptyPlannerData, normalizePlannerData } from "./planner";
@@ -49,6 +49,7 @@ import { MealPlanData, emptyMealPlanData, normalizeMealPlanData } from "./mealpl
 import { MilestoneData, defaultMilestoneData, normalizeMilestoneData } from "./milestones";
 import { RewardsData, emptyRewardsData, normalizeRewardsData } from "./rewards";
 import { RecipeBankData, defaultRecipeBankData, normalizeRecipeBankData } from "./recipes";
+import { PaycheckPlanData, emptyPaycheckPlanData, normalizePaycheckPlanData } from "./paycheckplan";
 
 export type TaskItem = {
   id: string;
@@ -524,23 +525,41 @@ export type Vault = {
   goalAmount: number;
 };
 
+export type DebtStatus = "current" | "pastDue" | "restricted" | "closed";
+
 export type Debt = {
   id: string;
   name: string;
   currentBalance: number;
   startingBalance: number;
+  interestRatePct: number; // 0 if unknown
+  minPayment: number; // 0 if unknown
+  dueDay: number; // 1-31, 0 = not set
+  status: DebtStatus;
+  pastDueAmount: number; // 0 unless status is "pastDue"
+  // Manually pinned to the top of every ordering regardless of snowball/
+  // avalanche math - for something urgent (past due, restricted) that
+  // needs eyes on it no matter what the "optimal" order says.
+  priority: boolean;
+  notes: string;
 };
 
 export type MoneyData = {
   vaults: Vault[];
   debts: Debt[];
   seedVersion: number;
+  debtSeedVersion: number;
 };
 
 // Bump whenever the seed content below changes and existing saved vaults/
 // debts should be replaced rather than left alone - see the seedVersion
 // migration in normalizeDashboardData.
 export const MONEY_SEED_VERSION = 1;
+
+// Separate gate from MONEY_SEED_VERSION so her real debt numbers can
+// replace the old placeholders without touching her vaults (which may
+// carry real saved balances by the time this ships).
+export const DEBT_SEED_VERSION = 2;
 
 function seedVaults(): Vault[] {
   return [
@@ -550,20 +569,73 @@ function seedVaults(): Vault[] {
   ];
 }
 
-// Placeholder balances the user will correct - ordered smallest starting
-// balance first for the debt snowball method.
+function debt(
+  name: string,
+  currentBalance: number,
+  interestRatePct: number,
+  minPayment: number,
+  dueDay: number,
+  status: DebtStatus,
+  pastDueAmount: number,
+  priority: boolean,
+  notes: string
+): Debt {
+  return {
+    id: crypto.randomUUID(),
+    name,
+    currentBalance,
+    startingBalance: currentBalance,
+    interestRatePct,
+    minPayment,
+    dueDay,
+    status,
+    pastDueAmount,
+    priority,
+    notes,
+  };
+}
+
+// Her real numbers, replacing the old generic placeholders (see
+// DEBT_SEED_VERSION). PSEG/Xfinity/Affirm/Zip are seeded at $0 for her to
+// fill in with current balances.
 function seedDebts(): Debt[] {
   return [
-    { id: crypto.randomUUID(), name: "ZIP", currentBalance: 100, startingBalance: 100 },
-    { id: crypto.randomUUID(), name: "Affirm", currentBalance: 300, startingBalance: 300 },
-    { id: crypto.randomUUID(), name: "Apple", currentBalance: 500, startingBalance: 500 },
-    { id: crypto.randomUUID(), name: "Chase", currentBalance: 800, startingBalance: 800 },
-    { id: crypto.randomUUID(), name: "Capital One", currentBalance: 1200, startingBalance: 1200 },
+    debt("Sallie Mae", 6938, 15.6, 0, 0, "pastDue", 135.59, true, "2 loans combined"),
+    debt("Capital One Quicksilver", 4179, 0, 0, 0, "restricted", 0, false, ""),
+    debt("Chase", 4863, 0, 91, 0, "closed", 0, false, "Account closed, still paying it down"),
+    debt("Best Buy", 81.5, 0, 10, 14, "current", 0, false, ""),
+    debt("Apple", 233, 0, 0, 0, "current", 0, false, ""),
+    debt("PSEG", 0, 0, 0, 5, "current", 0, false, "Fill in current balance"),
+    debt("Xfinity", 0, 0, 0, 28, "current", 0, false, "Fill in current balance"),
+    debt("Affirm", 0, 0, 0, 0, "current", 0, false, "Fill in current balance"),
+    debt("Zip", 0, 0, 0, 0, "current", 0, false, "Fill in current balance"),
   ];
 }
 
 export function emptyMoneyData(): MoneyData {
-  return { vaults: seedVaults(), debts: seedDebts(), seedVersion: MONEY_SEED_VERSION };
+  return { vaults: seedVaults(), debts: seedDebts(), seedVersion: MONEY_SEED_VERSION, debtSeedVersion: DEBT_SEED_VERSION };
+}
+
+// Vaults and debts migrate independently: vaults only ever reseed on the
+// original MONEY_SEED_VERSION gate (untouched here), while debts get a
+// one-time correction to her real numbers via DEBT_SEED_VERSION - once
+// applied, her own edits from then on always win, same as any other
+// seed-version migration in this file.
+function correctedMoneyData(raw: Partial<MoneyData> | null | undefined): MoneyData {
+  const seedVersion = raw?.seedVersion ?? 0;
+  const base: MoneyData =
+    seedVersion < MONEY_SEED_VERSION
+      ? { vaults: seedVaults(), debts: seedDebts(), seedVersion: MONEY_SEED_VERSION, debtSeedVersion: DEBT_SEED_VERSION }
+      : {
+          vaults: raw?.vaults ?? [],
+          debts: raw?.debts ?? [],
+          seedVersion: raw?.seedVersion ?? MONEY_SEED_VERSION,
+          debtSeedVersion: raw?.debtSeedVersion ?? 0,
+        };
+  if (base.debtSeedVersion < DEBT_SEED_VERSION) {
+    return { ...base, debts: seedDebts(), debtSeedVersion: DEBT_SEED_VERSION };
+  }
+  return base;
 }
 
 export type GoalCategory = "Finance" | "Health" | "Faith" | "Personal" | "Career";
@@ -905,6 +977,7 @@ export type DashboardData = {
   milestones: MilestoneData;
   rewards: RewardsData;
   recipes: RecipeBankData;
+  paycheckPlans: PaycheckPlanData;
 };
 
 export function emptyWorld(): WorldData {
@@ -975,6 +1048,7 @@ export function defaultDashboardData(): DashboardData {
     milestones: defaultMilestoneData(),
     rewards: emptyRewardsData(),
     recipes: defaultRecipeBankData(),
+    paycheckPlans: emptyPaycheckPlanData(),
   };
 }
 
@@ -1044,14 +1118,7 @@ export function normalizeDashboardData(
     },
     brainDump: data.brainDump ?? "",
     lifeQuarterly: {
-      money:
-        (data.lifeQuarterly?.money?.seedVersion ?? 0) < MONEY_SEED_VERSION
-          ? { vaults: seedVaults(), debts: seedDebts(), seedVersion: MONEY_SEED_VERSION }
-          : {
-              vaults: data.lifeQuarterly?.money?.vaults ?? [],
-              debts: data.lifeQuarterly?.money?.debts ?? [],
-              seedVersion: data.lifeQuarterly?.money?.seedVersion ?? MONEY_SEED_VERSION,
-            },
+      money: correctedMoneyData(data.lifeQuarterly?.money),
       paydayChecklist:
         (data.lifeQuarterly?.paydayChecklist?.seedVersion ?? 0) < PAYDAY_SEED_VERSION
           ? {
@@ -1138,6 +1205,7 @@ export function normalizeDashboardData(
     // (an account that predates the recipe bank) - after that, her real
     // saved recipes always win, even if she deletes every seed recipe.
     recipes: data.recipes === undefined ? defaultRecipeBankData() : normalizeRecipeBankData(data.recipes),
+    paycheckPlans: normalizePaycheckPlanData(data.paycheckPlans),
   };
 
   // One-time additive link: makes sure the vaults/debt this feature depends
@@ -1149,6 +1217,7 @@ export function normalizeDashboardData(
   result.routines = applyGlowRoutineUpdate(result.routines);
   result.glowUp = applyGlowUpContentUpdate(result.glowUp);
   result.lists = { ...result.lists, grocery: ensureGrocerySeedItems(result.lists.grocery) };
+  result.rhythm = applyRhythmAddOns(result.rhythm);
 
   return result;
 }

@@ -16,6 +16,10 @@ export type BillItem = {
   name: string;
   monthlyAmount: number;
   schedule: PaymentSchedule;
+  // Part of the survival number - the bare floor she must cover every
+  // period to stay safe. Defaults true (safer to overestimate the floor
+  // than under it); she can mark something optional herself.
+  essential: boolean;
 };
 
 // debtName/vaultName are soft links (matched by name against MoneyData) so
@@ -108,13 +112,34 @@ function emptyMonthState(startVaultTotal: number, startDebtPaidOff: number): Mon
   };
 }
 
+// Proof the plan works, especially on hard weeks - a discrete, dated log
+// of debt reductions/payoffs and vault growth, separate from the derived
+// month-boundary snapshots so an in-month payment shows up immediately
+// with today's real date, not just at the next month recap.
+export type WinKind = "debtPayment" | "debtPaidOff" | "vaultGrowth";
+
+export type WinEntry = {
+  id: string;
+  date: string; // YYYY-MM-DD
+  kind: WinKind;
+  name: string; // debt or vault name
+  amount: number;
+  note: string;
+};
+
 export type BudgetData = {
   config: BudgetConfig;
   months: Record<string, MonthlyBudgetState>;
   extraIncome: ExtraIncomeEntry[];
+  wins: WinEntry[];
   configSeedVersion: number;
   linkedSeedVersion: number;
 };
+
+export function addWin(data: BudgetData, entry: Omit<WinEntry, "id">): BudgetData {
+  const win: WinEntry = { ...entry, id: crypto.randomUUID() };
+  return { ...data, wins: [win, ...data.wins].slice(0, 500) };
+}
 
 export const BUDGET_CONFIG_SEED_VERSION = 1;
 export const BUDGET_LINK_SEED_VERSION = 1;
@@ -133,22 +158,23 @@ export function seedBudgetConfig(): BudgetConfig {
   return {
     perPaycheckIncome: 2996,
     bills: [
-      { id: crypto.randomUUID(), name: "Rent", monthlyAmount: 2000, schedule: dueDay(1) },
-      { id: crypto.randomUUID(), name: "Sou-Sou (Sol)", monthlyAmount: 500, schedule: paydaySplit(250, 250) },
-      { id: crypto.randomUUID(), name: "Electric (PSEG)", monthlyAmount: 220, schedule: dueDay(5) },
-      { id: crypto.randomUUID(), name: "WiFi", monthlyAmount: 91, schedule: dueDay(28) },
-      { id: crypto.randomUUID(), name: "Groceries", monthlyAmount: 600, schedule: paydaySplit(300, 300) },
-      { id: crypto.randomUUID(), name: "Subscriptions", monthlyAmount: 100, schedule: varies() },
-      { id: crypto.randomUUID(), name: "Gym", monthlyAmount: 50, schedule: varies() },
-      { id: crypto.randomUUID(), name: "Phone", monthlyAmount: 100, schedule: varies() },
+      { id: crypto.randomUUID(), name: "Rent", monthlyAmount: 2000, schedule: dueDay(1), essential: true },
+      { id: crypto.randomUUID(), name: "Sou-Sou (Sol)", monthlyAmount: 500, schedule: paydaySplit(250, 250), essential: true },
+      { id: crypto.randomUUID(), name: "Electric (PSEG)", monthlyAmount: 220, schedule: dueDay(5), essential: true },
+      { id: crypto.randomUUID(), name: "WiFi", monthlyAmount: 91, schedule: dueDay(28), essential: true },
+      { id: crypto.randomUUID(), name: "Groceries", monthlyAmount: 600, schedule: paydaySplit(300, 300), essential: true },
+      { id: crypto.randomUUID(), name: "Subscriptions", monthlyAmount: 100, schedule: varies(), essential: false },
+      { id: crypto.randomUUID(), name: "Gym", monthlyAmount: 50, schedule: varies(), essential: false },
+      { id: crypto.randomUUID(), name: "Phone", monthlyAmount: 100, schedule: varies(), essential: true },
     ],
     debtPayments: [
-      { id: crypto.randomUUID(), debtName: "Capital One", monthlyAmount: 200, schedule: dueDay(12), isFinalPayment: false },
-      { id: crypto.randomUUID(), debtName: "Apple", monthlyAmount: 50, schedule: dueDay(30), isFinalPayment: false },
+      { id: crypto.randomUUID(), debtName: "Sallie Mae", monthlyAmount: 135.59, schedule: varies(), isFinalPayment: false },
+      { id: crypto.randomUUID(), debtName: "Capital One Quicksilver", monthlyAmount: 200, schedule: dueDay(12), isFinalPayment: false },
       { id: crypto.randomUUID(), debtName: "Chase", monthlyAmount: 91, schedule: dueDay(28), isFinalPayment: false },
+      { id: crypto.randomUUID(), debtName: "Apple", monthlyAmount: 50, schedule: dueDay(30), isFinalPayment: false },
       { id: crypto.randomUUID(), debtName: "Affirm", monthlyAmount: 250, schedule: varies(), isFinalPayment: false },
-      { id: crypto.randomUUID(), debtName: "ZIP", monthlyAmount: 100, schedule: varies(), isFinalPayment: false },
-      { id: crypto.randomUUID(), debtName: "Best Buy", monthlyAmount: 150, schedule: dueDay(30), isFinalPayment: true },
+      { id: crypto.randomUUID(), debtName: "Zip", monthlyAmount: 100, schedule: varies(), isFinalPayment: false },
+      { id: crypto.randomUUID(), debtName: "Best Buy", monthlyAmount: 81.5, schedule: dueDay(14), isFinalPayment: true },
     ],
     vaultTransfers: [
       { id: crypto.randomUUID(), vaultName: "Emergency Fund", monthlyAmount: 350, schedule: paydaySplit(175, 175) },
@@ -171,6 +197,7 @@ export function emptyBudgetData(): BudgetData {
     config: seedBudgetConfig(),
     months: {},
     extraIncome: [],
+    wins: [],
     configSeedVersion: BUDGET_CONFIG_SEED_VERSION,
     linkedSeedVersion: 0,
   };
@@ -178,10 +205,16 @@ export function emptyBudgetData(): BudgetData {
 
 export function normalizeBudgetData(partial: Partial<BudgetData> | null | undefined): BudgetData {
   const configSeedVersion = partial?.configSeedVersion ?? 0;
+  const config =
+    configSeedVersion >= BUDGET_CONFIG_SEED_VERSION && partial?.config ? partial.config : seedBudgetConfig();
   return {
-    config: configSeedVersion >= BUDGET_CONFIG_SEED_VERSION && partial?.config ? partial.config : seedBudgetConfig(),
+    // Backfills `essential` on bills saved before that field existed
+    // (defaulting to true - safer to overestimate the survival-number
+    // floor than under it), so old data never fails validation.
+    config: { ...config, bills: config.bills.map((b) => ({ ...b, essential: b.essential ?? true })) },
     months: partial?.months ?? {},
     extraIncome: partial?.extraIncome ?? [],
+    wins: partial?.wins ?? [],
     configSeedVersion: BUDGET_CONFIG_SEED_VERSION,
     linkedSeedVersion: partial?.linkedSeedVersion ?? 0,
   };
@@ -210,7 +243,19 @@ export function ensureLinkedMoneyEntities(
 
   let debts = money.debts;
   if (!debts.some((d) => d.name.trim().toLowerCase() === "best buy")) {
-    const bestBuy: Debt = { id: crypto.randomUUID(), name: "Best Buy", currentBalance: 150, startingBalance: 150 };
+    const bestBuy: Debt = {
+      id: crypto.randomUUID(),
+      name: "Best Buy",
+      currentBalance: 150,
+      startingBalance: 150,
+      interestRatePct: 0,
+      minPayment: 0,
+      dueDay: 0,
+      status: "current",
+      pastDueAmount: 0,
+      priority: false,
+      notes: "",
+    };
     debts = [...debts, bestBuy];
   }
 

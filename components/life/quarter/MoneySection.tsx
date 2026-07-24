@@ -41,6 +41,13 @@ export default function MoneySection({
       name: "New Debt",
       currentBalance: 0,
       startingBalance: 0,
+      interestRatePct: 0,
+      minPayment: 0,
+      dueDay: 0,
+      status: "current",
+      pastDueAmount: 0,
+      priority: false,
+      notes: "",
     };
     onChange((m) => ({ ...m, debts: [...m.debts, debt] }));
   }
@@ -150,7 +157,7 @@ export default function MoneySection({
           </button>
         </div>
         <p className="mb-3 text-[11px] italic text-paper-muted">
-          Placeholder balances - edit them to match your real numbers.
+          For interest rate, minimum, due date, and status, see the Debts tab.
         </p>
 
         {money.debts.length === 0 ? (

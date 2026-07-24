@@ -268,12 +268,20 @@ const debtSchema = z.object({
   name: z.string().max(200),
   currentBalance: z.number().min(0).max(1000000000),
   startingBalance: z.number().min(0).max(1000000000),
+  interestRatePct: z.number().min(0).max(100),
+  minPayment: z.number().min(0).max(1000000000),
+  dueDay: z.number().int().min(0).max(31),
+  status: z.enum(["current", "pastDue", "restricted", "closed"]),
+  pastDueAmount: z.number().min(0).max(1000000000),
+  priority: z.boolean(),
+  notes: z.string().max(2000),
 });
 
 const moneyDataSchema = z.object({
   vaults: z.array(vaultSchema).max(200),
   debts: z.array(debtSchema).max(200),
   seedVersion: z.number().int(),
+  debtSeedVersion: z.number().int(),
 });
 
 const paydayStepSchema = z.object({
@@ -530,6 +538,7 @@ const rhythmDataSchema = z.object({
     sunday: z.array(rhythmAnchorSchema).max(20),
   }),
   logs: z.record(rhythmDayLogSchema),
+  addOnsVersion: z.number().int(),
 });
 
 const groceryCategorySchema = z.enum([
@@ -1155,6 +1164,26 @@ const recipeBankDataSchema = z.object({
   recipes: z.array(recipeSchema).max(500),
 });
 
+const allocationLineSchema = z.object({
+  id: z.string(),
+  kind: z.enum(["bill", "debt", "vault", "spending"]),
+  refName: z.string().max(200),
+  amount: z.number(),
+  done: z.boolean(),
+});
+
+const paycheckPlanSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  expectedAmount: z.number(),
+  lines: z.array(allocationLineSchema).max(200),
+  createdAt: z.string(),
+});
+
+const paycheckPlanDataSchema = z.object({
+  plans: z.array(paycheckPlanSchema).max(1000),
+});
+
 const transactionCategorySchema = z.enum([
   "Income",
   "Housing",
@@ -1303,6 +1332,7 @@ const budgetBillItemSchema = z.object({
   name: z.string().max(200),
   monthlyAmount: z.number(),
   schedule: paymentScheduleSchema,
+  essential: z.boolean(),
 });
 
 const budgetDebtPaymentItemSchema = z.object({
@@ -1361,10 +1391,20 @@ const monthlyBudgetStateSchema = z.object({
   startDebtPaidOff: z.number(),
 });
 
+const winEntrySchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  kind: z.enum(["debtPayment", "debtPaidOff", "vaultGrowth"]),
+  name: z.string().max(200),
+  amount: z.number(),
+  note: z.string().max(500),
+});
+
 const budgetDataSchema = z.object({
   config: budgetConfigSchema,
   months: z.record(monthlyBudgetStateSchema),
   extraIncome: z.array(extraIncomeEntrySchema),
+  wins: z.array(winEntrySchema).max(500),
   configSeedVersion: z.number(),
   linkedSeedVersion: z.number(),
 });
@@ -1513,6 +1553,7 @@ const dashboardSchema = z.object({
   milestones: milestoneDataSchema,
   rewards: rewardsDataSchema,
   recipes: recipeBankDataSchema,
+  paycheckPlans: paycheckPlanDataSchema,
 });
 
 export async function GET() {

@@ -63,6 +63,7 @@ export type RhythmData = {
   days: Record<RhythmDayKey, RhythmAnchor[]>;
   // Keyed by YYYY-MM-DD - only today's key is ever written to.
   logs: Record<string, RhythmDayLog>;
+  addOnsVersion: number;
 };
 
 function anchor(text: string, order: number, conditional?: "payday"): RhythmAnchor {
@@ -113,7 +114,7 @@ export function emptyRhythmDays(): Record<RhythmDayKey, RhythmAnchor[]> {
 }
 
 export function emptyRhythmData(): RhythmData {
-  return { days: seedDays(), logs: {} };
+  return { days: seedDays(), logs: {}, addOnsVersion: RHYTHM_ADDONS_VERSION };
 }
 
 // If `days` is missing entirely (the field never existed on this saved
@@ -135,7 +136,28 @@ export function normalizeRhythmData(partial: Partial<RhythmData> | null | undefi
       nudgedAnchorIds: log?.nudgedAnchorIds ?? [],
     };
   }
-  return { days, logs };
+  return { days, logs, addOnsVersion: partial?.addOnsVersion ?? 0 };
+}
+
+// Additive, one-time anchor insertions gated by version, same pattern as
+// the Glow Up / Routines content updates - only ever adds an anchor if a
+// day doesn't already have one matching by text, and only the first time,
+// so it never re-adds something she deliberately deleted.
+export const RHYTHM_ADDONS_VERSION = 1;
+
+export function applyRhythmAddOns(data: RhythmData): RhythmData {
+  if (data.addOnsVersion >= RHYTHM_ADDONS_VERSION) return data;
+
+  const sunday = data.days.sunday;
+  const hasMoneyCheckIn = sunday.some((a) => a.text.toLowerCase().includes("money check-in"));
+  const days = hasMoneyCheckIn
+    ? data.days
+    : {
+        ...data.days,
+        sunday: [...sunday, anchor("Weekly Money Check-In: in vs. out, categories, bills this week", sunday.length)],
+      };
+
+  return { ...data, days, addOnsVersion: RHYTHM_ADDONS_VERSION };
 }
 
 // Monday-first weekday key for a given date.

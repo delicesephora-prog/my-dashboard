@@ -33,9 +33,36 @@ import {
   moneyOutSummary,
   leftToBreathe,
   expectedMonthlyIncome,
+  addWin,
 } from "./budget";
 import { currentPeriodKey, completedStepIdsFor } from "./payday";
 import { addRecipe, Recipe } from "./recipes";
+import {
+  survivalNumberForSlot,
+  survivalNumberMonthly,
+  dueDateRadar,
+  payoffForecast,
+  interestCostPerMonth,
+  orderedDebts,
+  monthlyTrendSeries,
+} from "./debtplan";
+import {
+  AllocationKind,
+  AllocationLine,
+  createPaycheckPlan,
+  addPaycheckPlan,
+  updatePaycheckPlan,
+  newAllocationLine,
+  allocatedTotal,
+  unallocatedTotal,
+  allocationByKind,
+  safeToSpend,
+  plansSorted,
+  mostRecentPlan,
+  nextUpcomingPlan,
+  slotForPaycheckDate,
+  suggestLinesFromConfig,
+} from "./paycheckplan";
 
 // A tool call falls into one of three lanes:
 // - "write": mutates the dashboard - shown to Sephora as a one-tap
@@ -1013,14 +1040,19 @@ const payDownDebtTool: AssistantTool = {
     const after = Math.max(0, debt.currentBalance - amt);
     return `Paying ${formatMoney(amt)} toward "${debt.name}": ${formatMoney(debt.currentBalance)} -> ${formatMoney(after)}${after === 0 ? " - PAID OFF 🎉" : ""}.`;
   },
-  apply: (data, input) => {
+  apply: (data, input, now) => {
     const debt = findDebt(data, str(input.debtName));
     if (!debt) return { data, resultText: `No debt found matching "${str(input.debtName)}".` };
     const amt = Math.abs(num(input.amount));
     const newBalance = Math.max(0, debt.currentBalance - amt);
+    const paidOff = newBalance <= 0 && debt.currentBalance > 0;
+    const budget = amt > 0
+      ? addWin(data.budget, { date: dateKey(now), kind: paidOff ? "debtPaidOff" : "debtPayment", name: debt.name, amount: amt, note: "" })
+      : data.budget;
     return {
       data: {
         ...data,
+        budget,
         lifeQuarterly: {
           ...data.lifeQuarterly,
           money: {
@@ -1076,6 +1108,156 @@ const checkPaydayStepTool: AssistantTool = {
         },
       },
       resultText: `${input.done ? "Checked off" : "Unchecked"} "${step.text}".`,
+    };
+  },
+};
+
+function resolveAllocationLines(
+  rawLines: unknown,
+  existing: AllocationLine[] | undefined
+): AllocationLine[] {
+  const list = Array.isArray(rawLines) ? rawLines : [];
+  return list
+    .map((raw): AllocationLine | null => {
+      const r = raw as Record<string, unknown>;
+      const kind = ["bill", "debt", "vault", "spending"].includes(r.kind as string)
+        ? (r.kind as AllocationKind)
+        : "spending";
+      const refName = str(r.refName);
+      if (!refName) return null;
+      const amount = Math.abs(num(r.amount));
+      const prevDone = existing?.find((l) => l.kind === kind && l.refName === refName)?.done ?? false;
+      return { ...newAllocationLine(kind, refName, amount), done: prevDone };
+    })
+    .filter((l): l is AllocationLine => l !== null);
+}
+
+function allocatePaycheckPreview(
+  dateStr: string,
+  expectedAmount: number,
+  lines: { kind: string; refName: string; amount: number }[],
+  isUpdate: boolean
+): string {
+  if (lines.length === 0) {
+    return `${isUpdate ? "Updating" : "Creating"} paycheck plan for ${dateStr}: ${formatMoney(expectedAmount)} in, no lines given yet.`;
+  }
+  const byKind: Record<string, number> = {};
+  for (const l of lines) byKind[l.kind] = (byKind[l.kind] ?? 0) + l.amount;
+  const kindLine = Object.entries(byKind)
+    .map(([k, v]) => `${k}: ${formatMoney(v)}`)
+    .join(", ");
+  const allocated = lines.reduce((s, l) => s + l.amount, 0);
+  const unalloc = expectedAmount - allocated;
+  return `${isUpdate ? "Updating" : "Creating"} paycheck plan for ${dateStr}: ${formatMoney(expectedAmount)} in -> ${kindLine} -> ${formatMoney(unalloc)}${unalloc === 0 ? " unallocated (every dollar has a job)" : unalloc > 0 ? " still unassigned" : " over-allocated - trim something"}.`;
+}
+
+const allocatePaycheckTool: AssistantTool = {
+  name: "allocate_paycheck",
+  description:
+    "Build or adjust her zero-based paycheck allocation plan - the core budgeting ritual: every dollar of a paycheck gets assigned to a bill, a debt minimum (or more), a vault transfer, or spending, until nothing is left unassigned. Use this to walk her through a new paycheck live, or to adjust an existing plan (add/change a line, or update the expected amount) - upserts by date, so calling it again for a date that already has a plan replaces its lines with what you give (already-checked-off lines stay checked if you keep the same kind+refName). If she hasn't given specific lines yet and none exist for this date, leave lines empty and this auto-drafts from her recurring bills, debt minimums, and vault transfers so you're not starting from a blank page - then refine it with her from there. Always show the running math: paycheck minus allocated equals what's left unassigned, and call out her survival number (from read_dashboard_section('budget')) so she sees the floor she's covering first.",
+  input_schema: {
+    type: "object",
+    properties: {
+      date: { type: "string", description: "YYYY-MM-DD - the paycheck date this plan is for" },
+      expectedAmount: { type: "number", description: "What's landing, or her actual bank balance right now" },
+      lines: {
+        type: "array",
+        description:
+          "The full set of allocation lines for this paycheck - replaces any existing lines for this date. Omit entirely to auto-draft from her recurring config when creating a brand-new plan, or to leave an existing plan's lines untouched when you're just updating the amount.",
+        items: {
+          type: "object",
+          properties: {
+            kind: { type: "string", enum: ["bill", "debt", "vault", "spending"] },
+            refName: { type: "string", description: "Bill/debt/vault name, or a short label for a spending line" },
+            amount: { type: "number" },
+          },
+          required: ["kind", "refName", "amount"],
+        },
+      },
+    },
+    required: ["date", "expectedAmount"],
+  },
+  kind: "write",
+  describe: (input, data) => {
+    const dateStr = str(input.date);
+    const existing = data.paycheckPlans.plans.find((p) => p.date === dateStr);
+    const expectedAmount = num(input.expectedAmount);
+    const rawLines = Array.isArray(input.lines) ? (input.lines as Record<string, unknown>[]) : null;
+    const lines = rawLines
+      ? rawLines.map((r) => ({ kind: str(r.kind, "spending"), refName: str(r.refName), amount: Math.abs(num(r.amount)) }))
+      : existing
+        ? existing.lines.map((l) => ({ kind: l.kind, refName: l.refName, amount: l.amount }))
+        : suggestLinesFromConfig(data.budget.config, data.lifeQuarterly.money.debts, slotForPaycheckDate(dateStr)).map((l) => ({
+            kind: l.kind,
+            refName: l.refName,
+            amount: l.amount,
+          }));
+    return allocatePaycheckPreview(dateStr, expectedAmount, lines, Boolean(existing));
+  },
+  apply: (data, input, now) => {
+    const dateStr = str(input.date) || todayKey(now);
+    const expectedAmount = num(input.expectedAmount);
+    const existing = data.paycheckPlans.plans.find((p) => p.date === dateStr);
+    const rawLines = Array.isArray(input.lines) ? input.lines : null;
+
+    const lines = rawLines
+      ? resolveAllocationLines(rawLines, existing?.lines)
+      : existing
+        ? existing.lines
+        : suggestLinesFromConfig(data.budget.config, data.lifeQuarterly.money.debts, slotForPaycheckDate(dateStr));
+
+    const paycheckPlans = existing
+      ? updatePaycheckPlan(data.paycheckPlans, existing.id, (p) => ({ ...p, expectedAmount, lines }))
+      : addPaycheckPlan(data.paycheckPlans, createPaycheckPlan(dateStr, expectedAmount, lines, now));
+
+    const allocated = lines.reduce((s, l) => s + l.amount, 0);
+    const unalloc = expectedAmount - allocated;
+    const spending = lines.filter((l) => l.kind === "spending").reduce((s, l) => s + l.amount, 0);
+    return {
+      data: { ...data, paycheckPlans },
+      resultText: `Saved paycheck plan for ${dateStr}: ${formatMoney(expectedAmount)} - allocated ${formatMoney(allocated)} = ${formatMoney(unalloc)} unallocated. Safe to spend: ${formatMoney(spending)}.`,
+    };
+  },
+};
+
+const markPaycheckLinePaidTool: AssistantTool = {
+  name: "mark_paycheck_line_paid",
+  description:
+    "Check or uncheck one line of an existing paycheck plan as actually paid/transferred - use as she pays things through the pay period. Match the plan by its paycheck date and the line by a snippet of its bill/debt/vault/spending name.",
+  input_schema: {
+    type: "object",
+    properties: {
+      date: { type: "string", description: "YYYY-MM-DD - the paycheck plan's date" },
+      refNameMatch: { type: "string", description: "Text that appears in the line's name" },
+      done: { type: "boolean" },
+    },
+    required: ["date", "refNameMatch", "done"],
+  },
+  kind: "write",
+  describe: (input, data) => {
+    const dateStr = str(input.date);
+    const plan = data.paycheckPlans.plans.find((p) => p.date === dateStr);
+    if (!plan) return `No paycheck plan found for ${dateStr}.`;
+    const needle = str(input.refNameMatch).toLowerCase();
+    const line = plan.lines.find((l) => l.refName.toLowerCase().includes(needle));
+    if (!line) return `No line matching "${str(input.refNameMatch)}" in the ${dateStr} plan.`;
+    return `${input.done ? "Checking off" : "Unchecking"} "${line.refName}" (${formatMoney(line.amount)}) in the ${dateStr} paycheck plan.`;
+  },
+  apply: (data, input) => {
+    const dateStr = str(input.date);
+    const plan = data.paycheckPlans.plans.find((p) => p.date === dateStr);
+    if (!plan) return { data, resultText: `No paycheck plan found for ${dateStr}.` };
+    const needle = str(input.refNameMatch).toLowerCase();
+    const line = plan.lines.find((l) => l.refName.toLowerCase().includes(needle));
+    if (!line) return { data, resultText: `No line matching "${str(input.refNameMatch)}" in the ${dateStr} plan.` };
+    const done = Boolean(input.done);
+    const paycheckPlans = updatePaycheckPlan(data.paycheckPlans, plan.id, (p) => ({
+      ...p,
+      lines: p.lines.map((l) => (l.id === line.id ? { ...l, done } : l)),
+    }));
+    return {
+      data: { ...data, paycheckPlans },
+      resultText: `${done ? "Checked off" : "Unchecked"} "${line.refName}" in the ${dateStr} paycheck plan.`,
     };
   },
 };
@@ -1376,9 +1558,10 @@ function readSection(data: DashboardData, section: string, now: Date): unknown {
         .filter((i) => !i.resolvedDate)
         .map((i) => ({ who: i.who, what: i.what, askedDate: i.askedDate, followUpDate: i.followUpDate }));
     case "budget": {
-      // The real numbers she actually looks at (Money > Command Center) -
-      // not the separate legacy Accounts/Transactions ledger, which is
-      // kept underneath as personalLedger for completeness only.
+      // The real numbers she actually looks at (Money > Command Center,
+      // Paycheck Plan, Debts, Progress) - not the separate legacy
+      // Accounts/Transactions ledger, which is kept underneath as
+      // personalLedger for completeness only.
       const key = monthKey(now);
       const money = data.lifeQuarterly.money;
       const config = data.budget.config;
@@ -1391,6 +1574,21 @@ function readSection(data: DashboardData, section: string, now: Date): unknown {
       const doneStepIds = new Set(completedStepIdsFor(data.lifeQuarterly.paydayChecklist, periodKey));
 
       const monthTx = data.finance.transactions.filter((t) => t.date.slice(0, 7) === key);
+
+      const trend = monthlyTrendSeries(data.budget, money);
+      const netNow = trend[trend.length - 1];
+      const mostRecent = mostRecentPlan(data.paycheckPlans, now);
+      const nextPlan = nextUpcomingPlan(data.paycheckPlans, now);
+      const summarizePlan = (p: typeof mostRecent) =>
+        p && {
+          date: p.date,
+          expectedAmount: p.expectedAmount,
+          allocated: allocatedTotal(p),
+          unallocated: unallocatedTotal(p),
+          safeToSpend: safeToSpend(p),
+          byKind: allocationByKind(p),
+          lines: p.lines.map((l) => ({ kind: l.kind, refName: l.refName, amount: l.amount, done: l.done })),
+        };
 
       return {
         expectedMonthlyIncome: expectedMonthlyIncome(config),
@@ -1407,9 +1605,51 @@ function readSection(data: DashboardData, section: string, now: Date): unknown {
           pctUsed: s.pct,
         })),
         vaults: money.vaults.map((v) => ({ name: v.name, current: v.currentAmount, goal: v.goalAmount })),
-        debts: money.debts.map((d) => ({ name: d.name, currentBalance: d.currentBalance, startingBalance: d.startingBalance })),
+        // Survival number: the bare floor of essential bills + debt
+        // minimums she must cover each pay period to stay safe - not the
+        // full budget, just the non-negotiable part.
+        survivalNumber: {
+          monthly: survivalNumberMonthly(config, money.debts),
+          firstPaycheck: survivalNumberForSlot(config, money.debts, "first"),
+          secondPaycheck: survivalNumberForSlot(config, money.debts, "second"),
+        },
+        // Due-date radar: everything due before her next paycheck, with
+        // past-due and restricted accounts always pinned first regardless
+        // of date, so nothing slips from not-looking-again.
+        dueDateRadar: dueDateRadar(config, money.debts, now).map((r) => ({
+          name: r.name,
+          amount: r.amount,
+          date: r.date || null,
+          kind: r.kind,
+          status: r.status,
+          pinned: r.pinned,
+        })),
+        debts: money.debts.map((d) => ({
+          name: d.name,
+          currentBalance: d.currentBalance,
+          startingBalance: d.startingBalance,
+          interestRatePct: d.interestRatePct,
+          minPayment: d.minPayment,
+          dueDay: d.dueDay || null,
+          status: d.status,
+          pastDueAmount: d.pastDueAmount || null,
+          priority: d.priority,
+          monthlyInterestCost: interestCostPerMonth(d.currentBalance, d.interestRatePct),
+          payoffForecastAtCurrentMin: payoffForecast(d.currentBalance, d.interestRatePct, d.minPayment, now),
+        })),
+        // Both debt orders, side by side, so you can show her the math for
+        // each and let her choose rather than picking one for her.
+        debtOrder: {
+          snowballSmallestFirst: orderedDebts(money.debts, "snowball").map((d) => d.name),
+          avalancheHighestInterestFirst: orderedDebts(money.debts, "avalanche").map((d) => d.name),
+        },
         vaultTotal: buildingUp.vaultTotal,
         debtPaidOffTotal: buildingUp.debtPaidOff,
+        // Net position (vaults minus total debt) - the single truest
+        // measure of whether the plan is working, tracked over time.
+        netPositionNow: netNow?.netPosition ?? 0,
+        netPositionTrend: trend.slice(-6),
+        wins: data.budget.wins.slice(0, 15).map((w) => ({ date: w.date, kind: w.kind, name: w.name, amount: w.amount })),
         groceryMonthlyTarget: groceryBill?.monthlyAmount ?? 600,
         paydayChecklist: paydayAnchor
           ? {
@@ -1417,6 +1657,16 @@ function readSection(data: DashboardData, section: string, now: Date): unknown {
               steps: data.lifeQuarterly.paydayChecklist.steps.map((s) => ({ text: s.text, done: doneStepIds.has(s.id) })),
             }
           : { note: "No payday date set up yet." },
+        // The zero-based paycheck plan flow - her actual per-paycheck
+        // allocation ritual (~$2,996 on the 15th and 30th). Use
+        // allocate_paycheck to build or adjust one with her.
+        paycheckPlan: {
+          mostRecent: summarizePlan(mostRecent),
+          nextUpcoming: summarizePlan(nextPlan),
+          recentHistory: plansSorted(data.paycheckPlans)
+            .slice(0, 6)
+            .map((p) => ({ date: p.date, expectedAmount: p.expectedAmount, unallocated: unallocatedTotal(p) })),
+        },
         personalLedger: {
           totalBalance: data.finance.accounts.reduce((s, a) => s + a.balance, 0),
           monthIncome: monthTx.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0),
@@ -1587,6 +1837,8 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
   logBudgetExpenseTool,
   adjustVaultBalanceTool,
   payDownDebtTool,
+  allocatePaycheckTool,
+  markPaycheckLinePaidTool,
   checkPaydayStepTool,
   addWaitingOnTool,
   readDashboardSectionTool,

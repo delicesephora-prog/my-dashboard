@@ -73,6 +73,7 @@ import { TripsData } from "@/lib/trips";
 import { VisionData } from "@/lib/vision";
 import { MilestoneData } from "@/lib/milestones";
 import { RewardsData, evaluateRewardTriggers } from "@/lib/rewards";
+import { PaycheckPlanData } from "@/lib/paycheckplan";
 import { KnowledgeData } from "@/lib/knowledge";
 import KnowledgeView from "./work/knowledge/KnowledgeView";
 import CelebrationOverlay from "./CelebrationOverlay";
@@ -452,6 +453,11 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
 
   function updateRewards(updater: (r: RewardsData) => RewardsData) {
     setData((prev) => ({ ...prev, rewards: updater(prev.rewards) }));
+    scheduleSave();
+  }
+
+  function updatePaycheckPlans(updater: (p: PaycheckPlanData) => PaycheckPlanData) {
+    setData((prev) => ({ ...prev, paycheckPlans: updater(prev.paycheckPlans) }));
     scheduleSave();
   }
 
@@ -1055,6 +1061,8 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 onChangeFinance={updateFinance}
                 budget={data.budget}
                 onChangeBudget={updateBudget}
+                paycheckPlans={data.paycheckPlans}
+                onChangePaycheckPlans={updatePaycheckPlans}
                 milestones={data.milestones}
                 rewards={data.rewards}
                 onChangeRewards={updateRewards}
