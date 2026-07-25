@@ -116,9 +116,14 @@ export default function AssistantView({
       })[];
 
       if (toolUses.length === 0) {
-        if (result.stopReason === "max_tokens") {
+        // No text and no tool calls means nothing visible happened this
+        // turn - that must never pass silently, regardless of why (cut
+        // off by the token limit, or just an empty reply).
+        if (!textBlock) {
           setError(
-            "That was a lot to take in at once and her reply got cut off. Try asking again, maybe in a couple of smaller messages."
+            result.stopReason === "max_tokens"
+              ? "That was a lot to take in at once and her reply got cut off. Try asking again, maybe in a couple of smaller messages."
+              : "She didn't come back with anything that time - try sending that again."
           );
         }
         setLoading(false);
