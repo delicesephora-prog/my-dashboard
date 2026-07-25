@@ -1175,9 +1175,17 @@ const dailyThemeDayKeySchema = z.enum([
   "saturday",
 ]);
 
+// Uploaded photos are stored as resized data URIs directly in the JSONB
+// blob (there's no separate file storage in this app) - capped generously
+// enough for a real photo at the client-side resize/quality settings, but
+// bounded so one giant upload can't balloon the whole dashboard row.
+const DATA_URI_MAX = 400000;
+
 const dailyThemePromptSchema = z.object({
   id: z.string(),
-  text: z.string().max(300),
+  title: z.string().max(120),
+  description: z.string().max(600),
+  imageUrl: z.string().max(DATA_URI_MAX),
 });
 
 const dailyThemeImageSchema = z.object({
@@ -1187,17 +1195,23 @@ const dailyThemeImageSchema = z.object({
   photographerUrl: z.string().max(2000),
   sourceUrl: z.string().max(2000),
   fetchedAt: z.string(),
-  customUrl: z.string().max(2000),
+  customUrl: z.string().max(DATA_URI_MAX),
+});
+
+const accentImageSchema = z.object({
+  id: z.string(),
+  url: z.string().max(DATA_URI_MAX),
 });
 
 const dailyThemeSchema = z.object({
   dayKey: dailyThemeDayKeySchema,
   name: z.string().max(100),
   colorMood: z.string().max(100),
-  intro: z.string().max(500),
+  intro: z.string().max(1200),
   prompts: z.array(dailyThemePromptSchema).max(20),
   imageQuery: z.string().max(200),
   image: dailyThemeImageSchema,
+  accentImages: z.array(accentImageSchema).max(12),
 });
 
 const dailyThemeDataSchema = z.object({

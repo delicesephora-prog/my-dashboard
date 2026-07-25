@@ -1844,7 +1844,7 @@ function readSection(data: DashboardData, section: string, now: Date): unknown {
         name: theme.name,
         colorMood: theme.colorMood,
         intro: theme.intro,
-        prompts: theme.prompts.map((p) => ({ text: p.text, done: completed.includes(p.id) })),
+        prompts: theme.prompts.map((p) => ({ title: p.title, done: completed.includes(p.id) })),
       };
     }
     default:

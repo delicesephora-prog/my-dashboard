@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import localFont from "next/font/local";
 import { DailyTheme, DailyThemeImage } from "@/lib/dailytheme";
+import { resizeImageToDataUrl } from "@/lib/imageUpload";
 import CheckCircle from "./CheckCircle";
 
 // Same self-hosted pair the Welcome screen uses - the italic serif reads as
@@ -12,33 +13,7 @@ import CheckCircle from "./CheckCircle";
 const displaySerif = localFont({ src: "../app/fonts/Italiana-Regular.ttf", display: "swap" });
 const italicSerif = localFont({ src: "../app/fonts/Lora-Italic.ttf", display: "swap" });
 
-const MAX_UPLOAD_DIM = 900;
-
-function resizeImageToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Couldn't read that image"));
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error("Couldn't read that image"));
-      img.onload = () => {
-        const scale = Math.min(1, MAX_UPLOAD_DIM / Math.max(img.width, img.height));
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.max(1, Math.round(img.width * scale));
-        canvas.height = Math.max(1, Math.round(img.height * scale));
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          reject(new Error("Couldn't process that image"));
-          return;
-        }
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.78));
-      };
-      img.src = String(reader.result);
-    };
-    reader.readAsDataURL(file);
-  });
-}
+const ACCENT_ROTATIONS = ["-4deg", "3deg", "-2deg", "5deg", "-3deg", "2deg"];
 
 export default function DailyThemeScreen({
   theme,
@@ -50,7 +25,7 @@ export default function DailyThemeScreen({
 }: {
   theme: DailyTheme;
   completedPromptIds: string[];
-  onTogglePrompt: (promptId: string, text: string) => void;
+  onTogglePrompt: (promptId: string, promptTitle: string) => void;
   onDismiss: () => void;
   onEdit: () => void;
   onChangeImage: (updater: (img: DailyThemeImage) => DailyThemeImage) => void;
@@ -128,13 +103,16 @@ export default function DailyThemeScreen({
       }`}
       style={{ background: "var(--paper-bg)" }}
     >
-      <div className="relative h-[42vh] min-h-[260px] w-full shrink-0 overflow-hidden">
+      {/* Hero: full magazine-cover treatment - image fills the top of the
+          page, masthead sits directly on top of it with a scrim for
+          legibility, exactly like a cover title over a photo. */}
+      <div className="relative min-h-[64vh] w-full shrink-0 overflow-hidden">
         {displayImage ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={displayImage} alt="" className="h-full w-full object-cover" />
+          <img src={displayImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
         ) : (
           <div
-            className="h-full w-full"
+            className="absolute inset-0"
             style={{ background: "linear-gradient(160deg, #5B2333 0%, #7A3B4D 55%, #B08B4F 135%)" }}
           />
         )}
@@ -142,7 +120,7 @@ export default function DailyThemeScreen({
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(180deg, rgba(43,27,34,0.18) 0%, rgba(43,27,34,0.04) 42%, var(--paper-bg) 97%)",
+              "linear-gradient(180deg, rgba(20,10,14,0.35) 0%, rgba(20,10,14,0.08) 30%, rgba(20,10,14,0.55) 78%, rgba(20,10,14,0.82) 100%)",
           }}
         />
 
@@ -150,17 +128,16 @@ export default function DailyThemeScreen({
           <button
             type="button"
             onClick={onEdit}
-            className="rounded-full bg-black/25 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm"
+            className="rounded-full bg-black/30 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm"
           >
             Edit
           </button>
         </div>
-
-        <div className="absolute bottom-3 left-4 flex flex-wrap gap-2 pr-4">
+        <div className="safe-top absolute left-4 top-4 flex flex-wrap gap-2 pr-16">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="rounded-full bg-black/25 px-3 py-1.5 text-[10px] font-medium text-white backdrop-blur-sm"
+            className="rounded-full bg-black/30 px-3 py-1.5 text-[10px] font-medium text-white backdrop-blur-sm"
           >
             Add my photo
           </button>
@@ -169,7 +146,7 @@ export default function DailyThemeScreen({
               type="button"
               onClick={() => fetchImage(theme.imageQuery)}
               disabled={imageState === "loading"}
-              className="rounded-full bg-black/25 px-3 py-1.5 text-[10px] font-medium text-white backdrop-blur-sm disabled:opacity-50"
+              className="rounded-full bg-black/30 px-3 py-1.5 text-[10px] font-medium text-white backdrop-blur-sm disabled:opacity-50"
             >
               {imageState === "loading" ? "Finding..." : "Shuffle photo"}
             </button>
@@ -178,70 +155,124 @@ export default function DailyThemeScreen({
             <button
               type="button"
               onClick={handleRemoveCustom}
-              className="rounded-full bg-black/25 px-3 py-1.5 text-[10px] font-medium text-white backdrop-blur-sm"
+              className="rounded-full bg-black/30 px-3 py-1.5 text-[10px] font-medium text-white backdrop-blur-sm"
             >
-              Use suggested photo
+              Use suggested
             </button>
           )}
         </div>
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+
+        {/* Masthead, overlaid on the photo like a cover title. */}
+        <div className="absolute inset-x-0 bottom-0 px-7 pb-8 pt-16 text-center">
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.32em] text-gold">{theme.colorMood}</p>
+          <p className={`${italicSerif.className} text-[17px] italic text-white/85`} style={{ textShadow: "0 1px 8px rgba(0,0,0,0.35)" }}>
+            Today&rsquo;s theme
+          </p>
+          <h1
+            className={`${displaySerif.className} -mt-1 text-[44px] leading-[1.04] text-white`}
+            style={{ textShadow: "0 2px 16px rgba(0,0,0,0.45)" }}
+          >
+            {theme.name}
+          </h1>
+        </div>
       </div>
 
-      <div className="flex flex-1 flex-col items-center px-7 pb-10 pt-1 text-center">
-        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.32em] text-gold">{theme.colorMood}</p>
-        <p className={`${italicSerif.className} text-[18px] italic text-backdrop-muted`}>Today&rsquo;s theme</p>
-        <h1 className={`${displaySerif.className} -mt-1 text-[42px] leading-[1.05] text-backdrop-ink`}>
-          {theme.name}
-        </h1>
-        <div className="my-4 h-px w-10 bg-gradient-to-r from-transparent via-gold to-transparent" />
-        <p className={`${italicSerif.className} max-w-xs text-[15px] italic leading-[1.6] text-backdrop-muted`}>
+      {showCredit && (
+        <p className="px-7 pt-2 text-[10px] text-paper-faint">
+          Photo by{" "}
+          <a href={theme.image.photographerUrl} target="_blank" rel="noreferrer" className="underline">
+            {theme.image.photographer}
+          </a>{" "}
+          on{" "}
+          <a href={theme.image.sourceUrl} target="_blank" rel="noreferrer" className="underline">
+            Unsplash
+          </a>
+        </p>
+      )}
+
+      {/* Intro - a real paragraph, not a one-liner. */}
+      <div className="px-7 pb-2 pt-7">
+        <div className="mx-auto mb-4 h-px w-10 bg-gradient-to-r from-transparent via-gold to-transparent" />
+        <p className={`${italicSerif.className} mx-auto max-w-[320px] text-center text-[16px] italic leading-[1.75] text-backdrop-ink`}>
           {theme.intro}
         </p>
+      </div>
 
-        {theme.prompts.length > 0 && (
-          <div className="mt-8 flex w-full max-w-xs flex-col gap-2.5 text-left">
-            {theme.prompts.map((p) => {
-              const done = completedPromptIds.includes(p.id);
-              return (
-                <div
-                  key={p.id}
-                  className={`flex items-center gap-3 rounded-xl2 border px-3.5 py-3 transition ${
-                    done ? "border-gold-soft bg-paper-surface" : "border-paper-border/60 bg-paper-surface/60"
-                  }`}
-                >
+      {theme.accentImages.length > 0 && (
+        <div className="scroll-quiet flex gap-3 overflow-x-auto px-7 py-7">
+          {theme.accentImages.map((a, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={a.id}
+              src={a.url}
+              alt=""
+              className="h-24 w-20 shrink-0 rounded-lg object-cover shadow-paper"
+              style={{ transform: `rotate(${ACCENT_ROTATIONS[i % ACCENT_ROTATIONS.length]})` }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Prompts, as full editorial blocks - alternating image side. */}
+      <div className="flex flex-col gap-4 px-5 pb-8 pt-3">
+        {theme.prompts.map((p, i) => {
+          const done = completedPromptIds.includes(p.id);
+          const imageOnRight = i % 2 === 1;
+          return (
+            <div
+              key={p.id}
+              className={`flex items-stretch gap-3.5 rounded-xl2 border p-3.5 transition ${
+                done ? "border-gold-soft bg-paper-surface" : "border-paper-border/60 bg-paper-surface/85"
+              } ${imageOnRight ? "flex-row-reverse" : "flex-row"}`}
+            >
+              <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-paper-surface2 sm:h-32 sm:w-32">
+                {p.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.imageUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div
+                    className="h-full w-full"
+                    style={{
+                      background:
+                        i % 2 === 0
+                          ? "linear-gradient(150deg, #EEE0E3 0%, #E4D3B4 100%)"
+                          : "linear-gradient(150deg, #E4D3B4 0%, #EEE0E3 100%)",
+                    }}
+                  />
+                )}
+              </div>
+              <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+                <div className="flex items-start gap-2.5">
                   <CheckCircle
                     done={done}
-                    onToggle={() => onTogglePrompt(p.id, p.text)}
+                    onToggle={() => onTogglePrompt(p.id, p.title)}
                     accentClass="bg-gold"
                     size="sm"
                     ariaLabel={done ? "Mark not done" : "Mark done"}
                   />
-                  <span className={`text-[13.5px] leading-snug ${done ? "text-paper-muted line-through" : "text-paper-ink"}`}>
-                    {p.text}
-                  </span>
+                  <p
+                    className={`${displaySerif.className} text-[19px] leading-[1.15] ${
+                      done ? "text-paper-muted line-through" : "text-paper-ink"
+                    }`}
+                  >
+                    {p.title}
+                  </p>
                 </div>
-              );
-            })}
-          </div>
-        )}
+                {p.description && (
+                  <p className="pl-[30px] text-[12.5px] leading-relaxed text-paper-muted">{p.description}</p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
-        {showCredit && (
-          <p className="mt-6 text-[10px] text-paper-faint">
-            Photo by{" "}
-            <a href={theme.image.photographerUrl} target="_blank" rel="noreferrer" className="underline">
-              {theme.image.photographer}
-            </a>{" "}
-            on{" "}
-            <a href={theme.image.sourceUrl} target="_blank" rel="noreferrer" className="underline">
-              Unsplash
-            </a>
-          </p>
-        )}
-
+      <div className="flex justify-center pb-10">
         <button
           type="button"
           onClick={handleSkip}
-          className="safe-bottom mt-10 text-[11px] uppercase tracking-[0.2em] text-paper-faint underline underline-offset-4"
+          className="safe-bottom text-[11px] uppercase tracking-[0.2em] text-paper-faint underline underline-offset-4"
         >
           Continue to Front Page
         </button>
