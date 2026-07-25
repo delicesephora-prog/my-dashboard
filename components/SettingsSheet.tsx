@@ -14,6 +14,8 @@ import { BackupMeta, formatBackupSize } from "@/lib/backups";
 import { TAB_LABELS, TabUsageData, unhideTab } from "@/lib/systemcheck";
 import { AppearanceData, THEME_MODES, THEME_MODE_LABELS, ThemeMode } from "@/lib/appearance";
 import { AmbianceData, AMBIANCE_TRACKS, AMBIANCE_TRACK_LABELS } from "@/lib/ambiance";
+import { DailyThemeData, dayKeyForDate } from "@/lib/dailytheme";
+import DailyThemeEditor from "./DailyThemeEditor";
 
 type ImportState =
   | { step: "idle" }
@@ -45,6 +47,7 @@ export default function SettingsSheet({
   onChangeTabUsage,
   onChangeAppearance,
   onChangeAmbiance,
+  onChangeDailyTheme,
   onClose,
 }: {
   data: DashboardData;
@@ -55,10 +58,12 @@ export default function SettingsSheet({
   onChangeTabUsage: (updater: (t: TabUsageData) => TabUsageData) => void;
   onChangeAppearance: (updater: (a: AppearanceData) => AppearanceData) => void;
   onChangeAmbiance: (updater: (a: AmbianceData) => AmbianceData) => void;
+  onChangeDailyTheme: (updater: (d: DailyThemeData) => DailyThemeData) => void;
   onClose: () => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importState, setImportState] = useState<ImportState>({ step: "idle" });
+  const [dailyThemeEditorOpen, setDailyThemeEditorOpen] = useState(false);
 
   const [backups, setBackups] = useState<BackupMeta[] | null>(null);
   const [backupsError, setBackupsError] = useState<string | null>(null);
@@ -440,6 +445,29 @@ export default function SettingsSheet({
           </div>
 
           <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
+            <div className="mb-1.5 flex items-center justify-between">
+              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+                Daily Theme
+              </p>
+              <ToggleSwitch
+                checked={data.dailyTheme.enabled}
+                onChange={(v) => onChangeDailyTheme((d) => ({ ...d, enabled: v }))}
+              />
+            </div>
+            <p className="mb-3 text-[13px] leading-relaxed text-paper-muted">
+              A themed page for each day of the week, shown once before the Front Page. Turn it
+              off and it&rsquo;s skipped entirely.
+            </p>
+            <button
+              type="button"
+              onClick={() => setDailyThemeEditorOpen(true)}
+              className="rounded-full border border-paper-border bg-paper-surface2 px-3.5 py-1.5 text-[12.5px] font-medium text-paper-ink"
+            >
+              Edit themes and prompts
+            </button>
+          </div>
+
+          <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
             <p className="mb-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
               Ambiance
             </p>
@@ -670,6 +698,14 @@ export default function SettingsSheet({
           </div>
         </div>
       </div>
+      {dailyThemeEditorOpen && (
+        <DailyThemeEditor
+          data={data.dailyTheme}
+          initialDayKey={dayKeyForDate(new Date())}
+          onChange={onChangeDailyTheme}
+          onClose={() => setDailyThemeEditorOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -44,6 +44,7 @@ import { weekKeyFor } from "./week";
 import { dailyProgress, weeklyProgress, monthlyProgress, weeklyStreak, isOverdueForWarning } from "./glowup";
 import { computeMastery, dueCardsAcrossSubjects, unaskedQuestions, MASTERY_LABELS } from "./knowledge";
 import { todayRhythm, anchorsForDate, RHYTHM_DAY_LABELS, dayKeyForDate } from "./rhythm";
+import { themeForDate, completedPromptIdsFor } from "./dailytheme";
 import {
   survivalNumberForSlot,
   survivalNumberMonthly,
@@ -1528,6 +1529,7 @@ const READABLE_SECTIONS = [
   "knowledge",
   "rhythm",
   "frontPage",
+  "dailyTheme",
 ] as const;
 
 function readSection(data: DashboardData, section: string, now: Date): unknown {
@@ -1831,6 +1833,18 @@ function readSection(data: DashboardData, section: string, now: Date): unknown {
         lifeScore: { score: score.score, label: score.label },
         habitsAtRisk: atRisk.map((r) => `${r.habit.label} (${r.doneCount}/${r.habit.weeklyGoal})`),
         thisWeek: recap,
+      };
+    }
+    case "dailyTheme": {
+      if (!data.dailyTheme.enabled) return { enabled: false };
+      const theme = themeForDate(data.dailyTheme, now);
+      const completed = completedPromptIdsFor(data.dailyTheme, now);
+      return {
+        enabled: true,
+        name: theme.name,
+        colorMood: theme.colorMood,
+        intro: theme.intro,
+        prompts: theme.prompts.map((p) => ({ text: p.text, done: completed.includes(p.id) })),
       };
     }
     default:

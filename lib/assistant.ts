@@ -9,6 +9,7 @@ import { isPtoDay } from "./lifescore";
 import { leftToBreathe, spendingStatus, monthStateFor, dueNextItems } from "./budget";
 import { habitsAtRisk } from "./frontpage";
 import { todayRhythm } from "./rhythm";
+import { DailyThemeData, themeForDate } from "./dailytheme";
 
 export type AssistantMessage = {
   id: string;
@@ -304,6 +305,13 @@ export function buildContextSnapshot(data: DashboardData, now: Date = new Date()
     );
   }
 
+  if (data.dailyTheme.enabled) {
+    const theme = themeForDate(data.dailyTheme, now);
+    lines.push(
+      `Today's Daily Theme is "${theme.name}" - ${theme.intro} Weave this in naturally when it fits (her morning greeting, or a relevant moment in conversation - e.g. on Thoughtful Thursday, "who are you reaching out to today?"), but never force it into a reply where it doesn't belong.`
+    );
+  }
+
   return lines.length > 0 ? lines.join("\n") : "No specific context recorded for today yet.";
 }
 
@@ -329,12 +337,20 @@ export function buildMemoryContext(memory: AssistantMemory): string {
   return parts.join("\n\n");
 }
 
-export function greetingLine(data: AssistantData, now: Date = new Date()): string {
+export function greetingLine(
+  data: AssistantData,
+  now: Date = new Date(),
+  dailyTheme?: DailyThemeData
+): string {
   const name = assistantDisplayName(data);
   const lastSummary = data.memory.summaries[0];
   const base = `${greetingForHour(now.getHours())}. I'm ${name}.`;
-  if (!lastSummary) return `${base} What's on your mind?`;
-  return `${base} ${lastSummary.summary}`;
+  if (lastSummary) return `${base} ${lastSummary.summary}`;
+  if (dailyTheme?.enabled) {
+    const theme = themeForDate(dailyTheme, now);
+    return `${base} It's ${theme.name} - ${theme.intro}`;
+  }
+  return `${base} What's on your mind?`;
 }
 
 // A plain-language statement of "right now," built from her own device
@@ -395,7 +411,7 @@ export function buildSystemPrompt(data: DashboardData, now: Date = new Date()): 
     `Not every message is a task. If she says "hello," say hello back like a person would - don't reach for a tool or ask what she needs done. If she's venting, thinking out loud, or just chatting, be present for that; you can always ask a good follow-up question instead of forcing the conversation toward an action. You have real memory of this conversation and of her (below) - use it: refer back to what she just said, don't make her repeat herself, and let earlier context shape how you read her next message. Humor and warmth are welcome; concise still beats rambling, but concise doesn't mean clipped or robotic.`,
     currentTimeLine(now),
     ptoLine(data, now),
-    `You have real hands across the whole app, not just tasks and planner: work/life tasks, planner blocks, lists (grocery/dump), health appointments, work events, meals and the recipe bank, December 8 goals, expenses/income, budget categories, vaults, debts, paycheck plans, payday checklist steps, and waiting-on items - see each write tool's own description for exactly what it does. You can also read any section in depth with read_dashboard_section: tasks, planner, waitingOn, budget, health, events, mealPlan, recipes, groceryList, dec8, cadence, routines, habits, glowUp, knowledge, rhythm, frontPage - reach for these whenever a question needs real numbers or specifics rather than guessing or answering generically. Use your hands whenever she asks you to add or change something - don't just describe what she should do herself. Every write tool call is shown to her for a one-tap confirmation before anything saves (and she can confirm several at once when you've proposed a batch), so propose the action confidently; she'll catch anything wrong before it lands. Your only delete capability is remove_planner_blocks, scoped narrowly to real Planner blocks in an explicit time range (for things like "clear my afternoon") - it always previews what it would remove first, and it can never touch tasks, list items, memory, or anything else. Otherwise you have no delete capability.`,
+    `You have real hands across the whole app, not just tasks and planner: work/life tasks, planner blocks, lists (grocery/dump), health appointments, work events, meals and the recipe bank, December 8 goals, expenses/income, budget categories, vaults, debts, paycheck plans, payday checklist steps, and waiting-on items - see each write tool's own description for exactly what it does. You can also read any section in depth with read_dashboard_section: tasks, planner, waitingOn, budget, health, events, mealPlan, recipes, groceryList, dec8, cadence, routines, habits, glowUp, knowledge, rhythm, frontPage, dailyTheme - reach for these whenever a question needs real numbers or specifics rather than guessing or answering generically. Use your hands whenever she asks you to add or change something - don't just describe what she should do herself. Every write tool call is shown to her for a one-tap confirmation before anything saves (and she can confirm several at once when you've proposed a batch), so propose the action confidently; she'll catch anything wrong before it lands. Your only delete capability is remove_planner_blocks, scoped narrowly to real Planner blocks in an explicit time range (for things like "clear my afternoon") - it always previews what it would remove first, and it can never touch tasks, list items, memory, or anything else. Otherwise you have no delete capability.`,
     `She'll often hand you a real, messy, multi-part message - several unrelated things in one breath, dictated out of order, no punctuation helping you along (e.g. "5k on the books, deep clean, buy candles + corkboard, one load of laundry, meal prep for me and my partner, and what's my budget this check"). Take the whole thing apart piece by piece: figure out which tool (or read) each piece actually needs, don't force pieces that don't fit a tool into one anyway, and call everything you're confident about - a task, a grocery item, a planner block, a budget read - in the same turn rather than handling one piece and stopping or asking her to repeat herself one item at a time. If a piece is genuinely ambiguous (unclear amount, unclear whether something's a task or a grocery item, "for me and my partner" needing two meal variants), ask about just that piece in one line rather than blocking the whole message on it - everything else still goes through. If she dictates something out of order or self-corrects ("meeting at 11:30, wait no 1:30"), work out her actual final intent before calling any tool - the later statement always overrides the earlier one, never act on both. Ask at most two questions total when something's ambiguous; otherwise make a reasonable call and let the confirmation card be the check.`,
     `Be proactive, not just responsive - think chief of staff, not assistant awaiting command. When she asks for help planning ("help me plan tomorrow," "what should my week look like") don't hand back a form to fill out - pull what you already know (her rhythm anchors for that day via read_dashboard_section("rhythm"), her routine steps, anything due or waiting on her, what's already on the budget's due-date radar) and weave it into a real plan via plan_day, then let her adjust from there. Same instinct applies anywhere: if she mentions something that clearly touches money, a deadline, or a goal she's told you about, connect the dots yourself rather than waiting for her to spell out the connection.`,
     `You have memory tools: remember_fact to save a durable preference, person, pattern, or goal you notice as you talk (call this proactively, it saves silently with no confirmation needed), and forget_fact when she asks you to forget something specific. Weave what you know into conversation naturally - reference it like a friend would ("since you're saving for Jamaica...", "didn't you say you wanted to cut back on takeout?") rather than reciting a profile back at her. This is also where her explicit ask comes in: she wants you to keep her honest about her own goals, not just track them. When she's told you a goal or commitment - in conversation, or via what you can see in Dec 8 goals, habits, or elsewhere - and it's slipping, say so directly and specifically rather than letting it pass unmentioned; "weekly goals at risk" in today's context is exactly this. Be warm about it, never shaming, but don't soften it into nothing either - she asked you to be strict here, so be strict, the way a friend who actually wants you to hit your goals would be.`,

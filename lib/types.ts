@@ -23,6 +23,7 @@ import { TextAlertsData, emptyTextAlertsData, normalizeTextAlertsData } from "./
 import { PlannerData, emptyPlannerData, normalizePlannerData } from "./planner";
 import { HomeZonesData, emptyHomeZonesData, normalizeHomeZonesData } from "./home";
 import { WelcomeData, emptyWelcomeData, normalizeWelcomeData } from "./welcome";
+import { DailyThemeData, defaultDailyThemeData, normalizeDailyThemeData } from "./dailytheme";
 import { WaitingOnData, emptyWaitingOnData, normalizeWaitingOnData } from "./waitingon";
 import { VendorsData, emptyVendorsData, normalizeVendorsData } from "./vendors";
 import { WorkShutdownData, emptyWorkShutdownData, normalizeWorkShutdownData } from "./workshutdown";
@@ -1016,6 +1017,7 @@ export type DashboardData = {
   rewards: RewardsData;
   recipes: RecipeBankData;
   paycheckPlans: PaycheckPlanData;
+  dailyTheme: DailyThemeData;
 };
 
 export function emptyWorld(): WorldData {
@@ -1087,6 +1089,7 @@ export function defaultDashboardData(): DashboardData {
     rewards: emptyRewardsData(),
     recipes: defaultRecipeBankData(),
     paycheckPlans: emptyPaycheckPlanData(),
+    dailyTheme: defaultDailyThemeData(),
   };
 }
 
@@ -1244,6 +1247,7 @@ export function normalizeDashboardData(
     // saved recipes always win, even if she deletes every seed recipe.
     recipes: data.recipes === undefined ? defaultRecipeBankData() : normalizeRecipeBankData(data.recipes),
     paycheckPlans: normalizePaycheckPlanData(data.paycheckPlans),
+    dailyTheme: normalizeDailyThemeData(data.dailyTheme),
   };
 
   // One-time additive link: makes sure the vaults/debt this feature depends

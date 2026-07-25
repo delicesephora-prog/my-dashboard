@@ -345,7 +345,7 @@ export default function AssistantView({
         onSend={handleSend}
         loading={loading}
         placeholder={`Ask ${name} anything…`}
-        emptyState={greetingLine(assistant)}
+        emptyState={greetingLine(assistant, new Date(), data.dailyTheme)}
         accentClass="bg-life"
       />
 

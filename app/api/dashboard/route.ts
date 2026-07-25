@@ -1165,6 +1165,57 @@ const recipeBankDataSchema = z.object({
   recipes: z.array(recipeSchema).max(500),
 });
 
+const dailyThemeDayKeySchema = z.enum([
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+]);
+
+const dailyThemePromptSchema = z.object({
+  id: z.string(),
+  text: z.string().max(300),
+});
+
+const dailyThemeImageSchema = z.object({
+  url: z.string().max(2000),
+  thumbUrl: z.string().max(2000),
+  photographer: z.string().max(200),
+  photographerUrl: z.string().max(2000),
+  sourceUrl: z.string().max(2000),
+  fetchedAt: z.string(),
+  customUrl: z.string().max(2000),
+});
+
+const dailyThemeSchema = z.object({
+  dayKey: dailyThemeDayKeySchema,
+  name: z.string().max(100),
+  colorMood: z.string().max(100),
+  intro: z.string().max(500),
+  prompts: z.array(dailyThemePromptSchema).max(20),
+  imageQuery: z.string().max(200),
+  image: dailyThemeImageSchema,
+});
+
+const dailyThemeDataSchema = z.object({
+  enabled: z.boolean(),
+  themes: z.object({
+    sunday: dailyThemeSchema,
+    monday: dailyThemeSchema,
+    tuesday: dailyThemeSchema,
+    wednesday: dailyThemeSchema,
+    thursday: dailyThemeSchema,
+    friday: dailyThemeSchema,
+    saturday: dailyThemeSchema,
+  }),
+  completions: z.record(z.string(), z.array(z.string()).max(50)),
+  lastShownKey: z.string(),
+  seedVersion: z.number().int(),
+});
+
 const allocationLineSchema = z.object({
   id: z.string(),
   kind: z.enum(["bill", "debt", "vault", "spending"]),
@@ -1555,6 +1606,7 @@ const dashboardSchema = z.object({
   rewards: rewardsDataSchema,
   recipes: recipeBankDataSchema,
   paycheckPlans: paycheckPlanDataSchema,
+  dailyTheme: dailyThemeDataSchema,
 });
 
 export async function GET() {

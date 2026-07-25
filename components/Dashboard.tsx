@@ -15,6 +15,7 @@ import {
   WorldData,
   YearData,
   quarterDataFor,
+  setHabitCompletion,
   weekDataFor,
 } from "@/lib/types";
 import { RoutineKey, RoutinesData } from "@/lib/routines";
@@ -30,6 +31,18 @@ import { HomeZonesData } from "@/lib/home";
 import { TodayFocusItem } from "@/lib/frontpage";
 import { WelcomeData, shouldShowWelcome, markWelcomeShown } from "@/lib/welcome";
 import WelcomeScreen from "./WelcomeScreen";
+import {
+  DailyThemeData,
+  DailyThemeDayKey,
+  shouldShowDailyTheme,
+  markDailyThemeShown,
+  themeForDate,
+  completedPromptIdsFor,
+  togglePromptCompletion,
+  dayKeyForDate,
+} from "@/lib/dailytheme";
+import DailyThemeScreen from "./DailyThemeScreen";
+import DailyThemeEditor from "./DailyThemeEditor";
 import { VendorsData } from "@/lib/vendors";
 import { WorkShutdownData } from "@/lib/workshutdown";
 import { MeetingOpsData } from "@/lib/meetingops";
@@ -181,6 +194,8 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   const [focusOpen, setFocusOpen] = useState(false);
   const [celebration, setCelebration] = useState<Celebration | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [showDailyTheme, setShowDailyTheme] = useState(false);
+  const [dailyThemeEditorDay, setDailyThemeEditorDay] = useState<DailyThemeDayKey | null>(null);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestData = useRef(data);
@@ -208,6 +223,9 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   useEffect(() => {
     if (shouldShowWelcome(initialData.welcome, new Date())) {
       setShowWelcome(true);
+    }
+    if (shouldShowDailyTheme(initialData.dailyTheme, new Date())) {
+      setShowDailyTheme(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -469,6 +487,46 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   function dismissWelcome() {
     updateWelcome((w) => markWelcomeShown(w, new Date()));
     setShowWelcome(false);
+  }
+
+  function updateDailyTheme(updater: (d: DailyThemeData) => DailyThemeData) {
+    setData((prev) => ({ ...prev, dailyTheme: updater(prev.dailyTheme) }));
+    scheduleSave();
+  }
+
+  function dismissDailyTheme() {
+    updateDailyTheme((d) => markDailyThemeShown(d, new Date()));
+    setShowDailyTheme(false);
+  }
+
+  // Fuzzy soft-link, same rule as findLinkedVault/findLinkedDebt in
+  // CommandCenter - a prompt like "Reach out to someone I love" only needs
+  // to roughly match a habit label ("Reach out to family") for a check
+  // here to also check off today's habit cell, and a rename on either
+  // side doesn't silently break the link.
+  function findLinkedHabitByPrompt(habits: HabitsData, promptText: string) {
+    const needle = promptText.trim().toLowerCase();
+    if (!needle) return undefined;
+    return (
+      habits.habits.find((h) => h.label.trim().toLowerCase() === needle) ??
+      habits.habits.find(
+        (h) => h.label.trim().toLowerCase().includes(needle) || needle.includes(h.label.trim().toLowerCase())
+      )
+    );
+  }
+
+  function handleToggleDailyThemePrompt(promptId: string, promptText: string) {
+    const now = new Date();
+    const wasCompleted = completedPromptIdsFor(data.dailyTheme, now).includes(promptId);
+    const nowCompleted = !wasCompleted;
+    updateDailyTheme((d) => togglePromptCompletion(d, now, promptId));
+
+    const linkedHabit = findLinkedHabitByPrompt(data.habits, promptText);
+    if (linkedHabit) {
+      const habitId = linkedHabit.id;
+      const todayStorageIndex = now.getDay() === 0 ? 6 : now.getDay() - 1;
+      updateHabits((h) => setHabitCompletion(h, weekKeyFor(now), habitId, todayStorageIndex, nowCompleted));
+    }
   }
 
   function updateVendors(updater: (v: VendorsData) => VendorsData) {
@@ -782,6 +840,35 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-paper-bg">
       {showWelcome && <WelcomeScreen onDone={dismissWelcome} />}
+      {!showWelcome && showDailyTheme && (
+        <DailyThemeScreen
+          theme={themeForDate(data.dailyTheme, new Date())}
+          completedPromptIds={completedPromptIdsFor(data.dailyTheme, new Date())}
+          onTogglePrompt={handleToggleDailyThemePrompt}
+          onDismiss={dismissDailyTheme}
+          onEdit={() => setDailyThemeEditorDay(dayKeyForDate(new Date()))}
+          onChangeImage={(updater) =>
+            updateDailyTheme((d) => ({
+              ...d,
+              themes: {
+                ...d.themes,
+                [dayKeyForDate(new Date())]: {
+                  ...d.themes[dayKeyForDate(new Date())],
+                  image: updater(d.themes[dayKeyForDate(new Date())].image),
+                },
+              },
+            }))
+          }
+        />
+      )}
+      {dailyThemeEditorDay && (
+        <DailyThemeEditor
+          data={data.dailyTheme}
+          initialDayKey={dailyThemeEditorDay}
+          onChange={updateDailyTheme}
+          onClose={() => setDailyThemeEditorDay(null)}
+        />
+      )}
       <header className="safe-top px-5 pb-2 pt-2">
         <div className="flex items-center justify-between gap-2">
           <Monogram />
@@ -1179,6 +1266,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           onChangeTabUsage={updateTabUsage}
           onChangeAppearance={updateAppearance}
           onChangeAmbiance={updateAmbiance}
+          onChangeDailyTheme={updateDailyTheme}
           onClose={() => setSettingsOpen(false)}
         />
       )}
