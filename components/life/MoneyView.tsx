@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { pingCher } from "@/lib/cher";
 import { Debt, LifeQuarterly, MoneyData } from "@/lib/types";
 import { PaydayChecklistData } from "@/lib/payday";
 import { Account, Budget, FinanceData, Transaction } from "@/lib/finance";
@@ -81,6 +82,10 @@ export default function MoneyView({
   onCelebrate: (tier: CelebrationTier, message: string) => void;
 }) {
   const [tab, setTab] = useState<Tab>("paycheck");
+
+  useEffect(() => {
+    pingCher("tab-money");
+  }, []);
 
   function updateMoney(updater: (m: MoneyData) => MoneyData) {
     onChange((lq) => ({ ...lq, money: updater(lq.money) }));

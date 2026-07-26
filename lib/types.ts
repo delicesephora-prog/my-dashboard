@@ -25,6 +25,7 @@ import { HomeZonesData, emptyHomeZonesData, normalizeHomeZonesData } from "./hom
 import { WelcomeData, emptyWelcomeData, normalizeWelcomeData } from "./welcome";
 import { DailyThemeData, defaultDailyThemeData, normalizeDailyThemeData } from "./dailytheme";
 import { MealCalendarData, defaultMealCalendarData, normalizeMealCalendarData } from "./mealcalendar";
+import { CherData, defaultCherData, normalizeCherData } from "./cher";
 import { WaitingOnData, emptyWaitingOnData, normalizeWaitingOnData } from "./waitingon";
 import { VendorsData, emptyVendorsData, normalizeVendorsData } from "./vendors";
 import { WorkShutdownData, emptyWorkShutdownData, normalizeWorkShutdownData } from "./workshutdown";
@@ -1020,6 +1021,7 @@ export type DashboardData = {
   paycheckPlans: PaycheckPlanData;
   dailyTheme: DailyThemeData;
   mealCalendar: MealCalendarData;
+  cher: CherData;
 };
 
 export function emptyWorld(): WorldData {
@@ -1093,6 +1095,7 @@ export function defaultDashboardData(): DashboardData {
     paycheckPlans: emptyPaycheckPlanData(),
     dailyTheme: defaultDailyThemeData(),
     mealCalendar: defaultMealCalendarData(),
+    cher: defaultCherData(),
   };
 }
 
@@ -1252,6 +1255,7 @@ export function normalizeDashboardData(
     paycheckPlans: normalizePaycheckPlanData(data.paycheckPlans),
     dailyTheme: normalizeDailyThemeData(data.dailyTheme),
     mealCalendar: normalizeMealCalendarData(data.mealCalendar),
+    cher: normalizeCherData(data.cher),
   };
 
   // One-time additive link: makes sure the vaults/debt this feature depends

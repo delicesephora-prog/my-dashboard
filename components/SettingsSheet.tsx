@@ -15,7 +15,15 @@ import { TAB_LABELS, TabUsageData, unhideTab } from "@/lib/systemcheck";
 import { AppearanceData, THEME_MODES, THEME_MODE_LABELS, ThemeMode } from "@/lib/appearance";
 import { AmbianceData, AMBIANCE_TRACKS, AMBIANCE_TRACK_LABELS } from "@/lib/ambiance";
 import { DailyThemeData, dayKeyForDate } from "@/lib/dailytheme";
+import { CherData, CherFrequency } from "@/lib/cher";
 import DailyThemeEditor from "./DailyThemeEditor";
+
+const CHER_FREQUENCIES: CherFrequency[] = ["full", "quiet", "off"];
+const CHER_FREQUENCY_LABELS: Record<CherFrequency, string> = {
+  full: "Full - greetings, toasts, and pop-ins",
+  quiet: "Quiet - just the greeting, no toasts",
+  off: "Off - plain and unvoiced",
+};
 
 type ImportState =
   | { step: "idle" }
@@ -48,6 +56,7 @@ export default function SettingsSheet({
   onChangeAppearance,
   onChangeAmbiance,
   onChangeDailyTheme,
+  onChangeCher,
   onClose,
 }: {
   data: DashboardData;
@@ -59,6 +68,7 @@ export default function SettingsSheet({
   onChangeAppearance: (updater: (a: AppearanceData) => AppearanceData) => void;
   onChangeAmbiance: (updater: (a: AmbianceData) => AmbianceData) => void;
   onChangeDailyTheme: (updater: (d: DailyThemeData) => DailyThemeData) => void;
+  onChangeCher: (updater: (c: CherData) => CherData) => void;
   onClose: () => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -465,6 +475,33 @@ export default function SettingsSheet({
             >
               Edit themes and prompts
             </button>
+          </div>
+
+          <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
+            <p className="mb-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+              Cher
+            </p>
+            <p className="mb-3 text-[13px] leading-relaxed text-paper-muted">
+              How much personality Cher brings - her greeting, action toasts, and tab pop-ins. This
+              never affects the Daily Theme/Dash checklist itself, just her chatter around it.
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {CHER_FREQUENCIES.map((freq) => (
+                <button
+                  key={freq}
+                  type="button"
+                  onClick={() => onChangeCher((c) => ({ ...c, frequency: freq }))}
+                  className={`flex items-center justify-between rounded-lg border px-3 py-2.5 text-left text-[13px] transition ${
+                    data.cher.frequency === freq
+                      ? "border-work bg-work/10 font-medium text-work"
+                      : "border-paper-border text-paper-ink"
+                  }`}
+                >
+                  {CHER_FREQUENCY_LABELS[freq]}
+                  {data.cher.frequency === freq && <span className="text-[11px]">✓</span>}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">

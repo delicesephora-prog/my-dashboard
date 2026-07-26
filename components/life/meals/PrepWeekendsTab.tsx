@@ -1,17 +1,26 @@
 "use client";
 
 import { MealCalendarData, MealCalendarMonth, togglePrepTask } from "@/lib/mealcalendar";
+import { PREP_ALL_DONE_POOL, pickLine } from "@/lib/cher";
 import CheckCircle from "@/components/CheckCircle";
 
 export default function PrepWeekendsTab({
   month,
   monthData,
   onChange,
+  onCherToast,
 }: {
   month: string;
   monthData: MealCalendarMonth;
   onChange: (updater: (m: MealCalendarData) => MealCalendarData) => void;
+  onCherToast: (contextKey: string, message: string) => void;
 }) {
+  function handleToggleTask(weekendId: string, taskId: string, wasDone: boolean, doneCount: number, total: number) {
+    onChange((d) => togglePrepTask(d, month, weekendId, taskId));
+    if (!wasDone && doneCount + 1 === total) {
+      onCherToast("prep-all-done", pickLine(PREP_ALL_DONE_POOL).text);
+    }
+  }
   if (monthData.prepWeekends.length === 0) {
     return (
       <p className="py-8 text-center font-serif text-[0.95rem] italic text-paper-muted">
@@ -47,7 +56,7 @@ export default function PrepWeekendsTab({
                 <div key={t.id} className="flex items-start gap-2.5">
                   <CheckCircle
                     done={t.done}
-                    onToggle={() => onChange((d) => togglePrepTask(d, month, w.id, t.id))}
+                    onToggle={() => handleToggleTask(w.id, t.id, t.done, doneCount, w.tasks.length)}
                     accentClass="bg-life"
                     size="sm"
                     ariaLabel={t.done ? "Mark task not done" : "Mark task done"}

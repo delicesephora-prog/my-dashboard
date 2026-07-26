@@ -7,6 +7,7 @@ import {
   BucketListData,
   DailyReviewData,
   DashboardData,
+  Habit,
   HabitsData,
   LifeQuarterly,
   LifeWeekly,
@@ -14,6 +15,7 @@ import {
   WorkOps,
   WorldData,
   YearData,
+  habitCompletionsFor,
   quarterDataFor,
   setHabitCompletion,
   weekDataFor,
@@ -28,14 +30,21 @@ import { GlowUpData } from "@/lib/glowup";
 import { TextAlertsData } from "@/lib/textalerts";
 import { PlannerData } from "@/lib/planner";
 import { HomeZonesData } from "@/lib/home";
-import { TodayFocusItem } from "@/lib/frontpage";
+import {
+  ChecklistFocusItem,
+  TodayFocusItem,
+  habitsAtRisk,
+  todayChecklistFocusTasks,
+  todayHabitProgress,
+} from "@/lib/frontpage";
 import { WelcomeData, shouldShowWelcome, markWelcomeShown } from "@/lib/welcome";
 import WelcomeScreen from "./WelcomeScreen";
 import {
   DailyThemeData,
   DailyThemeDayKey,
   shouldShowDailyTheme,
-  markDailyThemeShown,
+  markDailyThemeSkipped,
+  markDailyThemeCleared,
   themeForDate,
   completedPromptIdsFor,
   togglePromptCompletion,
@@ -77,9 +86,32 @@ import { Celebration, CelebrationTier } from "@/lib/celebration";
 import { QuestData } from "@/lib/quest";
 import { MemosData } from "@/lib/memos";
 import { HealthData } from "@/lib/health";
-import { MealCalendarData } from "@/lib/mealcalendar";
-import { FinanceData } from "@/lib/finance";
-import { BudgetData } from "@/lib/budget";
+import {
+  ChecklistPrepTask,
+  MealCalendarData,
+  dinnerForDate,
+  monthKeyForDate,
+  prepTasksDueForDate,
+  togglePrepTask,
+} from "@/lib/mealcalendar";
+import {
+  CherData,
+  TASK_CHECKED_POOL,
+  getCherGreeting,
+  markCherToastShown,
+  moneyTabLine,
+  onCherPing,
+  pickLine,
+  randomHelloLine,
+  recordDashCleared,
+  routinesTabLine,
+  shouldShowCherGreeting,
+  shouldShowCherToast,
+} from "@/lib/cher";
+import { daysUntilDecember8 } from "@/lib/warroom";
+import CherToast from "./CherToast";
+import { FinanceData, monthKey as financeMonthKey } from "@/lib/finance";
+import { BudgetData, leftToBreathe, monthStateFor, spendingStatus } from "@/lib/budget";
 import { TabUsageData, SystemCheckData, trackTabOpen, isTabHidden } from "@/lib/systemcheck";
 import { WeddingData } from "@/lib/wedding";
 import { TripsData } from "@/lib/trips";
@@ -93,7 +125,7 @@ import CelebrationOverlay from "./CelebrationOverlay";
 import BoardMeeting from "./BoardMeeting";
 import SystemCheckFlow from "./SystemCheckFlow";
 import QuickDump from "./QuickDump";
-import { todayKey } from "@/lib/date";
+import { todayKey, dateKey, shiftDateKey } from "@/lib/date";
 import { weekKeyFor } from "@/lib/week";
 import WorldToggle from "./WorldToggle";
 import SubNav from "./SubNav";
@@ -197,6 +229,12 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
   const [celebration, setCelebration] = useState<Celebration | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showDailyTheme, setShowDailyTheme] = useState(false);
+  // A single Cher greeting picked once per app open (not per render, so it
+  // doesn't flicker between different lines) - shown in Greeting.tsx across
+  // the whole app, and reused as the Daily Dash header when that's showing
+  // too, rather than picking a second, different line for the same open.
+  const [cherAppGreeting, setCherAppGreeting] = useState("");
+  const [cherToast, setCherToast] = useState<string | null>(null);
   const [dailyThemeEditorDay, setDailyThemeEditorDay] = useState<DailyThemeDayKey | null>(null);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -226,8 +264,23 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     if (shouldShowWelcome(initialData.welcome, new Date())) {
       setShowWelcome(true);
     }
-    if (shouldShowDailyTheme(initialData.dailyTheme, new Date())) {
+    const now = new Date();
+    if (shouldShowDailyTheme(initialData.dailyTheme, now)) {
       setShowDailyTheme(true);
+    }
+    const greeting = getCherGreeting(now, initialData.cher.lastGreetingId);
+    setCherAppGreeting(greeting.text);
+    updateCher((c) => ({ ...c, lastGreetingId: greeting.id }));
+
+    // Random "just checking in" hello - only on opens where the dash is
+    // already cleared for the day (so it never competes with the dash
+    // itself), max once/day, ~20% of eligible opens.
+    const today = dateKey(now);
+    const dashAlreadyCleared = initialData.dailyTheme.lastClearedKey === today;
+    const notShownToday = initialData.cher.lastRandomHelloKey !== today;
+    if (initialData.cher.frequency === "full" && dashAlreadyCleared && notShownToday && Math.random() < 0.2) {
+      setCherToast(randomHelloLine(daysUntilDecember8(now)).text);
+      updateCher((c) => ({ ...c, lastRandomHelloKey: today }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -496,8 +549,20 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     scheduleSave();
   }
 
-  function dismissDailyTheme() {
-    updateDailyTheme((d) => markDailyThemeShown(d, new Date()));
+  function updateCher(updater: (c: CherData) => CherData) {
+    setData((prev) => ({ ...prev, cher: updater(prev.cher) }));
+    scheduleSave();
+  }
+
+  function skipDailyTheme() {
+    updateDailyTheme((d) => markDailyThemeSkipped(d, new Date()));
+    setShowDailyTheme(false);
+  }
+
+  function clearDailyTheme() {
+    const now = new Date();
+    updateDailyTheme((d) => markDailyThemeCleared(d, now));
+    updateCher((c) => recordDashCleared(c, dateKey(now), shiftDateKey(dateKey(now), -1)));
     setShowDailyTheme(false);
   }
 
@@ -529,6 +594,19 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
       const todayStorageIndex = now.getDay() === 0 ? 6 : now.getDay() - 1;
       updateHabits((h) => setHabitCompletion(h, weekKeyFor(now), habitId, todayStorageIndex, nowCompleted));
     }
+  }
+
+  function handleToggleDailyThemeHabit(habitId: string) {
+    const now = new Date();
+    const weekKey = weekKeyFor(now);
+    const todayStorageIndex = now.getDay() === 0 ? 6 : now.getDay() - 1;
+    const wasDone = habitCompletionsFor(data.habits, weekKey, habitId)[todayStorageIndex];
+    updateHabits((h) => setHabitCompletion(h, weekKey, habitId, todayStorageIndex, !wasDone));
+  }
+
+  function handleToggleDailyThemePrepTask(weekendId: string, taskId: string) {
+    const month = monthKeyForDate(new Date());
+    updateMealCalendar((m) => togglePrepTask(m, month, weekendId, taskId));
   }
 
   function updateVendors(updater: (v: VendorsData) => VendorsData) {
@@ -655,6 +733,49 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     setAmbianceSettings(data.ambiance);
   }, [data.ambiance]);
 
+  // Shared entry point for every Cher toast, whichever path triggers it:
+  // the generic ping bus below, or a direct callback prop threaded into a
+  // component that already has the specific data (streak, recipe name...)
+  // the bus's plain contextKey string can't carry. Applies the
+  // once-per-context-per-day dedup and frequency setting either way.
+  function fireCherToast(contextKey: string, message: string) {
+    const today = dateKey(new Date());
+    if (!shouldShowCherToast(latestData.current.cher, contextKey, today)) return;
+    setCherToast(message);
+    updateCher((c) => markCherToastShown(c, contextKey, today));
+  }
+
+  // Subscribes once to lib/cher.ts's generic ping bus - the single point
+  // that turns a "something happened" signal from anywhere in the tree
+  // (currently just CheckCircle's checked-off ping, and the Money/Rituals
+  // tab mount pings) into an actual toast. Reads latestData.current rather
+  // than closing over data so this never needs to resubscribe as data
+  // changes.
+  useEffect(() => {
+    return onCherPing((contextKey) => {
+      const cur = latestData.current;
+      let message: string | null = null;
+      if (contextKey === "task-checked") {
+        message = pickLine(TASK_CHECKED_POOL).text;
+      } else if (contextKey === "tab-money") {
+        const now = new Date();
+        const monthKeyStr = financeMonthKey(now);
+        const state = monthStateFor(cur.budget, monthKeyStr, cur.lifeQuarterly.money);
+        const buffer = leftToBreathe(cur.budget.config);
+        const overCategory = spendingStatus(cur.budget.config, state).find((s) => s.overTarget);
+        message = moneyTabLine(buffer, overCategory ? overCategory.target.name : null);
+      } else if (contextKey === "tab-rituals") {
+        const now = new Date();
+        const atRisk = habitsAtRisk(cur.habits, now).length;
+        const progress = todayHabitProgress(cur.habits, now);
+        message = routinesTabLine(atRisk, progress.done, progress.total);
+      }
+      if (!message) return;
+      fireCherToast(contextKey, message);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Re-checks every reward's trigger whenever anything it could depend on
   // changes (a milestone log, a debt payment, a Scholar streak, opening the
   // app on a new day). evaluateRewardTriggers only ever moves "active"
@@ -686,6 +807,53 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     data.knowledge.scholarStreak.current,
     data.lifeScore.history,
   ]);
+
+  // Merged Daily Dash checklist - theme prompts plus today's focus tasks,
+  // habits, and prep-weekend tasks due today. Focus/prep queries deliberately
+  // keep done items in the list (rather than filtering them out like
+  // pinnedFocusTasks does for the Front Page) so this total stays stable
+  // across the day instead of shrinking every time something gets checked.
+  const dailyDashToday = new Date();
+  const dailyDashDateKey = dateKey(dailyDashToday);
+  const dailyDashWeekKey = weekKeyFor(dailyDashToday);
+  const dailyDashTodayIndex = dailyDashToday.getDay() === 0 ? 6 : dailyDashToday.getDay() - 1;
+  const dailyDashTheme = themeForDate(data.dailyTheme, dailyDashToday);
+  const dailyDashCompletedPromptIds = completedPromptIdsFor(data.dailyTheme, dailyDashToday);
+  const dailyDashFocusTasks = todayChecklistFocusTasks(data);
+  const dailyDashHabits = data.habits.habits;
+  const dailyDashPrepTasks = prepTasksDueForDate(data.mealCalendar, dailyDashDateKey);
+  const dailyDashDinner = dinnerForDate(data.mealCalendar, dailyDashDateKey);
+
+  const dailyDashHabitsDone = dailyDashHabits.filter(
+    (h) => habitCompletionsFor(data.habits, dailyDashWeekKey, h.id)[dailyDashTodayIndex]
+  ).length;
+  const dailyDashTotal =
+    dailyDashTheme.prompts.length +
+    dailyDashFocusTasks.length +
+    dailyDashHabits.length +
+    dailyDashPrepTasks.length;
+  const dailyDashDone =
+    dailyDashCompletedPromptIds.length +
+    dailyDashFocusTasks.filter((t) => t.done).length +
+    dailyDashHabitsDone +
+    dailyDashPrepTasks.filter((t) => t.task.done).length;
+
+  // Fires the moment every checklist item is checked off while the dash is
+  // showing - clears the day (extends the streak) and hands off to the
+  // existing celebration/confetti system, same as any other big moment.
+  useEffect(() => {
+    if (!showDailyTheme) return;
+    if (dailyDashTotal === 0) return;
+    if (dailyDashDone < dailyDashTotal) return;
+    const newStreak = recordDashCleared(
+      data.cher,
+      dailyDashDateKey,
+      shiftDateKey(dailyDashDateKey, -1)
+    ).dashStreak.current;
+    clearDailyTheme();
+    triggerCelebration("big", `dash cleared 🔥 ${newStreak}-day streak — you ATE today`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showDailyTheme, dailyDashDone, dailyDashTotal]);
 
   // The Assistant's tools can touch any part of the dashboard (tasks,
   // planner, lists, health, events, meals, finance, waiting-on, Dec 8
@@ -844,10 +1012,10 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
       {showWelcome && <WelcomeScreen onDone={dismissWelcome} />}
       {!showWelcome && showDailyTheme && (
         <DailyThemeScreen
-          theme={themeForDate(data.dailyTheme, new Date())}
-          completedPromptIds={completedPromptIdsFor(data.dailyTheme, new Date())}
+          theme={dailyDashTheme}
+          completedPromptIds={dailyDashCompletedPromptIds}
           onTogglePrompt={handleToggleDailyThemePrompt}
-          onDismiss={dismissDailyTheme}
+          onSkip={skipDailyTheme}
           onEdit={() => setDailyThemeEditorDay(dayKeyForDate(new Date()))}
           onChangeImage={(updater) =>
             updateDailyTheme((d) => ({
@@ -861,6 +1029,20 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
               },
             }))
           }
+          cherGreeting={shouldShowCherGreeting(data.cher) ? cherAppGreeting : ""}
+          dashStreak={data.cher.dashStreak.current}
+          doneCount={dailyDashDone}
+          totalCount={dailyDashTotal}
+          focusTasks={dailyDashFocusTasks}
+          onToggleFocusTask={toggleTodayFocusTask}
+          habits={dailyDashHabits}
+          habitDoneToday={(habitId) =>
+            habitCompletionsFor(data.habits, dailyDashWeekKey, habitId)[dailyDashTodayIndex]
+          }
+          onToggleHabit={handleToggleDailyThemeHabit}
+          prepTasks={dailyDashPrepTasks}
+          onTogglePrepTask={handleToggleDailyThemePrepTask}
+          dinner={dailyDashDinner}
         />
       )}
       {dailyThemeEditorDay && (
@@ -929,6 +1111,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             onChangeQuest={updateQuest}
             onChangeKnowledge={updateKnowledge}
             onCelebrate={triggerCelebration}
+            cherGreeting={shouldShowCherGreeting(data.cher) ? cherAppGreeting : ""}
           />
         ) : world === "work" ? (
           <>
@@ -1167,6 +1350,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 onChange={updateMealCalendar}
                 recipeBank={data.recipes}
                 onCelebrate={triggerCelebration}
+                onCherToast={fireCherToast}
               />
             )}
             {lifeView === "quarter" && (
@@ -1272,6 +1456,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
           onChangeAppearance={updateAppearance}
           onChangeAmbiance={updateAmbiance}
           onChangeDailyTheme={updateDailyTheme}
+          onChangeCher={updateCher}
           onClose={() => setSettingsOpen(false)}
         />
       )}
@@ -1306,6 +1491,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
       )}
 
       <CelebrationOverlay celebration={celebration} onDismiss={() => setCelebration(null)} />
+      <CherToast message={cherToast} onDismiss={() => setCherToast(null)} />
     </div>
   );
 }

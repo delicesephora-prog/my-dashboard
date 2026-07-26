@@ -94,9 +94,14 @@ export type DailyThemeData = {
   // dateKey -> ids of prompts checked that day. Lightweight and per-date,
   // same shape as GlowUp's dailyLogs - not a permanent task list.
   completions: Record<string, string[]>;
-  // "" until first shown. One per calendar day, unlike the welcome screen
-  // which resets per day-part.
-  lastShownKey: string;
+  // "" until cleared. Set only when every theme prompt AND every item in
+  // that day's checklist (focus tasks, habits, prep) is checked off -
+  // the one path that also extends the streak below.
+  lastClearedKey: string;
+  // "" until skipped. Set by the explicit "Skip for now" tap - stops the
+  // screen for the rest of the day same as clearing, but doesn't count as
+  // a clear (the streak resets on the next real clear if this leaves a gap).
+  lastSkippedKey: string;
   seedVersion: number;
 };
 
@@ -230,7 +235,8 @@ export function defaultDailyThemeData(): DailyThemeData {
     enabled: true,
     themes: seedThemes(),
     completions: {},
-    lastShownKey: "",
+    lastClearedKey: "",
+    lastSkippedKey: "",
     seedVersion: DAILY_THEME_SEED_VERSION,
   };
 }
@@ -302,7 +308,8 @@ export function normalizeDailyThemeData(
       enabled: raw?.enabled ?? fallback.enabled,
       themes: fallback.themes,
       completions: raw?.completions ?? {},
-      lastShownKey: raw?.lastShownKey ?? "",
+      lastClearedKey: raw?.lastClearedKey ?? "",
+      lastSkippedKey: raw?.lastSkippedKey ?? "",
       seedVersion: DAILY_THEME_SEED_VERSION,
     };
   }
@@ -314,7 +321,8 @@ export function normalizeDailyThemeData(
     enabled: raw.enabled ?? true,
     themes,
     completions: raw.completions ?? {},
-    lastShownKey: raw.lastShownKey ?? "",
+    lastClearedKey: raw.lastClearedKey ?? "",
+    lastSkippedKey: raw.lastSkippedKey ?? "",
     seedVersion: raw.seedVersion ?? DAILY_THEME_SEED_VERSION,
   };
 }
@@ -323,13 +331,24 @@ export function themeForDate(data: DailyThemeData, d: Date): DailyTheme {
   return data.themes[dayKeyForDate(d)];
 }
 
+// Reappears on every app open while today's theme prompts and checklist
+// remain incomplete - the only two ways out are clearing everything or
+// tapping "Skip for now" (lib/cher.ts's frequency dial governs her ambient
+// chatter, never this gate itself).
 export function shouldShowDailyTheme(data: DailyThemeData, d: Date): boolean {
   if (!data.enabled) return false;
-  return data.lastShownKey !== dateKey(d);
+  const today = dateKey(d);
+  if (data.lastClearedKey === today) return false;
+  if (data.lastSkippedKey === today) return false;
+  return true;
 }
 
-export function markDailyThemeShown(data: DailyThemeData, d: Date): DailyThemeData {
-  return { ...data, lastShownKey: dateKey(d) };
+export function markDailyThemeCleared(data: DailyThemeData, d: Date): DailyThemeData {
+  return { ...data, lastClearedKey: dateKey(d) };
+}
+
+export function markDailyThemeSkipped(data: DailyThemeData, d: Date): DailyThemeData {
+  return { ...data, lastSkippedKey: dateKey(d) };
 }
 
 export function completedPromptIdsFor(data: DailyThemeData, d: Date): string[] {

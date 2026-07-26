@@ -30,11 +30,13 @@ export default function MealsView({
   onChange,
   recipeBank,
   onCelebrate,
+  onCherToast,
 }: {
   mealCalendar: MealCalendarData;
   onChange: (updater: (m: MealCalendarData) => MealCalendarData) => void;
   recipeBank: RecipeBankData;
   onCelebrate: (tier: CelebrationTier, message: string) => void;
+  onCherToast: (contextKey: string, message: string) => void;
 }) {
   const [tab, setTab] = useState<Tab>("calendar");
 
@@ -101,12 +103,17 @@ export default function MealsView({
           monthData={monthData}
           onChange={onChange}
           onCelebrate={onCelebrate}
+          onCherToast={onCherToast}
         />
       )}
 
-      {tab === "prep" && <PrepWeekendsTab month={month} monthData={monthData} onChange={onChange} />}
+      {tab === "prep" && (
+        <PrepWeekendsTab month={month} monthData={monthData} onChange={onChange} onCherToast={onCherToast} />
+      )}
 
-      {tab === "grocery" && <GroceryTab month={month} monthData={monthData} onChange={onChange} />}
+      {tab === "grocery" && (
+        <GroceryTab month={month} monthData={monthData} onChange={onChange} onCherToast={onCherToast} />
+      )}
 
       {tab === "lunches" && <LunchesTab lunches={mealCalendar.lunches} />}
 

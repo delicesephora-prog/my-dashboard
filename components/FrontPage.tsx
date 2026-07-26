@@ -68,6 +68,7 @@ export default function FrontPage({
   onChangeQuest,
   onChangeKnowledge,
   onCelebrate,
+  cherGreeting,
 }: {
   data: DashboardData;
   oneThingText: string;
@@ -82,6 +83,7 @@ export default function FrontPage({
   onChangeQuest: (updater: (q: QuestData) => QuestData) => void;
   onChangeKnowledge: (updater: (k: KnowledgeData) => KnowledgeData) => void;
   onCelebrate: (tier: CelebrationTier, message: string) => void;
+  cherGreeting: string;
 }) {
   // Deferred to the client, same as Greeting - the recommendation, "today"
   // habit progress, and week recap are all timezone-sensitive, so they
@@ -96,7 +98,7 @@ export default function FrontPage({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       <div className="scroll-quiet flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-        <Greeting />
+        <Greeting cherLine={cherGreeting} />
         {now && (
           <p className="-mt-2 text-[0.8rem] italic leading-snug text-backdrop-muted">
             {quoteForToday(now)}

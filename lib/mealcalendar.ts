@@ -79,6 +79,10 @@ export type PrepWeekend = {
   title: string;
   tag: string;
   tasks: PrepTask[];
+  // Which YYYY-MM-DD dates this weekend's prep is "for" - lets the Daily
+  // Dash checklist surface the right prep tasks on the right day without
+  // parsing the display title.
+  coversDates: string[];
 };
 
 export type LunchIdea = {
@@ -452,8 +456,24 @@ function seedAugustHauls(): GroceryHaul[] {
   ];
 }
 
-function prepWeekend(id: string, title: string, tag: string, tasks: string[]): PrepWeekend {
-  return { id, title, tag, tasks: tasks.map((text) => ({ id: crypto.randomUUID(), text, done: false })) };
+function prepWeekend(
+  id: string,
+  title: string,
+  tag: string,
+  tasks: string[],
+  coversDates: string[]
+): PrepWeekend {
+  return {
+    id,
+    title,
+    tag,
+    tasks: tasks.map((text) => ({ id: crypto.randomUUID(), text, done: false })),
+    coversDates,
+  };
+}
+
+function augustDates(...days: number[]): string[] {
+  return days.map((d) => dateKey(new Date(2026, 7, d)));
 }
 
 function seedAugustPrepWeekends(): PrepWeekend[] {
@@ -465,34 +485,34 @@ function seedAugustPrepWeekends(): PrepWeekend[] {
       "Sun: simmer poul an sòs (double batch) + big pot diri kole",
       "Sun: batch red lentils + 4 cups plain rice; boil 6 eggs; make pikliz jar",
       "Sun: wash + chop cucumbers, salad greens into grab boxes",
-    ]),
+    ], augustDates(1, 2)),
     prepWeekend("w2", "Weekend 2 · Aug 8-9", "Bowl Week Setup", [
       "Sat: steak frites date night - prep is just salting steak in the AM",
       "Sun: roast full tray of chili sweet potatoes",
       "Sun: mix street-corn topping ×2 (his mayo / hers yogurt) + portion 4 bowls",
       "Sun: marinate kebab chicken; garlic-yogurt sauce jar",
       "Sun: cook 4 cups rice for the week (fried rice wants day-old)",
-    ]),
+    ], augustDates(8, 9)),
     prepWeekend("w3", "Weekend 3 · Aug 15-16", "💰 Payday Reset", [
       "Sat: Haul 2 (all 3 stores) + marinate peri peri chicken while unpacking",
       "Sat night: soak nothing yet - enjoy dinner",
       "Sun: batch buffalo chicken ×2 (fry his / air-fry hers)",
       "Sun: bake mac n cheese; yogurt-ranch jar; chop slaw",
       "Sun: form beef patties; cook rice for fried-rice night",
-    ]),
+    ], augustDates(15, 16)),
     prepWeekend("w4", "Weekend 4 · Aug 22-23", "Haitian Batch", [
       "Sat: marinate chimichurri steak in the AM; blend green sauce",
       "Sat night: soak dry black beans for sòs pwa",
       "Sun: simmer sòs pwa nwa (double) + white rice batch",
       "Sun: boil 6 eggs; marinate hot-honey chicken",
       "Sun: chop zucchini + onions for hibachi; cook rice Wed for day-old",
-    ]),
+    ], augustDates(22, 23)),
     prepWeekend("w5", "Weekend 5 · Aug 29-30", "💰 Bouyon + Sept Bridge", [
       "Sat: pickle-brine chicken for sandwich night (do it Fri night)",
       "Sun: big pot of bouyon using week-1 frozen épis sauce",
       "Sun: portion bouyon for Monday lunches",
       "Sun: 20 min - sketch September plan while the pot simmers",
-    ]),
+    ], augustDates(29, 30)),
   ];
 }
 
@@ -584,7 +604,13 @@ function normalizeTask(raw: Partial<PrepTask> | null | undefined): PrepTask | nu
 function normalizeWeekend(raw: Partial<PrepWeekend> | null | undefined): PrepWeekend | null {
   if (!raw?.title) return null;
   const tasks = (raw.tasks ?? []).map(normalizeTask).filter((t): t is PrepTask => t !== null);
-  return { id: raw.id ?? crypto.randomUUID(), title: raw.title, tag: raw.tag ?? "", tasks };
+  return {
+    id: raw.id ?? crypto.randomUUID(),
+    title: raw.title,
+    tag: raw.tag ?? "",
+    tasks,
+    coversDates: Array.isArray(raw.coversDates) ? raw.coversDates : [],
+  };
 }
 
 function normalizeMonth(fallback: MealCalendarMonth, raw: Partial<MealCalendarMonth> | null | undefined): MealCalendarMonth {
@@ -740,6 +766,21 @@ export function dinnerForDate(
   const recipe = recipeFor(data, day.recipeId);
   if (!recipe) return null;
   return { day, recipe };
+}
+
+export type ChecklistPrepTask = { weekendId: string; weekendTitle: string; task: PrepTask };
+
+// All tasks (done and not) from whichever prep weekend(s) cover this date -
+// lets the Daily Dash checklist surface "prep for this weekend" on the
+// right days, with a stable total so "X of Y done" doesn't shrink as items
+// get checked off.
+export function prepTasksDueForDate(data: MealCalendarData, date: string): ChecklistPrepTask[] {
+  const month = monthKeyForDate(new Date(`${date}T00:00:00`));
+  const monthData = data.months[month];
+  if (!monthData) return [];
+  return monthData.prepWeekends
+    .filter((w) => w.coversDates.includes(date))
+    .flatMap((w) => w.tasks.map((task) => ({ weekendId: w.id, weekendTitle: w.title, task })));
 }
 
 // ---------------------------------------------------------------------------

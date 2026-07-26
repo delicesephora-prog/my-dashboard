@@ -77,6 +77,34 @@ export function pinnedFocusTasks(data: DashboardData): TodayFocusItem[] {
   return [...work, ...week, ...lifeTasks];
 }
 
+export type ChecklistFocusItem = TodayFocusItem & { done: boolean };
+
+// Same pinned-task pool as pinnedFocusTasks, but keeps done items in the
+// list instead of dropping them - the Daily Dash checklist needs a stable
+// total across the day so "X of Y done" doesn't shrink every time
+// something gets checked off.
+export function todayChecklistFocusTasks(data: DashboardData): ChecklistFocusItem[] {
+  const work = sortWorkTasks(data.workOps.tasks.filter((t) => t.topPriority)).map((t) => ({
+    id: t.id,
+    title: t.title,
+    side: "work" as const,
+    source: "workOps" as const,
+    done: t.status === "completed",
+  }));
+
+  const weekKey = weekKeyFor(new Date());
+  const weekData = weekDataFor(data.lifeWeekly, weekKey);
+  const week = weekData.tasks
+    .filter((t) => t.focus)
+    .map((t) => ({ id: t.id, title: t.text, side: "life" as const, source: "week" as const, done: t.done }));
+
+  const lifeTasks = data.life.tasks
+    .filter((t) => t.focus)
+    .map((t) => ({ id: t.id, title: t.text, side: "life" as const, source: "lifeTasks" as const, done: t.done }));
+
+  return [...work, ...week, ...lifeTasks];
+}
+
 export function todayHabitProgress(
   habits: HabitsData,
   now: Date = new Date()

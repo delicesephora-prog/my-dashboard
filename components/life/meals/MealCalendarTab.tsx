@@ -14,6 +14,7 @@ import {
 } from "@/lib/mealcalendar";
 import { todayKey } from "@/lib/date";
 import { CelebrationTier } from "@/lib/celebration";
+import { cookNightLine } from "@/lib/cher";
 import MealDayDetailSheet from "./MealDayDetailSheet";
 
 const WEEKDAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -24,12 +25,14 @@ export default function MealCalendarTab({
   monthData,
   onChange,
   onCelebrate,
+  onCherToast,
 }: {
   data: MealCalendarData;
   month: string;
   monthData: MealCalendarMonth;
   onChange: (updater: (m: MealCalendarData) => MealCalendarData) => void;
   onCelebrate: (tier: CelebrationTier, message: string) => void;
+  onCherToast: (contextKey: string, message: string) => void;
 }) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const today = todayKey();
@@ -58,6 +61,11 @@ export default function MealCalendarTab({
       const newCount = cookedCount + 1;
       if (newCount % 5 === 0) {
         onCelebrate("medium", `${newCount} dinners cooked this month - the system is working.`);
+      }
+      if (!selectedDay.isLeftover && selectedRecipe) {
+        const newStreak = streak + 1;
+        const isHaitian = selectedRecipe.category === "haitian";
+        onCherToast("cook-night-logged", cookNightLine(newStreak, isHaitian, selectedRecipe.name).text);
       }
     }
   }

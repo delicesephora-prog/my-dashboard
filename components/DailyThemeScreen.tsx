@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import localFont from "next/font/local";
 import { DailyTheme, DailyThemeImage } from "@/lib/dailytheme";
 import { resizeImageToDataUrl } from "@/lib/imageUpload";
+import { ChecklistFocusItem, TodayFocusItem } from "@/lib/frontpage";
+import { ChecklistPrepTask, MealDay, MealRecipe } from "@/lib/mealcalendar";
+import { Habit } from "@/lib/types";
 import CheckCircle from "./CheckCircle";
 
 // Same self-hosted pair the Welcome screen uses - the italic serif reads as
@@ -19,16 +22,40 @@ export default function DailyThemeScreen({
   theme,
   completedPromptIds,
   onTogglePrompt,
-  onDismiss,
+  onSkip,
   onEdit,
   onChangeImage,
+  cherGreeting,
+  dashStreak,
+  doneCount,
+  totalCount,
+  focusTasks,
+  onToggleFocusTask,
+  habits,
+  habitDoneToday,
+  onToggleHabit,
+  prepTasks,
+  onTogglePrepTask,
+  dinner,
 }: {
   theme: DailyTheme;
   completedPromptIds: string[];
   onTogglePrompt: (promptId: string, promptTitle: string) => void;
-  onDismiss: () => void;
+  onSkip: () => void;
   onEdit: () => void;
   onChangeImage: (updater: (img: DailyThemeImage) => DailyThemeImage) => void;
+  cherGreeting: string;
+  dashStreak: number;
+  doneCount: number;
+  totalCount: number;
+  focusTasks: ChecklistFocusItem[];
+  onToggleFocusTask: (item: TodayFocusItem) => void;
+  habits: Habit[];
+  habitDoneToday: (habitId: string) => boolean;
+  onToggleHabit: (habitId: string) => void;
+  prepTasks: ChecklistPrepTask[];
+  onTogglePrepTask: (weekendId: string, taskId: string) => void;
+  dinner: { day: MealDay; recipe: MealRecipe } | null;
 }) {
   const [leaving, setLeaving] = useState(false);
   const [imageState, setImageState] = useState<"idle" | "loading" | "unavailable">("idle");
@@ -90,7 +117,7 @@ export default function DailyThemeScreen({
 
   function handleSkip() {
     setLeaving(true);
-    setTimeout(onDismiss, 450);
+    setTimeout(onSkip, 450);
   }
 
   const displayImage = theme.image.customUrl || theme.image.url;
@@ -178,6 +205,29 @@ export default function DailyThemeScreen({
         </div>
       </div>
 
+      {/* Cher's greeting + the unified progress indicator spanning both
+          today's theme prompts and the checklist below. */}
+      <div className="mx-5 -mt-6 flex items-center justify-between gap-3 rounded-xl2 border border-gold-soft bg-paper-surface px-4 py-3 shadow-paper">
+        <div className="min-w-0">
+          {cherGreeting ? (
+            <>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gold">Cher</p>
+              <p className={`${italicSerif.className} mt-0.5 truncate text-[15px] italic text-paper-ink`}>
+                {cherGreeting}
+              </p>
+            </>
+          ) : (
+            <p className="text-[13px] font-medium text-paper-ink">Today&rsquo;s dash</p>
+          )}
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="text-[11px] font-semibold text-paper-ink">
+            {doneCount} of {totalCount} done
+          </p>
+          {dashStreak > 0 && <p className="text-[10px] text-paper-muted">🔥 {dashStreak}-day streak</p>}
+        </div>
+      </div>
+
       {showCredit && (
         <p className="px-7 pt-2 text-[10px] text-paper-faint">
           Photo by{" "}
@@ -213,6 +263,85 @@ export default function DailyThemeScreen({
           ))}
         </div>
       )}
+
+      {/* Today's checklist - focus tasks, habits, prep due today, and a
+          read-only dinner line, folded into the same dash as the theme
+          prompts above so there's one screen and one progress count. */}
+      <div className="px-5 pb-2 pt-1">
+        <p className="mb-3 px-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-paper-faint">
+          Today&rsquo;s checklist
+        </p>
+        <div className="flex flex-col gap-2">
+          {dinner && (
+            <div className="flex items-center gap-2.5 rounded-xl border border-paper-border/60 bg-paper-surface/85 px-3.5 py-3">
+              <span className="text-base">🍽️</span>
+              <p className="min-w-0 flex-1 truncate text-[13px] text-paper-ink">
+                Tonight: {dinner.recipe.name}
+                {dinner.day.isLeftover ? " (leftovers)" : ""}
+              </p>
+            </div>
+          )}
+          {focusTasks.map((item) => (
+            <div
+              key={`focus-${item.id}`}
+              className="flex items-center gap-2.5 rounded-xl border border-paper-border/60 bg-paper-surface/85 px-3.5 py-3"
+            >
+              <CheckCircle
+                done={item.done}
+                onToggle={() => onToggleFocusTask(item)}
+                accentClass="bg-gold"
+                size="sm"
+                ariaLabel={item.done ? "Mark not done" : "Mark done"}
+              />
+              <p className={`min-w-0 flex-1 truncate text-[13px] ${item.done ? "text-paper-muted line-through" : "text-paper-ink"}`}>
+                {item.title}
+              </p>
+              <span className="shrink-0 text-[9px] uppercase tracking-wide text-paper-faint">{item.side}</span>
+            </div>
+          ))}
+          {habits.map((h) => {
+            const done = habitDoneToday(h.id);
+            return (
+              <div
+                key={`habit-${h.id}`}
+                className="flex items-center gap-2.5 rounded-xl border border-paper-border/60 bg-paper-surface/85 px-3.5 py-3"
+              >
+                <CheckCircle
+                  done={done}
+                  onToggle={() => onToggleHabit(h.id)}
+                  accentClass="bg-gold"
+                  size="sm"
+                  ariaLabel={done ? "Mark not done" : "Mark done"}
+                />
+                <span className="shrink-0 text-base">{h.icon}</span>
+                <p className={`min-w-0 flex-1 truncate text-[13px] ${done ? "text-paper-muted line-through" : "text-paper-ink"}`}>
+                  {h.label}
+                </p>
+              </div>
+            );
+          })}
+          {prepTasks.map(({ weekendId, weekendTitle, task }) => (
+            <div
+              key={`prep-${task.id}`}
+              className="flex items-center gap-2.5 rounded-xl border border-paper-border/60 bg-paper-surface/85 px-3.5 py-3"
+            >
+              <CheckCircle
+                done={task.done}
+                onToggle={() => onTogglePrepTask(weekendId, task.id)}
+                accentClass="bg-gold"
+                size="sm"
+                ariaLabel={task.done ? "Mark not done" : "Mark done"}
+              />
+              <p className={`min-w-0 flex-1 truncate text-[13px] ${task.done ? "text-paper-muted line-through" : "text-paper-ink"}`}>
+                {task.text}
+              </p>
+              <span className="shrink-0 max-w-[35%] truncate text-[9px] uppercase tracking-wide text-paper-faint">
+                {weekendTitle}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Prompts, as full editorial blocks - alternating image side. */}
       <div className="flex flex-col gap-4 px-5 pb-8 pt-3">
@@ -274,7 +403,7 @@ export default function DailyThemeScreen({
           onClick={handleSkip}
           className="safe-bottom text-[11px] uppercase tracking-[0.2em] text-paper-faint underline underline-offset-4"
         >
-          Continue to Front Page
+          Skip for now
         </button>
       </div>
     </div>

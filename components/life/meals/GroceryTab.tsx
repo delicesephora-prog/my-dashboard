@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import {
   GroceryHaul,
   MealCalendarData,
@@ -12,6 +13,7 @@ import {
   setBudgetAmount,
   setStoreAmount,
 } from "@/lib/mealcalendar";
+import { BUDGET_UNDER_POOL, pickLine } from "@/lib/cher";
 import DonutChart from "@/components/DonutChart";
 import TrendLineChart from "@/components/TrendLineChart";
 
@@ -21,11 +23,28 @@ export default function GroceryTab({
   month,
   monthData,
   onChange,
+  onCherToast,
 }: {
   month: string;
   monthData: MealCalendarMonth;
   onChange: (updater: (m: MealCalendarData) => MealCalendarData) => void;
+  onCherToast: (contextKey: string, message: string) => void;
 }) {
+  const estimatedSpend = monthEstimatedSpend(monthData);
+  const actualSpend = monthActualSpend(monthData);
+  const flex = monthFlex(monthData);
+
+  const allActualsFilled =
+    monthData.budget.hauls.length > 0 &&
+    monthData.budget.hauls.every((h) => h.stores.every((s) => s.actualAmount !== null));
+
+  useEffect(() => {
+    if (!allActualsFilled) return;
+    if (actualSpend > monthData.budget.budgetAmount) return;
+    onCherToast("budget-under-target", pickLine(BUDGET_UNDER_POOL).text);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allActualsFilled, actualSpend, monthData.budget.budgetAmount]);
+
   if (monthData.budget.hauls.length === 0) {
     return (
       <p className="py-8 text-center font-serif text-[0.95rem] italic text-paper-muted">
@@ -33,10 +52,6 @@ export default function GroceryTab({
       </p>
     );
   }
-
-  const estimatedSpend = monthEstimatedSpend(monthData);
-  const actualSpend = monthActualSpend(monthData);
-  const flex = monthFlex(monthData);
 
   const donutSegments = monthData.budget.hauls.map((h, i) => ({
     label: h.title,

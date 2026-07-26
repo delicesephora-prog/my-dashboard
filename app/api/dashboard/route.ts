@@ -1226,7 +1226,8 @@ const dailyThemeDataSchema = z.object({
     saturday: dailyThemeSchema,
   }),
   completions: z.record(z.string(), z.array(z.string()).max(50)),
-  lastShownKey: z.string(),
+  lastClearedKey: z.string(),
+  lastSkippedKey: z.string(),
   seedVersion: z.number().int(),
 });
 
@@ -1280,6 +1281,7 @@ const prepWeekendSchema = z.object({
   title: z.string().max(150),
   tag: z.string().max(100),
   tasks: z.array(prepTaskSchema).max(30),
+  coversDates: z.array(z.string()).max(10),
 });
 
 const mealCalendarMonthSchema = z.object({
@@ -1304,6 +1306,18 @@ const mealCalendarDataSchema = z.object({
   months: z.record(z.string(), mealCalendarMonthSchema),
   lunches: z.array(lunchIdeaSchema).max(20),
   seedVersion: z.number().int(),
+});
+
+const cherDataSchema = z.object({
+  frequency: z.enum(["off", "quiet", "full"]),
+  lastGreetingId: z.string(),
+  toastLog: z.record(z.string(), z.string()),
+  dashStreak: z.object({
+    current: z.number().int(),
+    longest: z.number().int(),
+    lastClearedKey: z.string(),
+  }),
+  lastRandomHelloKey: z.string(),
 });
 
 const allocationLineSchema = z.object({
@@ -1698,6 +1712,7 @@ const dashboardSchema = z.object({
   paycheckPlans: paycheckPlanDataSchema,
   dailyTheme: dailyThemeDataSchema,
   mealCalendar: mealCalendarDataSchema,
+  cher: cherDataSchema,
 });
 
 export async function GET() {

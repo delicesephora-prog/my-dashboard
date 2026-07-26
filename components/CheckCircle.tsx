@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { burstConfettiFrom } from "@/lib/confetti";
 import { playCheckTick } from "@/lib/sound";
+import { pingCher } from "@/lib/cher";
 
 export default function CheckCircle({
   done,
@@ -24,6 +25,7 @@ export default function CheckCircle({
     if (!done && ref.current) {
       burstConfettiFrom(ref.current);
       playCheckTick();
+      pingCher("task-checked");
     }
     onToggle();
   }

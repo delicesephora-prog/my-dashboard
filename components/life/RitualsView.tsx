@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { pingCher } from "@/lib/cher";
 import {
   RoutineKey,
   RoutineStep,
@@ -56,6 +57,10 @@ export default function RitualsView({
   onManageHabits: () => void;
   onCelebrate: (tier: CelebrationTier, message: string) => void;
 }) {
+  useEffect(() => {
+    pingCher("tab-rituals");
+  }, []);
+
   return (
     <div className="scroll-quiet safe-bottom flex-1 overflow-y-auto">
       <p className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">

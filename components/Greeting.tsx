@@ -8,7 +8,7 @@ import { seasonalAccent } from "@/lib/seasonal";
 const NAME = "Sephora";
 const NBSP = "\u00A0";
 
-export default function Greeting() {
+export default function Greeting({ cherLine = "" }: { cherLine?: string }) {
   // Computed after mount (not on the server) so the greeting and date
   // reflect the visitor's own clock and time zone, not the server's.
   const [now, setNow] = useState<Date | null>(null);
@@ -21,9 +21,13 @@ export default function Greeting() {
     <div className="min-w-0">
       <h1 className="truncate font-serif text-[1.35rem] font-medium leading-tight text-backdrop-ink">
         {now ? (
-          <>
-            {greetingForHour(now.getHours())}, <span className="text-signature">{NAME}</span>
-          </>
+          cherLine ? (
+            <span className="text-signature">{cherLine}</span>
+          ) : (
+            <>
+              {greetingForHour(now.getHours())}, <span className="text-signature">{NAME}</span>
+            </>
+          )
         ) : (
           NBSP
         )}
