@@ -77,7 +77,7 @@ import { Celebration, CelebrationTier } from "@/lib/celebration";
 import { QuestData } from "@/lib/quest";
 import { MemosData } from "@/lib/memos";
 import { HealthData } from "@/lib/health";
-import { MealPlanData } from "@/lib/mealplan";
+import { MealCalendarData } from "@/lib/mealcalendar";
 import { FinanceData } from "@/lib/finance";
 import { BudgetData } from "@/lib/budget";
 import { TabUsageData, SystemCheckData, trackTabOpen, isTabHidden } from "@/lib/systemcheck";
@@ -115,6 +115,7 @@ import ManageHabits from "./life/ManageHabits";
 import ManageRoutines from "./life/routines/ManageRoutines";
 import QuarterView from "./life/quarter/QuarterView";
 import MoneyView from "./life/MoneyView";
+import MealsView from "./life/meals/MealsView";
 import ListsView from "./life/lists/ListsView";
 import RhythmView from "./life/rhythm/RhythmView";
 import GlowUpView from "./life/glowup/GlowUpView";
@@ -158,6 +159,7 @@ type LifeView =
   | "manageRoutines"
   | "manageHabits"
   | "money"
+  | "meals"
   | "quarter"
   | "lists"
   | "rhythm"
@@ -414,8 +416,8 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     scheduleSave();
   }
 
-  function updateMealPlan(updater: (m: MealPlanData) => MealPlanData) {
-    setData((prev) => ({ ...prev, mealPlan: updater(prev.mealPlan) }));
+  function updateMealCalendar(updater: (m: MealCalendarData) => MealCalendarData) {
+    setData((prev) => ({ ...prev, mealCalendar: updater(prev.mealCalendar) }));
     scheduleSave();
   }
 
@@ -1075,6 +1077,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                   { key: "week", label: "This Week" },
                   { key: "rituals", label: "Rituals" },
                   { key: "money", label: "Money" },
+                  { key: "meals", label: "Meals" },
                   { key: "quarter", label: "Quarter" },
                   { key: "lists", label: "Lists" },
                   { key: "rhythm", label: "Rhythm" },
@@ -1158,6 +1161,14 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 onCelebrate={triggerCelebration}
               />
             )}
+            {lifeView === "meals" && (
+              <MealsView
+                mealCalendar={data.mealCalendar}
+                onChange={updateMealCalendar}
+                recipeBank={data.recipes}
+                onCelebrate={triggerCelebration}
+              />
+            )}
             {lifeView === "quarter" && (
               <QuarterView
                 lifeQuarterly={data.lifeQuarterly}
@@ -1220,13 +1231,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             {lifeView === "verses" && <VersesView />}
             {lifeView === "memos" && <MemosView data={data.memos} onChange={updateMemos} />}
             {lifeView === "health" && (
-              <HealthView
-                health={data.health}
-                onChange={updateHealth}
-                mealPlan={data.mealPlan}
-                onChangeMealPlan={updateMealPlan}
-                recipes={data.recipes}
-              />
+              <HealthView health={data.health} onChange={updateHealth} />
             )}
             {lifeView === "wedding" && <WeddingView wedding={data.wedding} onChange={updateWedding} />}
             {lifeView === "trips" && <TripsView trips={data.trips} onChange={updateTrips} />}

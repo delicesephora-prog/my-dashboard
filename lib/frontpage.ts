@@ -28,6 +28,7 @@ export type FrontPageNavTarget =
         | "week"
         | "rituals"
         | "money"
+        | "meals"
         | "quarter"
         | "lists"
         | "rhythm"

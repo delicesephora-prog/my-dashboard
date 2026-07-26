@@ -1230,6 +1230,82 @@ const dailyThemeDataSchema = z.object({
   seedVersion: z.number().int(),
 });
 
+const mealCategorySchema = z.enum(["chicken", "beef", "seafood", "haitian", "light"]);
+
+const mealRecipeSchema = z.object({
+  id: z.string(),
+  name: z.string().max(150),
+  emoji: z.string().max(20),
+  category: mealCategorySchema,
+  effort: z.string().max(100),
+  hisVersion: z.string().max(1000),
+  hersVersion: z.string().max(1000),
+  prepNote: z.string().max(500),
+});
+
+const mealDaySchema = z.object({
+  date: z.string(),
+  recipeId: z.string(),
+  haulNumber: z.number().int().nullable(),
+  isPayday: z.boolean(),
+  isPrep: z.boolean(),
+  isLeftover: z.boolean(),
+  isFun: z.boolean(),
+  cooked: z.boolean(),
+});
+
+const groceryStoreLineSchema = z.object({
+  id: z.string(),
+  store: z.string().max(100),
+  items: z.array(z.string().max(200)).max(40),
+  estimatedAmount: z.number(),
+  actualAmount: z.number().nullable(),
+});
+
+const groceryHaulSchema = z.object({
+  id: z.string(),
+  title: z.string().max(150),
+  sub: z.string().max(200),
+  stores: z.array(groceryStoreLineSchema).max(10),
+});
+
+const prepTaskSchema = z.object({
+  id: z.string(),
+  text: z.string().max(300),
+  done: z.boolean(),
+});
+
+const prepWeekendSchema = z.object({
+  id: z.string(),
+  title: z.string().max(150),
+  tag: z.string().max(100),
+  tasks: z.array(prepTaskSchema).max(30),
+});
+
+const mealCalendarMonthSchema = z.object({
+  month: z.string(),
+  days: z.array(mealDaySchema).max(31),
+  prepWeekends: z.array(prepWeekendSchema).max(10),
+  budget: z.object({
+    budgetAmount: z.number(),
+    hauls: z.array(groceryHaulSchema).max(6),
+  }),
+});
+
+const lunchIdeaSchema = z.object({
+  id: z.string(),
+  emoji: z.string().max(20),
+  title: z.string().max(150),
+  description: z.string().max(500),
+});
+
+const mealCalendarDataSchema = z.object({
+  recipes: z.record(z.string(), mealRecipeSchema),
+  months: z.record(z.string(), mealCalendarMonthSchema),
+  lunches: z.array(lunchIdeaSchema).max(20),
+  seedVersion: z.number().int(),
+});
+
 const allocationLineSchema = z.object({
   id: z.string(),
   kind: z.enum(["bill", "debt", "vault", "spending"]),
@@ -1621,6 +1697,7 @@ const dashboardSchema = z.object({
   recipes: recipeBankDataSchema,
   paycheckPlans: paycheckPlanDataSchema,
   dailyTheme: dailyThemeDataSchema,
+  mealCalendar: mealCalendarDataSchema,
 });
 
 export async function GET() {

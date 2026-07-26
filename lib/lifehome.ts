@@ -11,6 +11,7 @@ import { daysUntilDecember8 } from "./warroom";
 import { upcomingAppointments } from "./health";
 import { daysUntilWedding } from "./wedding";
 import { upcomingTrips } from "./trips";
+import { monthCookedCount, monthDataFor, monthKeyForDate } from "./mealcalendar";
 
 export type LifePocketTile = {
   key: string;
@@ -38,12 +39,20 @@ export function lifePocketTiles(data: DashboardData, now: Date = new Date()): Li
   const weddingDays = daysUntilWedding(data.wedding, now);
   const tripsPlanned = upcomingTrips(data.trips.trips, now).length;
   const healthUpcoming = upcomingAppointments(data.health.appointments, now).length;
+  const mealMonth = monthDataFor(data.mealCalendar, monthKeyForDate(now));
+  const mealCooked = monthCookedCount(mealMonth);
 
   return [
     { key: "tasks", icon: "📋", label: "Tasks", stat: `${data.life.tasks.filter((t) => !t.done).length} open` },
     { key: "week", icon: "🗓️", label: "This Week", stat: `${recap.tasksDone}/${recap.tasksTotal} tasks` },
     { key: "rituals", icon: "🕯️", label: "Rituals", stat: `${habitProgress.pct}% habits today` },
     { key: "money", icon: "💰", label: "Money", stat: `${formatMoney(money.vaultTotal)} saved` },
+    {
+      key: "meals",
+      icon: "🍽️",
+      label: "Meals",
+      stat: mealMonth.days.length > 0 ? `${mealCooked}/${mealMonth.days.length} cooked` : "No plan yet",
+    },
     { key: "quarter", icon: "🎯", label: "Quarter", stat: `${quarterDone}/${quarterGoals.length} goals` },
     { key: "lists", icon: "🛒", label: "Lists", stat: `${groceryOpen} to grab` },
     { key: "rhythm", icon: "🌊", label: "Rhythm", stat: `${rhythm.done}/${rhythm.total} today` },

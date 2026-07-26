@@ -34,6 +34,7 @@ import { vocabForDate, factForDate } from "@/lib/welcome";
 import { QuestData, isQuestDone, markQuestDone, questForDate } from "@/lib/quest";
 import { openItems, overdueItems } from "@/lib/waitingon";
 import { coverOfTheDay } from "@/lib/vision";
+import { dinnerForDate } from "@/lib/mealcalendar";
 import { CelebrationTier } from "@/lib/celebration";
 import { burstConfettiMedium } from "@/lib/confetti";
 import Greeting from "./Greeting";
@@ -48,6 +49,7 @@ import Flourish from "./Flourish";
 
 const FOLDERS: { icon: string; label: string; target: FrontPageNavTarget }[] = [
   { icon: "📌", label: "Money", target: { world: "life", lifeView: "money" } },
+  { icon: "🍽️", label: "Meals", target: { world: "life", lifeView: "meals" } },
   { icon: "🕯️", label: "Rituals", target: { world: "life", lifeView: "rituals" } },
   { icon: "🕓", label: "Glow Up", target: { world: "life", lifeView: "glowUp" } },
 ];
@@ -256,6 +258,8 @@ function FrontPageBody({
         </p>
         <p className="font-serif text-[1.05rem] leading-snug text-paper-ink">{recommendation.text}</p>
       </button>
+
+      <TonightCard data={data} now={now} onNavigate={onNavigate} />
 
       <CoverOfTheDay data={data} now={now} onNavigate={onNavigate} />
 
@@ -556,6 +560,43 @@ function CoverOfTheDay({
         <p className="absolute bottom-3 left-3 right-3 text-left font-serif text-[1rem] leading-snug text-paper-surface">
           {cover.caption}
         </p>
+      )}
+    </button>
+  );
+}
+
+function TonightCard({
+  data,
+  now,
+  onNavigate,
+}: {
+  data: DashboardData;
+  now: Date;
+  onNavigate: (target: FrontPageNavTarget) => void;
+}) {
+  const tonight = dinnerForDate(data.mealCalendar, todayKey(now));
+
+  return (
+    <button
+      type="button"
+      onClick={() => onNavigate({ world: "life", lifeView: "meals" })}
+      className="hover-lift rounded-xl2 border border-paper-border bg-paper-surface p-4 text-left shadow-paper transition active:scale-[0.99] lg:col-span-5"
+    >
+      <p className="mb-1 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+        🍽️ Tonight
+      </p>
+      {tonight ? (
+        <>
+          <p className="font-serif text-[1.05rem] leading-snug text-paper-ink">
+            {tonight.recipe.emoji} {tonight.recipe.name}
+          </p>
+          <p className="mt-0.5 text-[11px] text-paper-muted">
+            {tonight.day.isLeftover ? "Leftover night" : "Cook night"}
+            {tonight.day.cooked && " · Cooked ✓"}
+          </p>
+        </>
+      ) : (
+        <p className="font-serif text-[1.05rem] italic text-paper-muted">No plan for tonight yet</p>
       )}
     </button>
   );
