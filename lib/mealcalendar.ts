@@ -35,6 +35,9 @@ export type MealRecipe = {
   hisVersion: string;
   hersVersion: string;
   prepNote: string;
+  // Links to lib/cookbook.ts's CookbookRecipe.id when the full premium
+  // writeup exists for this dish - "" when it doesn't (yet).
+  cookbookId: string;
 };
 
 export type MealDay = {
@@ -46,6 +49,10 @@ export type MealDay = {
   isLeftover: boolean;
   isFun: boolean;
   cooked: boolean;
+  // Free-text - breakfast/lunch aren't recipe-backed like dinner, just a
+  // quick note she can set and edit from "This Week" or Today's Meals.
+  breakfastNote: string;
+  lunchNote: string;
 };
 
 export type MealGroceryItem = {
@@ -126,9 +133,10 @@ function recipe(
   effort: string,
   hisVersion: string,
   hersVersion: string,
-  prepNote: string
+  prepNote: string,
+  cookbookId = ""
 ): MealRecipe {
-  return { id, name, emoji, category, effort, hisVersion, hersVersion, prepNote };
+  return { id, name, emoji, category, effort, hisVersion, hersVersion, prepNote, cookbookId };
 }
 
 function seedRecipes(): Record<string, MealRecipe> {
@@ -137,67 +145,78 @@ function seedRecipes(): Record<string, MealRecipe> {
       "tacos", "Beef Tacos + Black Beans", "🌮", "beef", "Cook · 25 min",
       "Seasoned ground beef in crisped corn-tortilla shells (bake tortillas over the oven rack at 375° for 8 min), shredded cheese, onion, hot sauce. Warm black beans + half avocado on the side.",
       "Same beef, same beans - swap shells for butter-lettuce cups or 1 low-carb tortilla. Add extra pico + avocado so the plate still feels full.",
-      "Brown all 3 lb of taco/bowl beef tonight while you're at the stove - half for tacos, half boxed for street-corn bowls & crunchwrap later."
+      "Brown all 3 lb of taco/bowl beef tonight while you're at the stove - half for tacos, half boxed for street-corn bowls & crunchwrap later.",
+      "beef-tacos-black-beans"
     ),
     recipe(
       "poulAnSos", "Poul an Sòs + Diri Kole", "🍗", "haitian", "Sunday batch · 90 min (makes 2 dinners)",
       "Haitian stewed chicken - épis-marinated legs simmered in tomato-onion-pepper sauce, over diri kole ak pwa (rice & beans). Fried plantains if you're feeling it.",
       "Same chicken, same sauce (it's mostly peppers, onion, tomato - already lean). Fist-size scoop of diri kole, then fill the plate with pikliz and cucumber salad.",
-      "Marinate chicken in épis Saturday night. Double the batch - Monday's dinner is done. Freeze 2 cups sauce for bouyon later."
+      "Marinate chicken in épis Saturday night. Double the batch - Monday's dinner is done. Freeze 2 cups sauce for bouyon later.",
+      "poul-an-sos-diri-kole"
     ),
     recipe(
       "poulLeft", "Leftover Poul an Sòs", "🫕", "haitian", "Leftover · 5 min",
       "Reheat chicken + rice, fresh pikliz on top.",
       "Shred the chicken over a big greens bowl with pikliz as the dressing - zero extra cooking.",
-      "Already done. This is the system working."
+      "Already done. This is the system working.",
+      "leftover-poul-an-sos"
     ),
     recipe(
       "lentilPlate", "Chicken, Red Lentils + Basmati", "🥘", "chicken", "Fast cook · 20 min",
       "Crispy pan-seared chicken thigh over stewed red lentils (onion, garlic, curry powder, stock) + basmati + half avocado.",
       "Same plate, flipped ratio: half-scoop rice, double lentils (protein + fiber = full for hours), avocado stays.",
-      "Lentils + rice were batched Sunday - tonight is just searing thighs."
+      "Lentils + rice were batched Sunday - tonight is just searing thighs.",
+      "chicken-red-lentils-basmati-rice"
     ),
     recipe(
       "beefPlantain", "Beef, Plantain + Spinach", "🍌", "beef", "Fast cook · 20 min",
       "Seasoned ground beef, 5-6 slices of fried sweet plantain, garlicky sautéed spinach.",
       "Same beef + spinach mountain, cap plantain at 3 slices. Air-fry them with a spray of oil instead of shallow-frying.",
-      "Beef can come from Saturday's batch. Plantains cook in 10 min."
+      "Beef can come from Saturday's batch. Plantains cook in 10 min.",
+      "beef-plantain-spinach"
     ),
     recipe(
       "tortillaSoup", "Chicken Tortilla Soup", "🍲", "chicken", "Assemble · 15 min (big batch)",
       "Shredded chicken, black beans, corn, fire-roasted tomatoes, stock + taco spices. Top with tortilla strips + cheese.",
       "Naturally light - go easy on tortilla strips, add extra chicken + a spoon of Greek yogurt instead of sour cream.",
-      "Uses Sunday's shredded chicken. Make the full pot: tonight + a freezer container for week 3."
+      "Uses Sunday's shredded chicken. Make the full pot: tonight + a freezer container for week 3.",
+      "chicken-tortilla-soup"
     ),
     recipe(
       "salmonBites", "Honey Garlic Salmon Bites", "🍣", "seafood", "Fast cook · 20 min",
       "Cubed salmon seared in honey-garlic-soy glaze, jasmine rice, roasted broccolini.",
       "Same bites (halve the honey in her pan-half, or sauce after splitting), half rice / half cauli-rice blend, double broccolini.",
-      "Frozen salmon from Walmart - thaw in fridge the night before."
+      "Frozen salmon from Walmart - thaw in fridge the night before.",
+      "honey-garlic-salmon-bites"
     ),
     recipe(
       "steakFrites", "Steak Frites Date Night", "🥩", "beef", "Cook · 35 min",
       "Chimichurri-topped sliced steak + garlic-parm fries.",
       "Same steak + chimichurri, big arugula-date salad as the base, steal a handful of his fries. One fun plate a week is part of the plan, not a cheat.",
-      "Salt the steak in the morning; it cooks in 8 min at night."
+      "Salt the steak in the morning; it cooks in 8 min at night.",
+      "steak-frites-date-night"
     ),
     recipe(
       "streetCorn", "Street Corn Beef Bowls", "🌽", "beef", "Prep + cook · 40 min (makes 2 dinners)",
       "Taco beef + chili-roasted sweet potato cubes, topped with creamy street-corn (corn, mayo, cheese, lime, cilantro).",
       "Same bowl - build the corn topping on Greek yogurt instead of mayo, lighter cheese, extra lime + tajín. Sweet potato stays; it's a great carb.",
-      "Sunday: roast a full tray of sweet potato, mix corn topping, portion 4 bowls. Mon is grab-and-heat."
+      "Sunday: roast a full tray of sweet potato, mix corn topping, portion 4 bowls. Mon is grab-and-heat.",
+      "street-corn-beef-bowls"
     ),
     recipe(
       "streetCornLeft", "Street Corn Bowls Rd. 2", "🌽", "beef", "Leftover · 5 min",
       "Reheat, fresh lime + cilantro.",
       "Hers is portioned already - add a handful of lettuce underneath to stretch it.",
-      "Done Sunday."
+      "Done Sunday.",
+      "street-corn-beef-bowls-round-two"
     ),
     recipe(
       "kebabBowls", "Chicken Kebab Bowls", "🥙", "chicken", "Fast cook · 25 min",
       "Marinated chicken, cucumber-tomato-red onion salad, garlic yogurt sauce, warm naan/pita + seasoned fries.",
       "Same chicken + big salad + yogurt sauce. Skip the fries, keep a half pita. The salad + sauce is what makes this one satisfying.",
-      "Chicken went into marinade Sunday - flavor is done before you get home."
+      "Chicken went into marinade Sunday - flavor is done before you get home.",
+      "chicken-kebab-bowls"
     ),
     recipe(
       "kebabLeft", "Kebab Bowls Rd. 2 / Wraps", "🌯", "chicken", "Leftover · 10 min",
@@ -209,25 +228,29 @@ function seedRecipes(): Record<string, MealRecipe> {
       "legim", "Legim + Rice", "🍆", "haitian", "Cook · 60 min (batchable)",
       "Haitian braised vegetable stew - eggplant, cabbage, carrot, chayote, spinach, with a little beef, over white rice.",
       "Legim IS the weight-loss meal - it's a mountain of vegetables. Big bowl of legim, fist of rice. Nothing to change.",
-      "Chop veg during Sunday prep or buy pre-cut cabbage. Freezes beautifully."
+      "Chop veg during Sunday prep or buy pre-cut cabbage. Freezes beautifully.",
+      "legim-white-rice"
     ),
     recipe(
       "crunchwrap", "Crunchwrap Night", "🫓", "beef", "Fast cook · 20 min",
       "Homemade crunchwrap supreme - beef, cheese, lettuce, tomato, sour cream, tostada layer, griddled.",
       "Crunchwrap bowl: same beef + toppings over lettuce with crushed tostada on top, Greek yogurt for sour cream - or a single high-fiber wrap version.",
-      "Last of Haul-1 beef. Uses fridge odds and ends before payday shop."
+      "Last of Haul-1 beef. Uses fridge odds and ends before payday shop.",
+      "crunchwrap-night"
     ),
     recipe(
       "periPeri", "Peri Peri Chicken + Sweet Potato", "🔥", "chicken", "Cook · 35 min",
       "Peri peri marinated chicken, roasted sweet potato wedges, cucumber-tomato salad, guac + sour cream.",
       "Same everything - Greek yogurt instead of sour cream, guac stays (good fat), extra salad. This one barely needs edits.",
-      "Payday-haul kickoff. Marinate chicken while unpacking groceries."
+      "Payday-haul kickoff. Marinate chicken while unpacking groceries.",
+      "peri-peri-chicken-sweet-potatoes"
     ),
     recipe(
       "buffaloMac", "Buffalo Chicken + Mac", "🧀", "chicken", "Sunday batch · 45 min (makes 2)",
       "Crispy buffalo chicken bites + baked mac n cheese, ranch drizzle.",
       "Air-fried buffalo chicken over crunchy slaw with ranch-yogurt dressing + a real spoonful of his mac. Taste it, don't build on it.",
-      "Batch double buffalo chicken Sunday - Monday's dinner + her lunch salads."
+      "Batch double buffalo chicken Sunday - Monday's dinner + her lunch salads.",
+      "buffalo-chicken-mac"
     ),
     recipe(
       "buffaloLeft", "Buffalo Chicken Rd. 2", "🥗", "chicken", "Leftover · 10 min",
@@ -239,91 +262,106 @@ function seedRecipes(): Record<string, MealRecipe> {
       "friedRice", "Chicken Fried Rice + Broccolini", "🍚", "chicken", "Fast cook · 20 min",
       "Day-old rice fried with chicken thigh, sun-dried tomato, scallion, egg. Roasted broccolini.",
       "Half rice / half riced cauliflower in her portion of the pan, extra egg for protein, double broccolini.",
-      "Cook the rice a day ahead (or use Sunday's batch) - cold rice fries better anyway."
+      "Cook the rice a day ahead (or use Sunday's batch) - cold rice fries better anyway.",
+      "chicken-fried-rice"
     ),
     recipe(
       "pattySalad", "Beef Patties + Arugula-Date Salad", "🥬", "beef", "Fast cook · 20 min",
       "Two parm-topped beef patties, arugula salad with dates + olive oil, fried plantain.",
       "One patty, salad doubled (the dates make it feel like a treat), 2-3 plantain slices.",
-      "Form patties in the morning; 10-min dinner."
+      "Form patties in the morning; 10-min dinner.",
+      "beef-patties-arugula-date-salad"
     ),
     recipe(
       "tortillaSoup2", "Tortilla Soup (Freezer Round)", "🍲", "chicken", "Reheat · 10 min",
       "Week-1 freezer batch, new tortilla strips.",
       "Same, topped with avocado instead of extra strips.",
-      "Past-you already cooked this. Say thank you."
+      "Past-you already cooked this. Say thank you.",
+      "chicken-tortilla-soup"
     ),
     recipe(
       "cajunSalmon", "Cajun Salmon Pasta", "🍝", "seafood", "Cook · 30 min",
       "Blackened salmon over creamy cajun penne.",
       "Same salmon + sauce over half-portion pasta bulked with zucchini ribbons - sauce clings the same, half the pasta load.",
-      "Thaw salmon overnight. Make sauce slightly loose so it stretches over veg."
+      "Thaw salmon overnight. Make sauce slightly loose so it stretches over veg.",
+      "cajun-salmon-pasta"
     ),
     recipe(
       "steakPitas", "Chimichurri Steak Pitas", "🥩", "beef", "Cook · 30 min",
       "Cumin steak bites in pitas with cucumber-tomato salad, feta, green sauce.",
       "Steak bowl: everything minus one pita - salad base, feta, extra green sauce (it's herbs + lime, basically free).",
-      "Marinate steak in the morning."
+      "Marinate steak in the morning.",
+      "chimichurri-steak-pitas"
     ),
     recipe(
       "sosPwa", "Sòs Pwa Nwa + Diri Blan", "🫘", "haitian", "Sunday batch · 75 min (makes 2)",
       "Silky Haitian black bean sauce over white rice, avocado on the side.",
       "Bean sauce is fiber + protein - generous ladle, fist of rice, half avocado, add a boiled egg for staying power.",
-      "Dry beans soaked Saturday night, simmered Sunday. Double batch = Monday handled."
+      "Dry beans soaked Saturday night, simmered Sunday. Double batch = Monday handled.",
+      "sos-pwa-nwa-diri-blan"
     ),
     recipe(
       "sosPwaLeft", "Sòs Pwa Rd. 2 + Egg", "🍳", "haitian", "Leftover · 10 min",
       "Reheat with rice, top with a fried egg.",
       "Same - the fried egg version is honestly the best version.",
-      "Done."
+      "Done.",
+      "sos-pwa-round-two"
     ),
     recipe(
       "steakBites", "Garlic Butter Steak Bites + Mash", "🧈", "beef", "Fast cook · 25 min",
       "Garlic-butter steak bites, mashed potatoes, roasted asparagus.",
       "Same bites (pull hers before the final butter baste), cauli-mash or a half scoop of his, double asparagus.",
-      "Cube steak in the morning."
+      "Cube steak in the morning.",
+      "garlic-butter-steak-bites-mashed-potatoes"
     ),
     recipe(
       "burritoBowls", "Hot Honey Chicken Burrito Bowls", "🍯", "chicken", "Fast cook · 25 min (makes 2)",
       "Hot honey glazed chicken, seasoned rice, charred corn, guac, sour cream, chips.",
       "Lettuce-based bowl: same chicken (glaze brushed light), small rice scoop, corn, guac, Greek yogurt, skip chips.",
-      "Chicken marinated Sunday; make double for tomorrow."
+      "Chicken marinated Sunday; make double for tomorrow.",
+      "hot-honey-chicken-burrito-bowls"
     ),
     recipe(
       "burritoLeft", "Burrito Bowls Rd. 2", "🥑", "chicken", "Leftover · 5 min",
       "Reheat + fresh guac.",
       "Hers is pre-portioned - fresh lettuce underneath.",
-      "Done."
+      "Done.",
+      "hot-honey-chicken-burrito-bowls"
     ),
     recipe(
       "hibachi", "Shrimp Hibachi", "🦐", "seafood", "Cook · 30 min",
       "Hibachi shrimp, fried rice, zucchini + onions, yum yum sauce.",
       "Same shrimp + double zucchini-onion, half rice, yum yum made on Greek yogurt base (mayo cut 50/50).",
-      "Day-old rice again - plan it Wednesday."
+      "Day-old rice again - plan it Wednesday.",
+      "shrimp-hibachi"
     ),
     recipe(
       "chickenSando", "Spicy Chicken Sandwich Night", "🍔", "chicken", "Cook · 35 min",
       "Fried spicy chicken sandwich on brioche + waffle fries.",
       "Air-fried or grilled version of the same chicken, open-faced (one bun half) or over slaw, share the fries. Second fun plate of the week - enjoy it.",
-      "Brine chicken in pickle juice overnight for max flavor."
+      "Brine chicken in pickle juice overnight for max flavor.",
+      "spicy-chicken-sandwich-night"
     ),
     recipe(
       "bouyon", "Bouyon Sunday", "🥣", "haitian", "Payday cook · 90 min (big pot)",
       "Haitian Sunday soup - beef, dumplings, plantain, yam, cabbage, spinach in rich broth.",
       "Broth + vegetables + beef are the meal - take 1-2 dumplings instead of 4 and you're done. This is comfort food that already fits the plan.",
-      "Uses frozen épis sauce from week 1. Big pot = Monday lunches too."
+      "Uses frozen épis sauce from week 1. Big pot = Monday lunches too.",
+      "bouyon-bouillon-haitien"
     ),
     recipe(
       "steakShrimp", "Steak & Shrimp Finale", "✨", "beef", "Cook · 35 min",
       "Surf & turf - steak bites + cajun shrimp over mash, asparagus.",
       "Same steak + shrimp (that part is all protein), cauli-mash base, big asparagus pile. Close August strong.",
-      "Last cook of the month. September plan drops next."
+      "Last cook of the month. September plan drops next.",
+      "steak-shrimp-finale"
     ),
     recipe(
       "griot", "Griot ak Bannann + Pikliz", "🍖", "haitian", "Fri/Sat only · marinate ahead + fry · 45 min",
       "Twice-fried crispy pork shoulder (marinated overnight in sour orange, garlic, and épis), golden fried plantains, a big scoop of pikliz on top.",
       "Same griot, same crispy edges - protein doesn't get cut here either. Half the plantain, pikliz piled high since it's basically a spicy slaw and does the veg job too.",
-      "Marinate the pork the night before. This one's a Friday/Saturday-only treat, not a weeknight regular - it earns its spot on the calendar."
+      "Marinate the pork the night before. This one's a Friday/Saturday-only treat, not a weeknight regular - it earns its spot on the calendar.",
+      "griot-pikliz"
     ),
     recipe(
       "pouleAkNwa", "Poule ak Nwa (Chicken in Cashew Sauce)", "🥜", "haitian", "Sunday batch · 60 min (makes 2 dinners)",
@@ -404,6 +442,8 @@ function seedDaysFor(month: string, seedDays: SeedDay[]): MealDay[] {
     isLeftover: sd.left ?? false,
     isFun: sd.fun ?? false,
     cooked: false,
+    breakfastNote: "",
+    lunchNote: "",
   }));
 }
 
@@ -646,6 +686,8 @@ function normalizeDay(raw: Partial<MealDay> | null | undefined): MealDay | null 
     isLeftover: raw.isLeftover ?? false,
     isFun: raw.isFun ?? false,
     cooked: raw.cooked ?? false,
+    breakfastNote: raw.breakfastNote ?? "",
+    lunchNote: raw.lunchNote ?? "",
   };
 }
 
@@ -693,6 +735,7 @@ function normalizeRecipe(fallback: MealRecipe, raw: Partial<MealRecipe> | null |
     hisVersion: raw.hisVersion ?? fallback.hisVersion,
     hersVersion: raw.hersVersion ?? fallback.hersVersion,
     prepNote: raw.prepNote ?? fallback.prepNote,
+    cookbookId: raw.cookbookId ?? fallback.cookbookId,
   };
 }
 
@@ -711,7 +754,7 @@ export function normalizeMealCalendarData(raw: Partial<MealCalendarData> | null 
   for (const id of Object.keys(raw.recipes ?? {})) {
     if (!recipes[id] && raw.recipes?.[id]) {
       recipes[id] = normalizeRecipe(
-        { id, name: "", emoji: "🍽️", category: "light", effort: "", hisVersion: "", hersVersion: "", prepNote: "" },
+        { id, name: "", emoji: "🍽️", category: "light", effort: "", hisVersion: "", hersVersion: "", prepNote: "", cookbookId: "" },
         raw.recipes[id]
       );
     }
@@ -821,6 +864,27 @@ export function dinnerForDate(
   return { day, recipe };
 }
 
+// The 7 dates (Sun-Sat) of the week containing `date`, for the "This Week"
+// panel and Today's Meals - works across a month boundary since each date
+// is looked up independently via dinnerForDate/dayForDate.
+export function weekDatesContaining(date: string): string[] {
+  const [y, m, d] = date.split("-").map(Number);
+  const anchor = new Date(y, m - 1, d);
+  const sunday = new Date(y, m - 1, d - anchor.getDay());
+  const out: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    out.push(dateKey(new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + i)));
+  }
+  return out;
+}
+
+export function dayForDate(data: MealCalendarData, date: string): MealDay | null {
+  const month = monthKeyForDate(new Date(`${date}T00:00:00`));
+  const monthData = data.months[month];
+  if (!monthData) return null;
+  return dayFor(monthData, date);
+}
+
 export type ChecklistPrepTask = { weekendId: string; weekendTitle: string; task: PrepTask };
 
 // All tasks (done and not) from whichever prep weekend(s) cover this date -
@@ -851,6 +915,28 @@ export function toggleDayCooked(data: MealCalendarData, month: string, date: str
       [month]: {
         ...monthData,
         days: monthData.days.map((d) => (d.date === date ? { ...d, cooked: !d.cooked } : d)),
+      },
+    },
+  };
+}
+
+export function setMealNote(
+  data: MealCalendarData,
+  date: string,
+  meal: "breakfast" | "lunch",
+  note: string
+): MealCalendarData {
+  const month = monthKeyForDate(new Date(`${date}T00:00:00`));
+  const monthData = data.months[month];
+  if (!monthData) return data;
+  const field = meal === "breakfast" ? "breakfastNote" : "lunchNote";
+  return {
+    ...data,
+    months: {
+      ...data.months,
+      [month]: {
+        ...monthData,
+        days: monthData.days.map((d) => (d.date === date ? { ...d, [field]: note } : d)),
       },
     },
   };

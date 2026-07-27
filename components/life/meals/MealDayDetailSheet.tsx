@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { MEAL_CATEGORY_COLORS, MEAL_CATEGORY_LABELS, MealDay, MealRecipe } from "@/lib/mealcalendar";
+import { CookbookData, recipeById } from "@/lib/cookbook";
 import CheckCircle from "@/components/CheckCircle";
+import RecipePage from "./RecipePage";
 
 function formatDayLabel(dateStr: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -15,15 +18,23 @@ function formatDayLabel(dateStr: string): string {
 export default function MealDayDetailSheet({
   day,
   recipe,
+  cookbook,
   onToggleCooked,
   onClose,
 }: {
   day: MealDay;
   recipe: MealRecipe;
+  cookbook: CookbookData;
   onToggleCooked: () => void;
   onClose: () => void;
 }) {
   const color = MEAL_CATEGORY_COLORS[recipe.category];
+  const [fullRecipeOpen, setFullRecipeOpen] = useState(false);
+  const cookbookRecipe = recipe.cookbookId ? recipeById(cookbook, recipe.cookbookId) : undefined;
+
+  if (fullRecipeOpen && cookbookRecipe) {
+    return <RecipePage recipe={cookbookRecipe} onClose={() => setFullRecipeOpen(false)} />;
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/30 animate-fade-in" onClick={onClose}>
@@ -43,6 +54,17 @@ export default function MealDayDetailSheet({
           {recipe.emoji} {recipe.name}
         </h2>
         <p className="mb-4 text-[12px] text-paper-muted">{recipe.effort}</p>
+
+        {cookbookRecipe && (
+          <button
+            type="button"
+            onClick={() => setFullRecipeOpen(true)}
+            className="mb-3 flex w-full items-center justify-between rounded-xl border border-gold/40 bg-gold-soft/50 px-3.5 py-2.5 text-left"
+          >
+            <span className="text-[13px] font-medium text-paper-ink">📖 View full recipe</span>
+            <span className="text-gold">›</span>
+          </button>
+        )}
 
         <div className="flex flex-col gap-2.5">
           <div className="rounded-xl border-l-[3px] border-life bg-paper-surface2 p-3.5">

@@ -1214,6 +1214,7 @@ const mealRecipeSchema = z.object({
   hisVersion: z.string().max(1000),
   hersVersion: z.string().max(1000),
   prepNote: z.string().max(500),
+  cookbookId: z.string().max(100),
 });
 
 const mealDaySchema = z.object({
@@ -1225,6 +1226,8 @@ const mealDaySchema = z.object({
   isLeftover: z.boolean(),
   isFun: z.boolean(),
   cooked: z.boolean(),
+  breakfastNote: z.string().max(200),
+  lunchNote: z.string().max(200),
 });
 
 const mealGroceryItemSchema = z.object({
@@ -1283,6 +1286,48 @@ const mealCalendarDataSchema = z.object({
   recipes: z.record(z.string(), mealRecipeSchema),
   months: z.record(z.string(), mealCalendarMonthSchema),
   lunches: z.array(lunchIdeaSchema).max(20),
+  seedVersion: z.number().int(),
+});
+
+const ingredientGroupSchema = z.object({
+  label: z.string().max(60),
+  items: z.array(z.string().max(200)).max(60),
+});
+
+const cookbookRecipeSchema = z.object({
+  id: z.string(),
+  name: z.string().max(150),
+  description: z.string().max(2000),
+  prepTime: z.string().max(40),
+  cookTime: z.string().max(40),
+  totalTime: z.string().max(40),
+  servings: z.string().max(40),
+  difficulty: z.string().max(40),
+  cuisine: z.string().max(60),
+  pronunciation: z.string().max(200),
+  culturalBackground: z.string().max(2000),
+  mealPrepFriendly: z.string().max(20),
+  freezerFriendly: z.string().max(20),
+  protein: z.string().max(60),
+  calories: z.string().max(40),
+  spiceLevel: z.string().max(40),
+  equipment: z.array(z.string().max(150)).max(30),
+  ingredients: z.array(ingredientGroupSchema).max(20),
+  ingredientNotes: z.string().max(2000),
+  directions: z.array(z.string().max(1000)).max(60),
+  storage: z.string().max(1000),
+  freezerInstructions: z.string().max(1000),
+  mealPrepTips: z.string().max(1000),
+  leftoverIdeas: z.array(z.string().max(300)).max(20),
+  nutrition: z.string().max(500),
+  shoppingList: z.array(z.string().max(200)).max(60),
+  suggestedPairings: z.array(z.string().max(200)).max(20),
+  chefTips: z.array(z.string().max(500)).max(20),
+  tags: z.array(z.string().max(60)).max(20),
+});
+
+const cookbookDataSchema = z.object({
+  recipes: z.array(cookbookRecipeSchema).max(200),
   seedVersion: z.number().int(),
 });
 
@@ -1689,6 +1734,7 @@ const dashboardSchema = z.object({
   paycheckPlans: paycheckPlanDataSchema,
   dailyTheme: dailyThemeDataSchema,
   mealCalendar: mealCalendarDataSchema,
+  cookbook: cookbookDataSchema,
   cher: cherDataSchema,
 });
 

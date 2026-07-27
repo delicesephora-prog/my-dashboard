@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MealCalendarData, monthDataFor, monthKeyForDate } from "@/lib/mealcalendar";
 import { RecipeBankData } from "@/lib/recipes";
+import { CookbookData } from "@/lib/cookbook";
 import { CelebrationTier } from "@/lib/celebration";
 import MealCalendarTab from "./MealCalendarTab";
 import PrepWeekendsTab from "./PrepWeekendsTab";
@@ -29,12 +30,14 @@ export default function MealsView({
   mealCalendar,
   onChange,
   recipeBank,
+  cookbook,
   onCelebrate,
   onCherToast,
 }: {
   mealCalendar: MealCalendarData;
   onChange: (updater: (m: MealCalendarData) => MealCalendarData) => void;
   recipeBank: RecipeBankData;
+  cookbook: CookbookData;
   onCelebrate: (tier: CelebrationTier, message: string) => void;
   onCherToast: (contextKey: string, message: string) => void;
 }) {
@@ -101,6 +104,7 @@ export default function MealsView({
           data={mealCalendar}
           month={month}
           monthData={monthData}
+          cookbook={cookbook}
           onChange={onChange}
           onCelebrate={onCelebrate}
           onCherToast={onCherToast}
@@ -117,7 +121,7 @@ export default function MealsView({
 
       {tab === "lunches" && <LunchesTab lunches={mealCalendar.lunches} />}
 
-      {tab === "recipes" && <RecipesTab recipes={mealCalendar.recipes} recipeBank={recipeBank} />}
+      {tab === "recipes" && <RecipesTab cookbook={cookbook} recipeBank={recipeBank} />}
     </div>
   );
 }

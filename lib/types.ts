@@ -25,6 +25,7 @@ import { HomeZonesData, emptyHomeZonesData, normalizeHomeZonesData } from "./hom
 import { WelcomeData, emptyWelcomeData, normalizeWelcomeData } from "./welcome";
 import { DailyThemeData, defaultDailyThemeData, normalizeDailyThemeData } from "./dailytheme";
 import { MealCalendarData, defaultMealCalendarData, normalizeMealCalendarData } from "./mealcalendar";
+import { CookbookData, defaultCookbookData, normalizeCookbookData } from "./cookbook";
 import { CherData, defaultCherData, normalizeCherData } from "./cher";
 import { WaitingOnData, emptyWaitingOnData, normalizeWaitingOnData } from "./waitingon";
 import { VendorsData, emptyVendorsData, normalizeVendorsData } from "./vendors";
@@ -1019,6 +1020,7 @@ export type DashboardData = {
   paycheckPlans: PaycheckPlanData;
   dailyTheme: DailyThemeData;
   mealCalendar: MealCalendarData;
+  cookbook: CookbookData;
   cher: CherData;
 };
 
@@ -1092,6 +1094,7 @@ export function defaultDashboardData(): DashboardData {
     paycheckPlans: emptyPaycheckPlanData(),
     dailyTheme: defaultDailyThemeData(),
     mealCalendar: defaultMealCalendarData(),
+    cookbook: defaultCookbookData(),
     cher: defaultCherData(),
   };
 }
@@ -1251,6 +1254,7 @@ export function normalizeDashboardData(
     paycheckPlans: normalizePaycheckPlanData(data.paycheckPlans),
     dailyTheme: normalizeDailyThemeData(data.dailyTheme),
     mealCalendar: normalizeMealCalendarData(data.mealCalendar),
+    cookbook: normalizeCookbookData(data.cookbook),
     cher: normalizeCherData(data.cher),
   };
 

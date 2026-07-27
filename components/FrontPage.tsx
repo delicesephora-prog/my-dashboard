@@ -34,7 +34,8 @@ import { vocabForDate, factForDate } from "@/lib/welcome";
 import { QuestData, isQuestDone, markQuestDone, questForDate } from "@/lib/quest";
 import { openItems, overdueItems } from "@/lib/waitingon";
 import { coverOfTheDay } from "@/lib/vision";
-import { dinnerForDate } from "@/lib/mealcalendar";
+import { dayForDate, dinnerForDate } from "@/lib/mealcalendar";
+import { recipeById } from "@/lib/cookbook";
 import { CelebrationTier } from "@/lib/celebration";
 import { burstConfettiMedium } from "@/lib/confetti";
 import Greeting from "./Greeting";
@@ -46,6 +47,7 @@ import ProgressRing from "./ProgressRing";
 import CheckCircle from "./CheckCircle";
 import AnimatedNumber from "./AnimatedNumber";
 import Flourish from "./Flourish";
+import RecipePage from "./life/meals/RecipePage";
 
 const FOLDERS: { icon: string; label: string; target: FrontPageNavTarget }[] = [
   { icon: "📌", label: "Money", target: { world: "life", lifeView: "money" } },
@@ -576,31 +578,70 @@ function TonightCard({
   now: Date;
   onNavigate: (target: FrontPageNavTarget) => void;
 }) {
-  const tonight = dinnerForDate(data.mealCalendar, todayKey(now));
+  const [recipeOpen, setRecipeOpen] = useState(false);
+  const todayStr = todayKey(now);
+  const tonight = dinnerForDate(data.mealCalendar, todayStr);
+  const day = dayForDate(data.mealCalendar, todayStr);
+  const cookbookRecipe = tonight?.recipe.cookbookId ? recipeById(data.cookbook, tonight.recipe.cookbookId) : undefined;
 
   return (
-    <button
-      type="button"
-      onClick={() => onNavigate({ world: "life", lifeView: "meals" })}
-      className="hover-lift rounded-xl2 border border-paper-border bg-paper-surface p-4 text-left shadow-paper transition active:scale-[0.99] lg:col-span-5"
-    >
-      <p className="mb-1 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
-        🍽️ Tonight
+    <div className="hover-lift rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper transition lg:col-span-5">
+      <p className="mb-2 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+        🍽️ Today&rsquo;s Meals
       </p>
-      {tonight ? (
-        <>
-          <p className="font-serif text-[1.05rem] leading-snug text-paper-ink">
-            {tonight.recipe.emoji} {tonight.recipe.name}
-          </p>
-          <p className="mt-0.5 text-[11px] text-paper-muted">
-            {tonight.day.isLeftover ? "Leftover night" : "Cook night"}
-            {tonight.day.cooked && " · Cooked ✓"}
-          </p>
-        </>
-      ) : (
-        <p className="font-serif text-[1.05rem] italic text-paper-muted">No plan for tonight yet</p>
-      )}
-    </button>
+
+      <div className="flex flex-col gap-1.5">
+        <button
+          type="button"
+          onClick={() => onNavigate({ world: "life", lifeView: "meals" })}
+          className="flex items-center gap-2 text-left"
+        >
+          <span className="w-[62px] shrink-0 text-[10px] font-semibold uppercase tracking-wide text-paper-faint">
+            Breakfast
+          </span>
+          <span className="min-w-0 flex-1 truncate text-[12.5px] text-paper-ink">
+            {day?.breakfastNote || <span className="italic text-paper-muted">Not set</span>}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => onNavigate({ world: "life", lifeView: "meals" })}
+          className="flex items-center gap-2 text-left"
+        >
+          <span className="w-[62px] shrink-0 text-[10px] font-semibold uppercase tracking-wide text-paper-faint">
+            Lunch
+          </span>
+          <span className="min-w-0 flex-1 truncate text-[12.5px] text-paper-ink">
+            {day?.lunchNote || <span className="italic text-paper-muted">Not set</span>}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => (cookbookRecipe ? setRecipeOpen(true) : onNavigate({ world: "life", lifeView: "meals" }))}
+          className="flex items-center gap-2 text-left"
+        >
+          <span className="w-[62px] shrink-0 text-[10px] font-semibold uppercase tracking-wide text-paper-faint">
+            Dinner
+          </span>
+          {tonight ? (
+            <>
+              <span className="min-w-0 flex-1 truncate font-serif text-[13px] text-paper-ink">
+                {tonight.recipe.emoji} {tonight.recipe.name}
+              </span>
+              <span className="shrink-0 text-[10.5px] text-paper-muted">
+                {tonight.day.isLeftover ? "Leftover" : "Cook"}
+                {tonight.day.cooked && " · ✓"}
+              </span>
+              {cookbookRecipe && <span className="shrink-0 text-paper-muted">›</span>}
+            </>
+          ) : (
+            <span className="italic text-paper-muted">No plan for tonight yet</span>
+          )}
+        </button>
+      </div>
+
+      {recipeOpen && cookbookRecipe && <RecipePage recipe={cookbookRecipe} onClose={() => setRecipeOpen(false)} />}
+    </div>
   );
 }
 

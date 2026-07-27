@@ -1343,6 +1343,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 mealCalendar={data.mealCalendar}
                 onChange={updateMealCalendar}
                 recipeBank={data.recipes}
+                cookbook={data.cookbook}
                 onCelebrate={triggerCelebration}
                 onCherToast={fireCherToast}
               />

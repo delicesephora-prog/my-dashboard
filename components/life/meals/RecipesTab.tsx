@@ -1,97 +1,111 @@
 "use client";
 
-import { useState } from "react";
-import { MEAL_CATEGORY_COLORS, MEAL_CATEGORY_LABELS, MealCategory, MealRecipe } from "@/lib/mealcalendar";
+import { useMemo, useState } from "react";
+import { CookbookData, CookbookRecipe } from "@/lib/cookbook";
 import { RecipeBankData } from "@/lib/recipes";
+import RecipePage from "./RecipePage";
 
 export default function RecipesTab({
-  recipes,
+  cookbook,
   recipeBank,
 }: {
-  recipes: Record<string, MealRecipe>;
+  cookbook: CookbookData;
   recipeBank: RecipeBankData;
 }) {
-  const [filter, setFilter] = useState<MealCategory | "all">("all");
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [cuisineFilter, setCuisineFilter] = useState<string>("all");
+  const [openRecipe, setOpenRecipe] = useState<CookbookRecipe | null>(null);
   const [bankOpen, setBankOpen] = useState(false);
 
-  const list = Object.values(recipes)
-    .filter((r) => filter === "all" || r.category === filter)
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const cuisines = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of cookbook.recipes) if (r.cuisine) set.add(r.cuisine);
+    return Array.from(set).sort();
+  }, [cookbook.recipes]);
+
+  const list = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return cookbook.recipes
+      .filter((r) => cuisineFilter === "all" || r.cuisine === cuisineFilter)
+      .filter((r) => {
+        if (!needle) return true;
+        return (
+          r.name.toLowerCase().includes(needle) ||
+          r.cuisine.toLowerCase().includes(needle) ||
+          r.tags.some((t) => t.toLowerCase().includes(needle)) ||
+          r.protein.toLowerCase().includes(needle)
+        );
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [cookbook.recipes, query, cuisineFilter]);
 
   return (
     <div>
-      <div className="mb-3 flex gap-1.5 overflow-x-auto">
-        <button
-          type="button"
-          onClick={() => setFilter("all")}
-          className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-medium transition ${
-            filter === "all" ? "bg-life text-paper-surface" : "border border-paper-border bg-paper-surface text-paper-muted"
-          }`}
-        >
-          All ({Object.keys(recipes).length})
-        </button>
-        {(Object.keys(MEAL_CATEGORY_LABELS) as MealCategory[]).map((cat) => (
-          <button
-            key={cat}
-            type="button"
-            onClick={() => setFilter(cat)}
-            className={`shrink-0 rounded-full border px-3 py-1.5 text-[12px] font-medium transition ${
-              filter === cat ? "border-transparent text-white" : "border-paper-border bg-paper-surface text-paper-muted"
-            }`}
-            style={filter === cat ? { background: MEAL_CATEGORY_COLORS[cat] } : undefined}
-          >
-            {MEAL_CATEGORY_LABELS[cat]}
-          </button>
-        ))}
-      </div>
+      <p className="mb-3 text-[12px] text-paper-muted">
+        The full cookbook, searchable - but the fastest way to a recipe is still tapping the meal on your calendar.
+      </p>
 
-      <div className="flex flex-col gap-2">
-        {list.map((r) => {
-          const open = openId === r.id;
-          const color = MEAL_CATEGORY_COLORS[r.category];
-          return (
-            <div key={r.id} className="rounded-xl2 border border-paper-border bg-paper-surface shadow-paper">
-              <button
-                type="button"
-                onClick={() => setOpenId(open ? null : r.id)}
-                className="flex w-full items-center gap-3 px-3.5 py-3 text-left"
-              >
-                <span className="text-[24px] leading-none">{r.emoji}</span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-serif text-[14.5px] text-paper-ink">{r.name}</p>
-                  <p className="text-[11px] text-paper-muted">{r.effort}</p>
-                </div>
-                <span
-                  className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
-                  style={{ background: color }}
-                >
-                  {MEAL_CATEGORY_LABELS[r.category]}
-                </span>
-                <span className={`shrink-0 text-paper-muted transition-transform ${open ? "rotate-90" : ""}`}>
-                  ›
-                </span>
-              </button>
-              {open && (
-                <div className="flex flex-col gap-2 border-t border-paper-border px-3.5 py-3 animate-fade-in">
-                  <div className="rounded-lg border-l-[3px] border-life bg-paper-surface2 p-2.5">
-                    <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-life">His plate</p>
-                    <p className="text-[12.5px] leading-relaxed text-paper-ink">{r.hisVersion}</p>
-                  </div>
-                  <div className="rounded-lg border-l-[3px] border-sage bg-paper-surface2 p-2.5">
-                    <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-sage">Her plate</p>
-                    <p className="text-[12.5px] leading-relaxed text-paper-ink">{r.hersVersion}</p>
-                  </div>
-                  <div className="rounded-lg border-l-[3px] border-gold bg-paper-surface2 p-2.5">
-                    <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-gold">Prep note</p>
-                    <p className="text-[12.5px] leading-relaxed text-paper-muted">{r.prepNote}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search recipes, cuisine, protein..."
+        className="mb-2.5 w-full rounded-xl border border-paper-border bg-paper-surface px-3.5 py-2.5 text-[13.5px] text-paper-ink outline-none focus:border-gold"
+      />
+
+      {cuisines.length > 0 && (
+        <div className="mb-3 flex gap-1.5 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setCuisineFilter("all")}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-medium transition ${
+              cuisineFilter === "all" ? "bg-life text-paper-surface" : "border border-paper-border bg-paper-surface text-paper-muted"
+            }`}
+          >
+            All ({cookbook.recipes.length})
+          </button>
+          {cuisines.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setCuisineFilter(c)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-medium transition ${
+                cuisineFilter === c ? "bg-life text-paper-surface" : "border border-paper-border bg-paper-surface text-paper-muted"
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {list.length === 0 ? (
+        <p className="py-8 text-center font-serif text-[0.95rem] italic text-paper-muted">
+          No recipes match &ldquo;{query}&rdquo;.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {list.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              onClick={() => setOpenRecipe(r)}
+              className="flex w-full items-center gap-3 rounded-xl2 border border-paper-border bg-paper-surface px-3.5 py-3 text-left shadow-paper"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-serif text-[14.5px] text-paper-ink">{r.name}</p>
+                <p className="truncate text-[11px] text-paper-muted">
+                  {[r.cuisine, r.totalTime || r.cookTime].filter(Boolean).join(" · ")}
+                </p>
+              </div>
+              {r.tags.includes("haitian") || r.cuisine.toLowerCase().includes("haitian") ? (
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: "#A6643B" }} />
+              ) : null}
+              <span className="shrink-0 text-paper-muted">›</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="mt-4 rounded-xl2 border border-paper-border bg-paper-surface p-3.5 shadow-paper">
         <button type="button" onClick={() => setBankOpen((v) => !v)} className="flex w-full items-center justify-between">
@@ -119,6 +133,8 @@ export default function RecipesTab({
           </div>
         )}
       </div>
+
+      {openRecipe && <RecipePage recipe={openRecipe} onClose={() => setOpenRecipe(null)} />}
     </div>
   );
 }
