@@ -19,7 +19,7 @@ export default function Greeting({ cherLine = "" }: { cherLine?: string }) {
 
   return (
     <div className="min-w-0">
-      <h1 className="truncate font-serif text-[1.35rem] font-medium leading-tight text-backdrop-ink">
+      <h1 className="font-serif text-[1.35rem] font-medium leading-tight text-backdrop-ink">
         {now ? (
           cherLine ? (
             <span className="text-signature">{cherLine}</span>
