@@ -51,6 +51,16 @@ export default function AssistantView({
   dataRef.current = data;
   const autoResultsRef = useRef<ResolvedResult[]>([]);
   const resolvedRef = useRef<ResolvedResult[]>([]);
+  // Counts chained tool-only turns within a single send/confirm - without a
+  // cap, a big multi-part ask can lead her to keep calling read tools back
+  // to back with nothing to show yet, leaving "Thinking..." spinning with
+  // no way out. Reset at the start of every user-initiated round.
+  const autoTurnCountRef = useRef(0);
+  const MAX_AUTO_TURNS = 8;
+  // A hung network request (dropped connection, backgrounded tab) must
+  // still resolve to a plain error instead of spinning forever - the
+  // outer try/catch can only help once the fetch itself settles.
+  const FETCH_TIMEOUT_MS = 60000;
 
   function updateAssistantData(updater: (a: AssistantData) => AssistantData) {
     onChangeData((d) => ({ ...d, assistant: updater(d.assistant) }));
@@ -61,17 +71,32 @@ export default function AssistantView({
   > {
     const now = new Date();
     const monthUsage = currentMonthUsage(dataRef.current.assistant, now);
-    const res = await fetch("/api/assistant", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system: buildSystemPrompt(dataRef.current, now),
-        messages,
-        useTools,
-        monthSpendUsd: monthUsage.costUsd,
-        monthCapUsd: dataRef.current.assistant.usage.monthlySpendCapUsd,
-      }),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    let res: Response;
+    try {
+      res = await fetch("/api/assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system: buildSystemPrompt(dataRef.current, now),
+          messages,
+          useTools,
+          monthSpendUsd: monthUsage.costUsd,
+          monthCapUsd: dataRef.current.assistant.usage.monthlySpendCapUsd,
+        }),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      setError(
+        err instanceof Error && err.name === "AbortError"
+          ? "That took too long to come back - the connection may have dropped. Try again, maybe in a smaller message."
+          : "Couldn't reach the Assistant - check your connection and try again."
+      );
+      return null;
+    } finally {
+      clearTimeout(timeout);
+    }
     const json = await res.json().catch(() => null);
     if (!res.ok || !json?.ok) {
       setError(json?.error ?? "The Assistant couldn't respond just now.");
@@ -92,6 +117,18 @@ export default function AssistantView({
   async function runTurn() {
     setLoading(true);
     setError(null);
+    autoTurnCountRef.current += 1;
+    if (autoTurnCountRef.current > MAX_AUTO_TURNS) {
+      // Chained tool-only turns with nothing to show yet - stop instead of
+      // silently continuing to spin. Whatever already landed (auto-applied
+      // reads/writes so far) is kept; she just isn't allowed to keep going
+      // without checking back in.
+      setError(
+        "That request needed more back-and-forth than usual and I stopped it partway through so it doesn't just hang - tell me what's still missing and I'll pick it back up."
+      );
+      setLoading(false);
+      return;
+    }
     try {
       const result = await callApi(historyRef.current, true);
       if (!result) {
@@ -238,6 +275,7 @@ export default function AssistantView({
       const all = [...autoResultsRef.current, ...nextResolved];
       autoResultsRef.current = [];
       resolvedRef.current = [];
+      autoTurnCountRef.current = 0;
       setLoading(true);
       finishToolTurn(all);
     }
@@ -262,6 +300,7 @@ export default function AssistantView({
     autoResultsRef.current = [];
     resolvedRef.current = [];
     setPending([]);
+    autoTurnCountRef.current = 0;
     setLoading(true);
     finishToolTurn(all);
   }
@@ -274,6 +313,7 @@ export default function AssistantView({
     const now = new Date();
     updateAssistantData((a) => addMessage(a, newMessage("user", text, now)));
     historyRef.current = [...historyRef.current, { role: "user", content: text }];
+    autoTurnCountRef.current = 0;
     await runTurn();
   }
 
