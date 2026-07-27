@@ -100,7 +100,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   const normalized = normalizeDashboardData(raw);
 
   // Normalizing can silently purge known-bad identity data (see
-  // lib/becoming.ts / lib/assistant.ts) - when it does, write the cleaned
+  // lib/assistant.ts) - when it does, write the cleaned
   // copy straight back instead of waiting for her next unrelated save, so
   // the bad data doesn't linger in storage after it's already gone from
   // what she sees.

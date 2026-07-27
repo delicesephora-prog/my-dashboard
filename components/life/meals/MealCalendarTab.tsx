@@ -142,10 +142,34 @@ export default function MealCalendarTab({
 
       <div className="mt-4 rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
         <p className="mb-1.5 font-serif text-[15px] text-life">Her plate rules - same food, tuned</p>
-        <p className="text-[12.5px] leading-relaxed text-paper-muted">
+        <p className="mb-2.5 text-[12.5px] leading-relaxed text-paper-muted">
           🥩 Protein: palm-size or more, never cut · 🥬 Veg: half the plate · 🍚 Carb: one fist · 🥣 Creamy
           things: Greek yogurt swap or sauce-on-side · ✨ Two fun plates a week stay untouched.
         </p>
+        <div className="border-t border-paper-border pt-2.5 text-[12.5px] leading-relaxed text-paper-muted">
+          <p className="mb-2">
+            <b className="text-paper-ink">The method:</b> one cook, two plates. Whatever&rsquo;s simmering for
+            him is the same pot she&rsquo;s eating from - nothing separate to cook, nothing separate to clean.
+            The only thing that changes at the very end is how it&rsquo;s portioned onto each plate, so dinner
+            stays one meal, not two.
+          </p>
+          <p className="mb-2">
+            <b className="text-paper-ink">Her portions, in real terms:</b> protein is never the thing that
+            shrinks - a full palm or more, every time, since that&rsquo;s what actually keeps her full. Veg
+            fills half the plate, generously, straight from whatever&rsquo;s already in the pan or pot. Carb
+            (rice, diri kole, potatoes) is capped at one closed fist - not a diet trick, just enough to round
+            the plate out without crowding the protein and veg doing the real work. Anything creamy or
+            sauce-heavy either swaps to Greek yogurt or rides on the side so it&rsquo;s a choice, not a default.
+          </p>
+          <p>
+            <b className="text-paper-ink">Flexing further for weight loss:</b> on nights that need to run
+            lighter, the fist of carb becomes a half-fist (or gets swapped for extra veg entirely) before
+            protein or veg ever gets touched - that ordering is the whole trick. A splash more lime, hot
+            sauce, or fresh herbs covers what a heavier sauce used to do. And the two fun plates a week (date
+            night, a real treat) stay completely untouched - they&rsquo;re part of the plan, not a slip from it,
+            so there&rsquo;s never a reason to feel guilty reaching for one.
+          </p>
+        </div>
       </div>
 
       {selectedDay && selectedRecipe && (

@@ -971,34 +971,6 @@ const assistantDataSchema = z.object({
   }),
 });
 
-const becomingMessageSchema = z.object({
-  id: z.string(),
-  role: z.enum(["user", "assistant"]),
-  content: z.string().max(8000),
-  createdAt: z.string(),
-});
-
-const dailyActionSchema = z.object({
-  date: z.string(),
-  action: z.string().max(2000),
-  done: z.boolean(),
-});
-
-const reflectionSchema = z.object({
-  id: z.string(),
-  date: z.string(),
-  text: z.string().max(8000),
-  aiResponse: z.string().max(8000),
-});
-
-const becomingDataSchema = z.object({
-  onboarded: z.boolean(),
-  profileSummary: z.string().max(4000),
-  conversation: z.array(becomingMessageSchema).max(200),
-  dailyActions: z.record(dailyActionSchema),
-  reflections: z.array(reflectionSchema).max(1000),
-});
-
 const questDataSchema = z.object({
   completedDates: z.record(z.string()),
 });
@@ -1255,10 +1227,16 @@ const mealDaySchema = z.object({
   cooked: z.boolean(),
 });
 
+const mealGroceryItemSchema = z.object({
+  id: z.string(),
+  text: z.string().max(200),
+  quantity: z.string().max(60),
+});
+
 const groceryStoreLineSchema = z.object({
   id: z.string(),
   store: z.string().max(100),
-  items: z.array(z.string().max(200)).max(40),
+  items: z.array(mealGroceryItemSchema).max(40),
   estimatedAmount: z.number(),
   actualAmount: z.number().nullable(),
 });
@@ -1691,7 +1669,6 @@ const dashboardSchema = z.object({
   events: eventsDataSchema,
   focus: focusDataSchema,
   assistant: assistantDataSchema,
-  becoming: becomingDataSchema,
   quest: questDataSchema,
   memos: memosDataSchema,
   health: healthDataSchema,

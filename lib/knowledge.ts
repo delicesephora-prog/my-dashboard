@@ -805,7 +805,7 @@ export function defaultKnowledgeData(now: Date = new Date()): KnowledgeData {
 // ---------------------------------------------------------------------------
 // AI prompt builders - the actual API calls live in app/api/knowledge/*,
 // but the prompt text itself lives here so it stays next to the data it
-// describes, same convention as lib/becoming.ts and lib/assistant.ts.
+// describes, same convention as lib/assistant.ts.
 
 // Only the fields prompt-building actually needs, so API routes can pass
 // what the client sends without requiring a full Subject object.

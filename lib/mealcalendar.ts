@@ -48,10 +48,18 @@ export type MealDay = {
   cooked: boolean;
 };
 
+export type MealGroceryItem = {
+  id: string;
+  text: string;
+  // Free-text so it can hold "2 lb", "1 bag", "3 cans" etc. - editable
+  // anytime, independent of the item's own description.
+  quantity: string;
+};
+
 export type GroceryStoreLine = {
   id: string;
   store: string;
-  items: string[];
+  items: MealGroceryItem[];
   estimatedAmount: number;
   actualAmount: number | null;
 };
@@ -311,6 +319,30 @@ function seedRecipes(): Record<string, MealRecipe> {
       "Same steak + shrimp (that part is all protein), cauli-mash base, big asparagus pile. Close August strong.",
       "Last cook of the month. September plan drops next."
     ),
+    recipe(
+      "griot", "Griot ak Bannann + Pikliz", "🍖", "haitian", "Fri/Sat only · marinate ahead + fry · 45 min",
+      "Twice-fried crispy pork shoulder (marinated overnight in sour orange, garlic, and épis), golden fried plantains, a big scoop of pikliz on top.",
+      "Same griot, same crispy edges - protein doesn't get cut here either. Half the plantain, pikliz piled high since it's basically a spicy slaw and does the veg job too.",
+      "Marinate the pork the night before. This one's a Friday/Saturday-only treat, not a weeknight regular - it earns its spot on the calendar."
+    ),
+    recipe(
+      "pouleAkNwa", "Poule ak Nwa (Chicken in Cashew Sauce)", "🥜", "haitian", "Sunday batch · 60 min (makes 2 dinners)",
+      "Bone-in chicken braised in a rich cashew-tomato sauce with épis and thyme, over diri ak pwa (rice and beans).",
+      "Same chicken, same sauce - it's mostly cashew, tomato, and aromatics, already balanced. Fist of diri ak pwa, extra spoon of sauce over a bigger scoop of beans instead of rice.",
+      "Toast and blend the cashews Saturday for a head start. Makes enough for Monday too."
+    ),
+    recipe(
+      "pouleAkNwaLeft", "Poule ak Nwa Leftover Bowl", "🥣", "haitian", "Leftover · 5 min",
+      "Reheat the chicken and sauce over fresh rice and beans.",
+      "Shred the chicken over extra beans and greens, sauce spooned on top - same flavors, lighter carb.",
+      "Already done - Sunday's batch carries the week."
+    ),
+    recipe(
+      "soupJoumou", "Soup Joumou (Haitian Independence Soup)", "🎃", "haitian", "Special weekend · slow simmer, 2+ hours",
+      "The celebration soup - beef, squash, cabbage, carrots, potatoes, macaroni, and a full pot of épis, simmered low and slow until the broth turns gold.",
+      "Same soup, same broth - it's naturally balanced already. Go light on the macaroni scoop, generous on the vegetables and beef.",
+      "This is the payday-weekend treat, not a regular rotation dish - let it simmer most of the afternoon."
+    ),
   ];
   const record: Record<string, MealRecipe> = {};
   for (const r of list) record[r.id] = r;
@@ -334,21 +366,21 @@ const AUGUST_2026_DAYS: SeedDay[] = [
   { d: 4, r: "lentilPlate" },
   { d: 5, r: "beefPlantain" },
   { d: 6, r: "tortillaSoup" },
-  { d: 7, r: "salmonBites" },
+  { d: 7, r: "griot" },
   { d: 8, r: "steakFrites", fun: true },
-  { d: 9, r: "streetCorn", prep: true },
-  { d: 10, r: "streetCornLeft", left: true },
+  { d: 9, r: "pouleAkNwa", prep: true },
+  { d: 10, r: "pouleAkNwaLeft", left: true },
   { d: 11, r: "kebabBowls" },
   { d: 12, r: "kebabLeft", left: true },
   { d: 13, r: "legim" },
   { d: 14, r: "crunchwrap" },
-  { d: 15, r: "periPeri", haul: 2, payday: true, prep: true },
+  { d: 15, r: "soupJoumou", haul: 2, payday: true, prep: true },
   { d: 16, r: "buffaloMac", prep: true },
   { d: 17, r: "buffaloLeft", left: true },
   { d: 18, r: "friedRice" },
   { d: 19, r: "pattySalad" },
   { d: 20, r: "tortillaSoup2", left: true },
-  { d: 21, r: "cajunSalmon" },
+  { d: 21, r: "griot" },
   { d: 22, r: "steakPitas", fun: true },
   { d: 23, r: "sosPwa", prep: true },
   { d: 24, r: "sosPwaLeft", left: true },
@@ -376,7 +408,13 @@ function seedDaysFor(month: string, seedDays: SeedDay[]): MealDay[] {
 }
 
 function storeLine(store: string, estimatedAmount: number, items: string[]): GroceryStoreLine {
-  return { id: crypto.randomUUID(), store, estimatedAmount, actualAmount: null, items };
+  return {
+    id: crypto.randomUUID(),
+    store,
+    estimatedAmount,
+    actualAmount: null,
+    items: items.map((text) => ({ id: crypto.randomUUID(), text, quantity: "" })),
+  };
 }
 
 function seedAugustHauls(): GroceryHaul[] {
@@ -450,6 +488,7 @@ function seedAugustHauls(): GroceryHaul[] {
           "Avocados ×4, limes, cilantro + parsley",
           "Plantains, yam + dumplings-flour veg for bouyon",
           "Sweet potatoes ×3, dates (small box)",
+          "Butternut squash + celery + extra carrots (soup joumou)",
         ]),
       ],
     },
@@ -488,14 +527,14 @@ function seedAugustPrepWeekends(): PrepWeekend[] {
     ], augustDates(1, 2)),
     prepWeekend("w2", "Weekend 2 · Aug 8-9", "Bowl Week Setup", [
       "Sat: steak frites date night - prep is just salting steak in the AM",
-      "Sun: roast full tray of chili sweet potatoes",
-      "Sun: mix street-corn topping ×2 (his mayo / hers yogurt) + portion 4 bowls",
+      "Sat: toast + blend cashews for poule ak nwa sauce",
+      "Sun: braise poule ak nwa (double batch) + big pot diri ak pwa",
       "Sun: marinate kebab chicken; garlic-yogurt sauce jar",
       "Sun: cook 4 cups rice for the week (fried rice wants day-old)",
     ], augustDates(8, 9)),
     prepWeekend("w3", "Weekend 3 · Aug 15-16", "💰 Payday Reset", [
-      "Sat: Haul 2 (all 3 stores) + marinate peri peri chicken while unpacking",
-      "Sat night: soak nothing yet - enjoy dinner",
+      "Sat: Haul 2 (all 3 stores) + get soup joumou simmering while unpacking - beef, squash, épis, low and slow",
+      "Sat night: soup joumou for dinner, payday treat",
       "Sun: batch buffalo chicken ×2 (fry his / air-fry hers)",
       "Sun: bake mac n cheese; yogurt-ranch jar; chop slaw",
       "Sun: form beef patties; cook rice for fried-rice night",
@@ -565,12 +604,26 @@ export function defaultMealCalendarData(): MealCalendarData {
 // only reseed wholesale the first time (version behind current), her edits
 // afterward (checkboxes, actual amounts, budget) always win.
 
+function normalizeGroceryItem(raw: unknown): MealGroceryItem | null {
+  // Back-compat: earlier saves stored items as plain strings.
+  if (typeof raw === "string") {
+    return raw.trim() ? { id: crypto.randomUUID(), text: raw, quantity: "" } : null;
+  }
+  const item = raw as Partial<MealGroceryItem> | null | undefined;
+  if (!item?.text) return null;
+  return {
+    id: item.id ?? crypto.randomUUID(),
+    text: item.text,
+    quantity: item.quantity ?? "",
+  };
+}
+
 function normalizeStoreLine(raw: Partial<GroceryStoreLine> | null | undefined): GroceryStoreLine | null {
   if (!raw?.store) return null;
   return {
     id: raw.id ?? crypto.randomUUID(),
     store: raw.store,
-    items: Array.isArray(raw.items) ? raw.items : [],
+    items: (Array.isArray(raw.items) ? raw.items : []).map(normalizeGroceryItem).filter((i): i is MealGroceryItem => i !== null),
     estimatedAmount: raw.estimatedAmount ?? 0,
     actualAmount: raw.actualAmount ?? null,
   };
@@ -861,6 +914,42 @@ export function setStoreAmount(
             h.id !== haulId
               ? h
               : { ...h, stores: h.stores.map((s) => (s.id === storeId ? { ...s, [field]: amount } : s)) }
+          ),
+        },
+      },
+    },
+  };
+}
+
+export function setItemQuantity(
+  data: MealCalendarData,
+  month: string,
+  haulId: string,
+  storeId: string,
+  itemId: string,
+  quantity: string
+): MealCalendarData {
+  const monthData = data.months[month];
+  if (!monthData) return data;
+  return {
+    ...data,
+    months: {
+      ...data.months,
+      [month]: {
+        ...monthData,
+        budget: {
+          ...monthData.budget,
+          hauls: monthData.budget.hauls.map((h) =>
+            h.id !== haulId
+              ? h
+              : {
+                  ...h,
+                  stores: h.stores.map((s) =>
+                    s.id !== storeId
+                      ? s
+                      : { ...s, items: s.items.map((i) => (i.id === itemId ? { ...i, quantity } : i)) }
+                  ),
+                }
           ),
         },
       },

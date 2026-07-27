@@ -39,7 +39,6 @@ import { FridayLedgerData, emptyFridayLedgerData, normalizeFridayLedgerData } fr
 import { EventsData, emptyEventsData, normalizeEventsData } from "./events";
 import { FocusData, emptyFocusData, normalizeFocusData } from "./focus";
 import { AssistantData, emptyAssistantData, normalizeAssistantData } from "./assistant";
-import { BecomingData, emptyBecomingData, normalizeBecomingData } from "./becoming";
 import { KnowledgeData, defaultKnowledgeData, normalizeKnowledgeData } from "./knowledge";
 import { QuestData, emptyQuestData, normalizeQuestData } from "./quest";
 import { MemosData, emptyMemosData, normalizeMemosData } from "./memos";
@@ -1000,7 +999,6 @@ export type DashboardData = {
   events: EventsData;
   focus: FocusData;
   assistant: AssistantData;
-  becoming: BecomingData;
   quest: QuestData;
   memos: MemosData;
   health: HealthData;
@@ -1074,7 +1072,6 @@ export function defaultDashboardData(): DashboardData {
     events: emptyEventsData(),
     focus: emptyFocusData(),
     assistant: emptyAssistantData(),
-    becoming: emptyBecomingData(),
     quest: emptyQuestData(),
     memos: emptyMemosData(),
     health: emptyHealthData(),
@@ -1225,7 +1222,6 @@ export function normalizeDashboardData(
     events: normalizeEventsData(data.events),
     focus: normalizeFocusData(data.focus),
     assistant: normalizeAssistantData(data.assistant),
-    becoming: normalizeBecomingData(data.becoming),
     quest: normalizeQuestData(data.quest),
     memos: normalizeMemosData(data.memos),
     health: normalizeHealthData(data.health),

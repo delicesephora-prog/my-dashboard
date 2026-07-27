@@ -11,6 +11,7 @@ import {
   monthEstimatedSpend,
   monthFlex,
   setBudgetAmount,
+  setItemQuantity,
   setStoreAmount,
 } from "@/lib/mealcalendar";
 import { BUDGET_UNDER_POOL, pickLine } from "@/lib/cher";
@@ -187,11 +188,21 @@ function HaulCard({
               </label>
             </div>
           </div>
-          <ul className="flex flex-col gap-0.5">
+          <ul className="flex flex-col gap-1">
             {store.items.map((item) => (
-              <li key={item} className="flex gap-1.5 text-[12px] leading-relaxed text-paper-muted">
+              <li key={item.id} className="flex items-center gap-1.5 text-[12px] leading-relaxed text-paper-muted">
                 <span className="text-gold">·</span>
-                <span>{item}</span>
+                <span className="min-w-0 flex-1">{item.text}</span>
+                <input
+                  type="text"
+                  inputMode="text"
+                  placeholder="qty"
+                  value={item.quantity}
+                  onChange={(e) =>
+                    onChange((d) => setItemQuantity(d, month, haul.id, store.id, item.id, e.target.value))
+                  }
+                  className="w-16 shrink-0 rounded-md border border-paper-border bg-paper-surface px-1.5 py-0.5 text-right text-[11px] text-paper-ink outline-none focus:border-gold"
+                />
               </li>
             ))}
           </ul>

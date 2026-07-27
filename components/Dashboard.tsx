@@ -81,7 +81,6 @@ import { AssistantData, assistantDisplayName } from "@/lib/assistant";
 import { AppearanceData, effectiveIsEvening } from "@/lib/appearance";
 import { AmbianceData, setAmbianceSettings } from "@/lib/ambiance";
 import AssistantView from "./AssistantView";
-import { BecomingData } from "@/lib/becoming";
 import { Celebration, CelebrationTier } from "@/lib/celebration";
 import { QuestData } from "@/lib/quest";
 import { MemosData } from "@/lib/memos";
@@ -864,11 +863,6 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
     scheduleSave();
   }
 
-  function updateBecoming(updater: (b: BecomingData) => BecomingData) {
-    setData((prev) => ({ ...prev, becoming: updater(prev.becoming) }));
-    scheduleSave();
-  }
-
   function triggerCelebration(tier: CelebrationTier, message: string) {
     setCelebration({ tier, message });
   }
@@ -1377,14 +1371,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
             {lifeView === "rhythm" && (
               <RhythmView rhythmData={data.rhythm} onChange={updateRhythm} />
             )}
-            {lifeView === "glowUp" && (
-              <GlowUpView
-                data={data.glowUp}
-                onChange={updateGlowUp}
-                becoming={data.becoming}
-                onChangeBecoming={updateBecoming}
-              />
-            )}
+            {lifeView === "glowUp" && <GlowUpView data={data.glowUp} onChange={updateGlowUp} />}
             {lifeView === "home" && (
               <HomeView data={data.homeZones} onChange={updateHomeZones} />
             )}
