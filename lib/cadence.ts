@@ -2,7 +2,7 @@ import { dateKey } from "./date";
 import { weekKeyFor } from "./week";
 import { monthKey } from "./finance";
 import { quarterKeyFor } from "./quarter";
-import { Department, DEPARTMENTS } from "./department";
+import { Department, DEPARTMENTS, remapLegacyDepartment } from "./department";
 
 export type CadenceFrequency = "daily" | "weekly" | "monthly" | "quarterly";
 
@@ -70,17 +70,17 @@ function seedItems(): CadenceItem[] {
     item("Uber Health — reconcile new site trips/billing", "weekly", "Clinical Operations", 0),
     item("BOD calendar — check responses, follow up", "weekly", "Executive Support", 1),
     item("Weekly 1:1 with Silas", "weekly", "Executive Support", 2),
-    item("Review open contracts/NDAs for movement", "weekly", "Vendor", 3),
-    item("Vendor check-ins as needed — SwagMagic, GoLunaTech, Westin", "weekly", "Vendor", 4),
+    item("Review open contracts/NDAs for movement", "weekly", "Vendor Management", 3),
+    item("Vendor check-ins as needed — SwagMagic, GoLunaTech, Westin", "weekly", "Vendor Management", 4),
     item("Inbox cleanup — archive completed threads", "weekly", "Administration", 5),
 
     // Monthly
     item("Uber Health — consolidated billing, all sites", "monthly", "Clinical Operations", 0),
     item("Review CS-08 BP backlog — enrolled subjects not yet reviewed", "monthly", "Clinical Operations", 1),
-    item("Update Accomplishment Record with the month's work", "monthly", "Career", 2),
-    item("Review approval chain — new contract types to log", "monthly", "Vendor", 3),
+    item("Update Accomplishment Record with the month's work", "monthly", "Administration", 2),
+    item("Review approval chain — new contract types to log", "monthly", "Vendor Management", 3),
     item("Check BACKBEAT enrollment vs Q3 2026 target", "monthly", "Clinical Operations", 4),
-    item("Run System Check", "monthly", "Career", 5),
+    item("Run System Check", "monthly", "Administration", 5),
 
     // Quarterly - empty for now.
   ];
@@ -100,8 +100,14 @@ export function emptyCadenceData(): CadenceData {
 export function normalizeCadenceData(partial: Partial<CadenceData> | null | undefined): CadenceData {
   const fallback = emptyCadenceData();
   if (!partial) return fallback;
+  // Remaps any item saved under a retired department name ("Career",
+  // "Vendor") to its current home - see remapLegacyDepartment.
+  const items = (partial.items ?? fallback.items).map((i) => ({
+    ...i,
+    department: remapLegacyDepartment(i.department),
+  }));
   return applySystemCheckSeed({
-    items: partial.items ?? fallback.items,
+    items,
     dailyLogs: partial.dailyLogs ?? {},
     weeklyLogs: partial.weeklyLogs ?? {},
     monthlyLogs: partial.monthlyLogs ?? {},
@@ -120,10 +126,10 @@ export function applySystemCheckSeed(data: CadenceData): CadenceData {
   if (data.systemCheckSeedVersion >= SYSTEM_CHECK_SEED_VERSION) return data;
   const alreadyPresent = data.items.some((i) => i.text === "Run System Check");
   if (alreadyPresent) return { ...data, systemCheckSeedVersion: SYSTEM_CHECK_SEED_VERSION };
-  const order = itemsFor(data, "monthly", "Career").length;
+  const order = itemsFor(data, "monthly", "Administration").length;
   return {
     ...data,
-    items: [...data.items, item("Run System Check", "monthly", "Career", order)],
+    items: [...data.items, item("Run System Check", "monthly", "Administration", order)],
     systemCheckSeedVersion: SYSTEM_CHECK_SEED_VERSION,
   };
 }

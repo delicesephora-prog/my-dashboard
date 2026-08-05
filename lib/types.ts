@@ -1,4 +1,4 @@
-import { Department, DEPARTMENTS } from "./department";
+import { Department, DEPARTMENTS, remapLegacyDepartment } from "./department";
 import {
   TabUsageData,
   SystemCheckData,
@@ -1133,6 +1133,9 @@ export function normalizeDashboardData(
         progressPct: t.progressPct ?? 0,
         progressLog: t.progressLog ?? [],
         stallSnoozedUntil: t.stallSnoozedUntil ?? "",
+        // See remapLegacyDepartment - folds any task filed under a
+        // retired department name onto its current home.
+        category: remapLegacyDepartment(t.category),
       })),
     },
     cadence: normalizeCadenceData(data.cadence),

@@ -1,4 +1,5 @@
 import { WorkTaskCategory } from "./types";
+import { remapLegacyDepartment } from "./department";
 
 export type Vendor = {
   id: string;
@@ -22,7 +23,10 @@ export function emptyVendorsData(): VendorsData {
 export function normalizeVendorsData(
   partial: Partial<VendorsData> | null | undefined
 ): VendorsData {
-  return { vendors: Array.isArray(partial?.vendors) ? partial.vendors : [] };
+  const vendors = Array.isArray(partial?.vendors) ? partial.vendors : [];
+  // See remapLegacyDepartment - folds any vendor filed under a retired
+  // department name onto its current home.
+  return { vendors: vendors.map((v) => ({ ...v, category: remapLegacyDepartment(v.category) })) };
 }
 
 export function newVendor(name: string, category: WorkTaskCategory): Vendor {

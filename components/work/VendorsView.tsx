@@ -14,7 +14,7 @@ export default function VendorsView({
   onBack: () => void;
 }) {
   const [name, setName] = useState("");
-  const [category, setCategory] = useState<WorkTaskCategory>("Vendor");
+  const [category, setCategory] = useState<WorkTaskCategory>("Vendor Management");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const list = activeVendors(vendors);

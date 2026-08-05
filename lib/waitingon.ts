@@ -1,5 +1,6 @@
 import { dateKey, daysBetween } from "./date";
 import { CadenceDepartment } from "./cadence";
+import { remapLegacyDepartment } from "./department";
 
 export type WaitingOnItem = {
   id: string;
@@ -31,7 +32,9 @@ export function normalizeWaitingOnData(
     items: Array.isArray(partial?.items)
       ? partial.items.map((i) => ({
           ...i,
-          department: i.department ?? null,
+          // See remapLegacyDepartment - folds any item filed under a
+          // retired department name onto its current home.
+          department: i.department ? remapLegacyDepartment(i.department) : null,
           linkedCadenceItemId: i.linkedCadenceItemId ?? null,
         }))
       : [],

@@ -3,11 +3,21 @@ import { dateKey, todayKey, shiftDateKey } from "./date";
 // ---------------------------------------------------------------------------
 // Core content
 
+// Real, published source for a block's claims - a trial registry entry,
+// press release, or paper. Reuses the same {title, url} shape as Ask
+// Deeper's citations so the two never drift into lookalike types.
+export type BlockCitation = { title: string; url: string };
+
 export type TwoLayerBlock = {
   id: string;
   heading: string;
   realWords: string;
   plainEnglish: string;
+  // Empty/absent for most blocks (especially AI-generated ones, which
+  // never invent a source) - only populated where a real citation was
+  // verified. Optional so the prompt-building routes, which only pass
+  // {id, heading, realWords, plainEnglish} through, don't need it too.
+  citations?: BlockCitation[];
 };
 
 export type Subject = {
@@ -22,8 +32,13 @@ export type Subject = {
   celebratedLevel: MasteryLevel | null;
 };
 
-export function newTwoLayerBlock(heading: string, realWords: string, plainEnglish: string): TwoLayerBlock {
-  return { id: crypto.randomUUID(), heading, realWords, plainEnglish };
+export function newTwoLayerBlock(
+  heading: string,
+  realWords: string,
+  plainEnglish: string,
+  citations: BlockCitation[] = []
+): TwoLayerBlock {
+  return { id: crypto.randomUUID(), heading, realWords, plainEnglish, citations };
 }
 
 export function newSubject(name: string, pitch: string, blocks: TwoLayerBlock[], now: Date = new Date()): Subject {
@@ -367,8 +382,14 @@ export function emptyKnowledgeData(): KnowledgeData {
 
 export function normalizeKnowledgeData(partial: Partial<KnowledgeData> | null | undefined): KnowledgeData {
   const fallback = emptyKnowledgeData();
+  // Backfills `citations` on any block saved before that field existed,
+  // so old data doesn't fail validation on its next save.
+  const subjects = (Array.isArray(partial?.subjects) ? partial.subjects : fallback.subjects).map((s) => ({
+    ...s,
+    blocks: s.blocks.map((b) => ({ ...b, citations: b.citations ?? [] })),
+  }));
   return {
-    subjects: Array.isArray(partial?.subjects) ? partial.subjects : fallback.subjects,
+    subjects,
     cards: Array.isArray(partial?.cards) ? partial.cards : fallback.cards,
     silasTests: Array.isArray(partial?.silasTests) ? partial.silasTests : fallback.silasTests,
     askDeeperChats: partial?.askDeeperChats ?? fallback.askDeeperChats,
@@ -464,23 +485,51 @@ function seedSubjects(now: Date): { subjects: Subject[]; cards: Flashcard[]; que
     [
       newTwoLayerBlock(
         "What it treats",
-        `Uncontrolled hypertension in patients also indicated for a dual-chamber pacemaker. FDA Breakthrough Device Designation; ~7.7M US patients with uncontrolled hypertension despite medication.`,
-        `High blood pressure that pills aren't fixing — specifically in people who already need a pacemaker. Huge market, and the FDA fast-tracked it.`
+        `Uncontrolled hypertension in patients also indicated for a dual-chamber pacemaker. FDA Breakthrough Device Designation (granted April 2025, with an additional BDD in 2026); ~7.7M US patients meet the designation's criteria - increased 10-year ASCVD risk, preserved LV systolic function, and uncontrolled hypertension despite (or intolerant to) antihypertensive medication.`,
+        `High blood pressure that pills aren't fixing — specifically in people who already need a pacemaker and have some added heart-risk factors. Huge market, and the FDA fast-tracked it.`,
+        [
+          {
+            title: "Orchestra BioMed Receives FDA Breakthrough Device Designation for AVIM Therapy (GlobeNewswire, Apr 22, 2025)",
+            url: "https://www.globenewswire.com/news-release/2025/04/22/3065345/0/en/Orchestra-BioMed-Receives-FDA-Breakthrough-Device-Designation-for-AVIM-Therapy.html",
+          },
+          { title: "AVIM Therapy overview — orchestrabiomed.com", url: "https://www.orchestrabiomed.com/avim-therapy" },
+        ]
       ),
       newTwoLayerBlock(
         "How it works in the heart (THE key answer)",
         `The heart beats in two stages — the atrium (top chamber) contracts to fill the ventricle (bottom chamber), then the ventricle contracts to pump blood out. The gap between is the AV (atrioventricular) interval. AVIM delivers repeating sequences of short and longer AV intervals via dual-chamber pacing. SHORT intervals reduce ventricular filling → less preload → less pressure ejected (Frank-Starling law: a less-full heart pumps with less force). LONGER intervals modulate the autonomic nervous system, lowering total peripheral resistance (afterload) and preventing the reflex sympathetic response that would otherwise fight the drop.`,
-        `Your heart fills, then squeezes. This therapy slightly mistimes those on purpose so the heart squeezes before it's totally full — less blood in means less pressure out. AND it calms the nervous system so your body doesn't panic and tighten everything back up (which is what normally undoes blood-pressure drops). That second part is the clever bit.`
+        `Your heart fills, then squeezes. This therapy slightly mistimes those on purpose so the heart squeezes before it's totally full — less blood in means less pressure out. AND it calms the nervous system so your body doesn't panic and tighten everything back up (which is what normally undoes blood-pressure drops). That second part is the clever bit.`,
+        [
+          {
+            title:
+              "Orchestra BioMed Presents New AVIM Therapy Clinical Data at HRX - mechanistic + clinical results (GlobeNewswire, Sep 4, 2025)",
+            url: "https://www.globenewswire.com/news-release/2025/09/04/3145007/0/en/Orchestra-BioMed-Presents-New-AVIM-Therapy-Clinical-Data-at-HRX-Demonstrating-Substantial-and-Sustained-Blood-Pressure-Reductions-that-are-Reproducible-Upon-Reactivation-Following-.html",
+          },
+          { title: "AVIM Therapy overview — orchestrabiomed.com", url: "https://www.orchestrabiomed.com/avim-therapy" },
+        ]
       ),
       newTwoLayerBlock(
         "Why it's different",
-        `Device-based, not pharmacologic. Uses standard pacemaker hardware, same implant procedure and lead positions. Works automatically without patient medication compliance.`,
-        `It's not a pill and not a new gadget — it's smart software running on a pacemaker doctors already know how to implant. Works on its own; the patient doesn't have to remember anything.`
+        `Device-based, not pharmacologic. Uses standard pacemaker hardware, same implant procedure and lead positions - strategic collaboration with Medtronic. Works automatically without patient medication compliance.`,
+        `It's not a pill and not a new gadget — it's smart software running on a pacemaker doctors already know how to implant. Works on its own; the patient doesn't have to remember anything.`,
+        [{ title: "AVIM Therapy overview — orchestrabiomed.com", url: "https://www.orchestrabiomed.com/avim-therapy" }]
       ),
       newTwoLayerBlock(
         "Proof so far",
-        `MODERATO I & II pilot studies showed statistically significant BP reductions; MODERATO II showed substantial, immediate, sustained reduction in ambulatory and office BP at 6 and 24 months. BACKBEAT (NCT06059638) is the ongoing pivotal IDE trial.`,
-        `Two early studies proved it drops blood pressure and keeps it down for 2 years. BACKBEAT — the trial I support — is the big one meant to prove it for approval.`
+        `MODERATO I & II pilot studies showed statistically significant BP reductions. MODERATO II (double-blind, randomized) showed net reductions of 8.1 mmHg in 24-hour ambulatory systolic BP and 12.3 mmHg in office systolic BP at 6 months vs. control, with reductions sustained through more than 3 years of follow-up. BACKBEAT (NCT06059638) is the ongoing global pivotal IDE study - a Medtronic collaboration randomizing ~500 patients 1:1, primary endpoint is the between-group change in mean 24-hour ambulatory systolic BP at 3 months post-randomization.`,
+        `Two early studies proved it drops blood pressure and keeps it down for years. BACKBEAT — the trial I support — is the big one meant to prove it for approval, and it's already enrolling.`,
+        [
+          {
+            title:
+              "Orchestra BioMed Presents New Data Showing Sustained Reduction in 24-Hour Ambulatory Systolic BP for Over 3 Years (MODERATO II follow-up)",
+            url: "https://investors.orchestrabiomed.com/news-releases/news-release-details/orchestra-biomed-presents-new-data-showing-sustained-clinically",
+          },
+          {
+            title: "Orchestra BioMed Announces Initiation of BACKBEAT Pivotal Study of AVIM Therapy (GlobeNewswire, Jan 8, 2024)",
+            url: "https://www.globenewswire.com/news-release/2024/01/08/2805330/0/en/Orchestra-BioMed-Announces-Initiation-of-BACKBEAT-Pivotal-Study-of-AVIM-Therapy-in-Hypertensive-Pacemaker-Patients.html",
+          },
+          { title: "BACKBEAT study record — ClinicalTrials.gov (NCT06059638)", url: "https://clinicaltrials.gov/study/NCT06059638" },
+        ]
       ),
     ],
     now

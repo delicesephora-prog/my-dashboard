@@ -115,6 +115,22 @@ function CoreContentTab({ subject }: { subject: Subject }) {
               <p className="mb-1 text-[9.5px] font-semibold uppercase tracking-[0.12em] text-sage">In Plain English</p>
               <p className="text-[13px] leading-relaxed text-paper-ink">{b.plainEnglish}</p>
             </div>
+            {(b.citations?.length ?? 0) > 0 && (
+              <div className="flex flex-col gap-1 border-t border-paper-border pt-2">
+                <p className="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-paper-muted">Sources</p>
+                {b.citations!.map((c, i) => (
+                  <a
+                    key={i}
+                    href={c.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11.5px] leading-snug text-work underline decoration-work/40 underline-offset-2"
+                  >
+                    {c.title}
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       ))}

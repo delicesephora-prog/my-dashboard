@@ -72,11 +72,10 @@ const departmentSchema = z.enum([
   "Investor Relations",
   "Finance",
   "Translation",
-  "Vendor",
+  "Vendor Management",
   "Facilities",
   "Regulatory",
   "Administration",
-  "Career",
 ]);
 
 const workTaskProgressEntrySchema = z.object({
@@ -984,6 +983,10 @@ const twoLayerBlockSchema = z.object({
   heading: z.string().max(200),
   realWords: z.string().max(4000),
   plainEnglish: z.string().max(4000),
+  // Real published sources backing this block (trial registries, press
+  // releases, papers) - optional since most blocks (especially
+  // AI-generated ones) won't have any.
+  citations: z.array(z.object({ title: z.string().max(300), url: z.string().max(1000) })).max(10).default([]),
 });
 
 const masteryLevelSchema = z.enum(["novice", "learning", "conversant", "fluent", "expert"]);
