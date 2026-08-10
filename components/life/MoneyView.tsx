@@ -65,6 +65,7 @@ export default function MoneyView({
   scholarStreakCurrent,
   appOpenDateKeys,
   onCelebrate,
+  lastSavedAt,
 }: {
   lifeQuarterly: LifeQuarterly;
   onChange: (updater: (lq: LifeQuarterly) => LifeQuarterly) => void;
@@ -78,6 +79,7 @@ export default function MoneyView({
   rewards: RewardsData;
   onChangeRewards: (updater: (r: RewardsData) => RewardsData) => void;
   scholarStreakCurrent: number;
+  lastSavedAt: Date | null;
   appOpenDateKeys: string[];
   onCelebrate: (tier: CelebrationTier, message: string) => void;
 }) {
@@ -162,6 +164,8 @@ export default function MoneyView({
         <CommandCenter
           budget={budget}
           money={lifeQuarterly.money}
+          finance={finance}
+          lastSavedAt={lastSavedAt}
           onChangeBudget={onChangeBudget}
           onChangeMoney={updateMoney}
           onCelebrate={onCelebrate}

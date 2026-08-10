@@ -1336,6 +1336,7 @@ export default function Dashboard({ initialData }: { initialData: DashboardData 
                 scholarStreakCurrent={data.knowledge.scholarStreak.current}
                 appOpenDateKeys={Object.keys(data.lifeScore.history)}
                 onCelebrate={triggerCelebration}
+                lastSavedAt={lastSavedAt}
               />
             )}
             {lifeView === "meals" && (

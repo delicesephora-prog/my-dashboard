@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MoneyData } from "@/lib/types";
-import { formatMoney } from "@/lib/finance";
+import { FinanceData, Transaction, formatMoney, incomeForMonth, expenseForMonth, spendingByCategory } from "@/lib/finance";
 import { CelebrationTier } from "@/lib/celebration";
 import {
   BillItem,
@@ -39,6 +39,7 @@ import {
 } from "@/lib/budget";
 import BudgetItemRow, { Slot } from "./BudgetItemRow";
 import CheckCircle from "../../CheckCircle";
+import DonutChart from "../../DonutChart";
 import { PaymentSchedule } from "@/lib/budget";
 import { dateKey } from "@/lib/date";
 
@@ -73,12 +74,16 @@ function convertSchedule(kind: PaymentSchedule["kind"], monthlyAmount: number): 
 export default function CommandCenter({
   budget,
   money,
+  finance,
+  lastSavedAt,
   onChangeBudget,
   onChangeMoney,
   onCelebrate,
 }: {
   budget: BudgetData;
   money: MoneyData;
+  finance: FinanceData;
+  lastSavedAt: Date | null;
   onChangeBudget: (updater: (b: BudgetData) => BudgetData) => void;
   onChangeMoney: (updater: (m: MoneyData) => MoneyData) => void;
   onCelebrate: (tier: CelebrationTier, message: string) => void;
@@ -270,32 +275,138 @@ export default function CommandCenter({
   const [paydayTab, setPaydayTab] = useState<Slot>(now.getDate() <= 15 ? "first" : "second");
   const souSou = config.bills.find((b) => b.name.toLowerCase().includes("sou-sou"));
 
+  // -- new dashboard header: KPIs, category bars, savings donut, recent txns
+  // (visual layer only - everything below reads the same budget/money/
+  // finance data the rest of this component already reads, nothing new is
+  // stored) -----------------------------------------------------------
+
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  const prevKey = shiftMonthKey(key, -1);
+  const monthIncome = incomeForMonth(finance.transactions, key);
+  const prevMonthIncome = incomeForMonth(finance.transactions, prevKey);
+  const monthExpense = expenseForMonth(finance.transactions, key);
+  const prevMonthExpense = expenseForMonth(finance.transactions, prevKey);
+  const savedThisMonth = Math.max(0, buildingUp.vaultTrend);
+  const savedPct = monthIncome > 0 ? Math.round((savedThisMonth / monthIncome) * 100) : 0;
+
+  const categorySpend = spendingByCategory(finance.transactions, key);
+  const recentTxns = [...finance.transactions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8);
+
+  const vaultTotal = money.vaults.reduce((sum, v) => sum + v.currentAmount, 0);
+  const vaultGoalTotal = money.vaults.reduce((sum, v) => sum + v.goalAmount, 0);
+
+  // Last 24 real months, newest first, for the month-jump dropdown -
+  // paging further than that is still possible with the ‹ › arrows.
+  const monthOptions = Array.from({ length: 24 }, (_, i) => shiftMonthKey(realKey, -i));
+
+  const lastUpdatedLabel = lastSavedAt
+    ? `Last updated ${lastSavedAt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`
+    : "Not saved yet";
+
   return (
     <div className="flex flex-col gap-3">
-      {/* MONTH NAVIGATION */}
-      <div className="flex items-center justify-between rounded-xl2 border border-paper-border bg-paper-surface px-3 py-2 shadow-paper">
-        <button
-          type="button"
-          onClick={() => setViewKey((k) => shiftMonthKey(k, -1))}
-          aria-label="Previous month"
-          className="px-2 text-paper-muted"
-        >
-          ‹
-        </button>
-        <span className="text-[13px] font-medium text-paper-ink">
+      {/* HEADER — Money, current month, dropdown to page back, last-updated.
+          Title and controls get their own rows so a long month name never
+          fights the dropdown for space on a narrow phone. */}
+      <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
+        <p className="text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">Money</p>
+        <p className="mt-0.5 font-serif text-xl text-paper-ink">
           {formatMonthLabel(viewKey)}
-          {isCurrentMonth && <span className="ml-1.5 text-[10px] text-gold">this month</span>}
-        </span>
-        <button
-          type="button"
-          onClick={() => setViewKey((k) => shiftMonthKey(k, 1))}
-          aria-label="Next month"
-          className="px-2 text-paper-muted"
-        >
-          ›
-        </button>
+          {isCurrentMonth && <span className="ml-1.5 align-middle text-[10px] font-sans text-gold">this month</span>}
+        </p>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setViewKey((k) => shiftMonthKey(k, -1))}
+              aria-label="Previous month"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-paper-border text-paper-muted"
+            >
+              ‹
+            </button>
+            <select
+              value={viewKey}
+              onChange={(e) => setViewKey(e.target.value)}
+              aria-label="Jump to month"
+              className="min-w-0 rounded-lg border border-paper-border bg-paper-surface2 px-2 py-1.5 text-[12px] text-paper-ink outline-none"
+            >
+              {monthOptions.map((k) => (
+                <option key={k} value={k}>
+                  {formatMonthLabel(k)}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => setViewKey((k) => shiftMonthKey(k, 1))}
+              aria-label="Next month"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-paper-border text-paper-muted"
+            >
+              ›
+            </button>
+          </div>
+          <p className="shrink-0 text-[11px] text-paper-faint">{lastUpdatedLabel}</p>
+        </div>
       </div>
 
+      {/* KPI ROW — Income / Expenses / Saved */}
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+        <KpiCard
+          label="Income"
+          value={formatMoney(monthIncome)}
+          valueClass="text-paper-ink"
+          detail={<MonthDelta value={monthIncome - prevMonthIncome} prevKey={prevKey} />}
+        />
+        <KpiCard
+          label="Expenses"
+          value={formatMoney(monthExpense)}
+          valueClass="text-paper-ink"
+          detail={<MonthDelta value={monthExpense - prevMonthExpense} prevKey={prevKey} />}
+        />
+        <KpiCard
+          label="Saved"
+          value={formatMoney(savedThisMonth)}
+          valueClass="text-sage"
+          detail={<span className="text-[11px] text-paper-muted">{savedPct}% of income</span>}
+        />
+      </div>
+
+      {/* TWO-COLUMN BAND — expenses by category / savings goal donut */}
+      <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
+        <CategoryBarsCard data={categorySpend} />
+        <SavingsDonutCard total={vaultTotal} goal={vaultGoalTotal} />
+      </div>
+
+      {/* RECENT TRANSACTIONS */}
+      <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
+        <p className="mb-1 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+          Recent Transactions
+        </p>
+        {recentTxns.length === 0 ? (
+          <p className="py-2 text-[12.5px] text-paper-faint">No transactions logged yet.</p>
+        ) : (
+          <div className="flex flex-col divide-y divide-paper-border/70">
+            {recentTxns.map((t) => (
+              <TransactionRow key={t.id} t={t} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* DETAILS — bills, debt payments, vault transfers, payday checklist,
+          everything this Command Center already tracked, one tap away */}
+      <button
+        type="button"
+        onClick={() => setDetailsOpen((v) => !v)}
+        className="flex items-center justify-between rounded-xl2 border border-paper-border bg-paper-surface px-4 py-3 text-left shadow-paper"
+      >
+        <span className="text-[13px] font-medium text-paper-ink">Bills, Debts, Vaults &amp; Payday Checklist</span>
+        <span className={`text-paper-muted transition-transform ${detailsOpen ? "rotate-180" : ""}`}>⌄</span>
+      </button>
+
+      {detailsOpen && (
+        <div className="animate-fade-in flex flex-col gap-3">
       {/* MONEY IN + LEFT TO BREATHE */}
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-xl2 border border-paper-border bg-paper-surface p-3.5 shadow-paper">
@@ -786,6 +897,8 @@ export default function CommandCenter({
           </button>
         </div>
       </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -963,6 +1076,136 @@ function SpendingTargetRow({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// New dashboard-header pieces (KPI cards, category bars, savings donut,
+// recent transactions) - purely presentational, reading the same
+// budget/money/finance data the rest of this file already reads.
+
+function KpiCard({
+  label,
+  value,
+  valueClass,
+  detail,
+}: {
+  label: string;
+  value: string;
+  valueClass: string;
+  detail: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
+      <p className="text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">{label}</p>
+      <p className={`mt-1 font-serif text-2xl ${valueClass}`}>{value}</p>
+      <div className="mt-0.5">{detail}</div>
+    </div>
+  );
+}
+
+// Delta text is intentionally always muted (not colored red/green) - it's
+// a magnitude-and-direction note under a big number, not a judgment call
+// on whether the change was good or bad.
+function MonthDelta({ value, prevKey }: { value: number; prevKey: string }) {
+  const prevLabel = formatMonthLabel(prevKey).split(" ")[0].slice(0, 3);
+  if (Math.abs(value) < 0.005) {
+    return <span className="text-[11px] text-paper-muted">Flat vs {prevLabel}</span>;
+  }
+  const up = value > 0;
+  return (
+    <span className="text-[11px] text-paper-muted">
+      {up ? "↑" : "↓"} {up ? "+" : "-"}
+      {formatMoney(Math.abs(value))} vs {prevLabel}
+    </span>
+  );
+}
+
+function CategoryBarsCard({ data }: { data: { category: string; amount: number }[] }) {
+  const max = data.length > 0 ? data[0].amount : 0;
+  return (
+    <div className="rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
+      <p className="mb-3 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+        Expenses by Category
+      </p>
+      {data.length === 0 ? (
+        <p className="py-2 text-[12.5px] text-paper-faint">No expenses logged yet.</p>
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          {data.map((d) => (
+            <div key={d.category}>
+              <div className="mb-1 flex items-center justify-between gap-2 text-[12px]">
+                <span className="truncate text-paper-ink">{d.category}</span>
+                <span className="shrink-0 text-paper-muted">{formatMoney(d.amount)}</span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-paper-surface2">
+                <div
+                  className="h-full rounded-full bg-work transition-all"
+                  style={{ width: `${max > 0 ? (d.amount / max) * 100 : 0}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SavingsDonutCard({ total, goal }: { total: number; goal: number }) {
+  const pct = goal > 0 ? Math.min(100, Math.round((total / goal) * 100)) : null;
+  return (
+    <div className="flex flex-col items-center rounded-xl2 border border-paper-border bg-paper-surface p-4 shadow-paper">
+      <p className="mb-3 self-start text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-paper-muted">
+        Savings Goal
+      </p>
+      {pct === null ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-1 py-4">
+          <p className="font-serif text-xl text-paper-ink">{formatMoney(total)}</p>
+          <p className="text-center text-[11px] text-paper-muted">saved so far — set vault goals to track progress</p>
+        </div>
+      ) : (
+        <>
+          <DonutChart
+            segments={[
+              { label: "Saved", value: total, color: "#5B2333" },
+              { label: "Remaining", value: Math.max(0, goal - total), color: "#F2EBDD" },
+            ]}
+            centerLabel={`${pct}%`}
+          />
+          <p className="mt-3 text-[13px] text-paper-muted">
+            {formatMoney(total)} / {formatMoney(goal)}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+function formatShortDate(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function TransactionRow({ t }: { t: Transaction }) {
+  const isIncome = t.amount > 0;
+  return (
+    <div className="flex items-center gap-2.5 py-2.5">
+      <span className={`h-2 w-2 shrink-0 rounded-full ${isIncome ? "bg-sage" : "bg-work"}`} />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13px] text-paper-ink">{t.description || t.category}</p>
+        <div className="mt-0.5 flex items-center gap-1.5">
+          <span className="text-[10.5px] text-paper-faint">{formatShortDate(t.date)}</span>
+          <span className="rounded-full border border-paper-border px-1.5 py-0.5 font-mono text-[9.5px] text-paper-muted">
+            {t.category}
+          </span>
+        </div>
+      </div>
+      <span className={`shrink-0 text-[13px] font-medium ${isIncome ? "text-sage" : "text-[#B5574A]"}`}>
+        {isIncome ? "+" : "-"}
+        {formatMoney(Math.abs(t.amount))}
+      </span>
     </div>
   );
 }
